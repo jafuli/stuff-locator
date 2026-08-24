@@ -3,6 +3,23 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Wireframe design tokens (stuff-locator-wireframes v1/v2) — power the
+     mock-data component set under src/components/. Lifted verbatim from
+     the wireframes' own CSS custom properties; not reinterpreted. There is
+     no dark-mode variant because the wireframes never defined one. */
+  --ink: #1a1a1a;
+  --mid: #6b6b6b;
+  --dim: #9a9a9a;
+  --line: #c8c8c8;
+  --wash: #f4f4f2;
+  --paper: #fff;
+
+  /* Scoped narrowly to location-autocomplete's "+ New place…" row. This is
+     the wireframe file's own annotation-callout orange, deliberately reused
+     for exactly that one row — not part of the general product palette. */
+  --note: #b8562f;
+  --note-bg: #fdf3ee;
 }
 
 @theme inline {
@@ -10,6 +27,21 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-ink: var(--ink);
+  --color-mid: var(--mid);
+  --color-dim: var(--dim);
+  --color-line: var(--line);
+  --color-wash: var(--wash);
+  --color-paper: var(--paper);
+  --color-note: var(--note);
+  --color-note-bg: var(--note-bg);
+
+  /* Named --font-wire* (not reusing --font-sans/--font-mono) so these never
+     collide with the Geist-backed tokens already wired in layout.tsx. */
+  --font-wire: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-wire-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
