@@ -1,34 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-
-/**
- * Tabs forward from the top of the document until an element with the given
- * accessible name is focused, or gives up after `max` presses. Used instead
- * of `.focus()` (which sets focus programmatically regardless of tab order)
- * to prove the element is actually reachable by keyboard.
- */
-async function tabUntilFocused(page: Page, name: string, max = 25): Promise<boolean> {
-  for (let i = 0; i < max; i++) {
-    await page.keyboard.press("Tab");
-    const focusedName = await page.evaluate((): string => {
-      const el = document.activeElement;
-      if (!el) {
-        return "";
-      }
-      const ariaLabel = el.getAttribute("aria-label");
-      if (ariaLabel !== null) {
-        return ariaLabel;
-      }
-      // Element.textContent (unlike the broader Node.textContent) is never
-      // null per spec — TS's DOM lib narrows it accordingly, so no null
-      // check here.
-      return el.textContent.trim();
-    });
-    if (focusedName === name) {
-      return true;
-    }
-  }
-  return false;
-}
+import { test, expect } from "@playwright/test";
+import { tabUntilFocused } from "./utils";
 
 test("home route boots cleanly, shows the item list, and is keyboard-reachable", async ({ page }) => {
   const consoleErrors: string[] = [];

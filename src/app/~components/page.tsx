@@ -74,13 +74,7 @@ export default function ComponentsDemoPage() {
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Success</p>
           <div>
             {ITEMS.slice(0, 4).map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                path={pathFor(item.locationId)}
-                href={`/items/${item.id}`}
-                prefetch={false}
-              />
+              <ItemCard key={item.id} item={item} path={pathFor(item.locationId)} href={`/items/${item.id}`} />
             ))}
           </div>
         </div>

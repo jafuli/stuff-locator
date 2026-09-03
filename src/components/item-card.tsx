@@ -7,14 +7,13 @@ export interface ItemCardProps {
   item: Item;
   /** Already-resolved breadcrumb for item.locationId — see LocationBreadcrumb. */
   path: string[];
-  /** Where this card links to. No item-detail route exists yet, so the caller decides. */
+  /** Where this card links to — typically an item's `/items/${id}` detail route. */
   href: string;
   /**
    * Passed straight through to next/link. Defaults to Link's own default
-   * (viewport-based prefetch). Callers linking to a route that doesn't
-   * exist yet — as of this component set, `/items/[id]` — should pass
-   * `false`: an in-viewport ItemCard otherwise gets prefetched automatically
-   * and produces real 404s in the browser console.
+   * (viewport-based prefetch). Exposed for callers linking to a route that
+   * doesn't exist (yet) — an in-viewport ItemCard would otherwise get
+   * prefetched automatically and produce a real 404 in the browser console.
    */
   prefetch?: boolean;
 }
