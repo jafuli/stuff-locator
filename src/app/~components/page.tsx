@@ -2,33 +2,16 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { ItemCard } from "@/components/item-card";
-import { BottomNav, type NavTab } from "@/components/bottom-nav";
+import { ItemCardSkeleton } from "@/components/item-card-skeleton";
+import { BottomNav } from "@/components/bottom-nav";
 import { AutocompleteDemo } from "./autocomplete-demo";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbNames, getFullLocationPaths } from "@/lib/fixtures/location-path";
-
-// Wireframe literally draws 3 tabs (Stuff / Activity / Home) and its own
-// footer calls the count an open question. This task's Acceptance Criteria
-// specifies a 2-tab nav, so "Home" (household settings) is dropped here —
-// a real divergence from the wireframe's drawing, flagged rather than
-// silently decided. See the PR description and the task's Notion Notes.
-const NAV_TABS: NavTab[] = [
-  { href: "/stuff", label: "Stuff" },
-  { href: "/activity", label: "Activity" },
-];
+import { NAV_TABS } from "@/lib/nav-tabs";
 
 const locationOptions = getFullLocationPaths(LOCATIONS);
 const pathFor = (locationId: string) => getBreadcrumbNames(locationId, LOCATIONS);
-
-function SkeletonRow() {
-  return (
-    <div className="animate-pulse border-b border-[#ececec] py-[9px] last:border-b-0">
-      <div className="h-[13.5px] w-2/3 rounded bg-wash" />
-      <div className="mt-[6px] h-[10.5px] w-1/2 rounded bg-wash" />
-    </div>
-  );
-}
 
 export default function ComponentsDemoPage() {
   return (
@@ -91,7 +74,13 @@ export default function ComponentsDemoPage() {
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Success</p>
           <div>
             {ITEMS.slice(0, 4).map((item) => (
-              <ItemCard key={item.id} item={item} path={pathFor(item.locationId)} href={`/items/${item.id}`} />
+              <ItemCard
+                key={item.id}
+                item={item}
+                path={pathFor(item.locationId)}
+                href={`/items/${item.id}`}
+                prefetch={false}
+              />
             ))}
           </div>
         </div>
@@ -99,9 +88,9 @@ export default function ComponentsDemoPage() {
         <div>
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Loading</p>
           <div>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
+            <ItemCardSkeleton />
+            <ItemCardSkeleton />
+            <ItemCardSkeleton />
           </div>
         </div>
 
@@ -157,12 +146,11 @@ export default function ComponentsDemoPage() {
           Bottom nav
         </h2>
         <p className="text-[11px] text-mid">
-          The wireframes draw 3 tabs (Stuff / Activity / Home) and flag the count as an open question. This task&apos;s
-          Acceptance Criteria specifies 2 — shown below with &quot;Home&quot; dropped. Flagged for confirmation in the PR,
-          not decided silently.
+          The wireframes draw 3 tabs (Stuff / Activity / Home) and flag the count as an open question. The shipped
+          nav (src/lib/nav-tabs.ts, wired into the real app shell) uses 2 — shown below with &quot;Home&quot; dropped.
         </p>
         <div className="max-w-xs overflow-hidden rounded-[8px] border border-line">
-          <BottomNav tabs={NAV_TABS} activePath="/stuff" />
+          <BottomNav tabs={NAV_TABS} activePath="/" />
         </div>
         <div className="max-w-xs overflow-hidden rounded-[8px] border border-line">
           <BottomNav tabs={NAV_TABS} activePath="/activity" />

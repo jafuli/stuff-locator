@@ -9,6 +9,14 @@ export interface ItemCardProps {
   path: string[];
   /** Where this card links to. No item-detail route exists yet, so the caller decides. */
   href: string;
+  /**
+   * Passed straight through to next/link. Defaults to Link's own default
+   * (viewport-based prefetch). Callers linking to a route that doesn't
+   * exist yet — as of this component set, `/items/[id]` — should pass
+   * `false`: an in-viewport ItemCard otherwise gets prefetched automatically
+   * and produces real 404s in the browser console.
+   */
+  prefetch?: boolean;
 }
 
 /**
@@ -17,12 +25,13 @@ export interface ItemCardProps {
  * `.item` row exactly. No match-source tag slot (that decision was settled
  * ahead of this component set — see the task Notes).
  */
-export function ItemCard({ item, path, href }: ItemCardProps) {
+export function ItemCard({ item, path, href, prefetch }: ItemCardProps) {
   const lastTouched = item.lastMovedAt ?? item.addedAt;
 
   return (
     <Link
       href={href}
+      prefetch={prefetch}
       className="flex items-start justify-between gap-2 border-b border-[#ececec] py-[9px] outline-none last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,8 +36,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <SerwistProvider swUrl="/serwist/sw.js">{children}</SerwistProvider>
+      {/*
+        Fixed-height flex column so BottomNav (rendered via SiteNav below)
+        pins to the bottom of the viewport instead of getting pushed below
+        the fold by page content — the content area scrolls independently.
+        This also affects /~offline and /~components (both wired here at
+        the true root layout, not scoped to just / and /activity) — their
+        own <main>s still use min-h-dvh, which now leaves harmless extra
+        scroll slack on those two secondary/debug routes; flagged in the PR
+        rather than reworked here to keep the diff scoped to the real
+        Stuff/Activity flow.
+      */}
+      <body className="flex h-dvh flex-col overflow-hidden">
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <div className="flex-1 overflow-y-auto">{children}</div>
+          <SiteNav />
+        </SerwistProvider>
       </body>
     </html>
   );

@@ -40,8 +40,9 @@ npm run supabase:stop
 | `npm run start` | Serve a production build |
 | `npm run lint` | ESLint (Next config + typescript-eslint strict + jsx-a11y) |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run test` | Run the test suite once (Vitest) |
+| `npm run test` | Run the unit/component test suite once (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm run test:e2e` | Playwright UI-smoke check (builds, boots the app, checks it) |
 
 ## Layout
 
