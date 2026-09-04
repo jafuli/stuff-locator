@@ -21,8 +21,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
+      # typecheck must run before lint: it's what invokes `next typegen`,
+      # and ESLint's type-aware rules need the generated `PageProps`/
+      # `LayoutProps` route types to exist on a fresh checkout (.next/ is
+      # gitignored). A page using a typed dynamic-route helper —
+      # PageProps<'/items/[id]'> — is what first exposed this ordering gap;
+      # see the PR that added it.
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm run test
       - run: npm run build
       - name: Install Playwright browsers

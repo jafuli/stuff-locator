@@ -32,10 +32,7 @@ export function StuffList({ entries }: StuffListProps) {
   return (
     <div>
       {entries.map(({ item, path }) => (
-        // prefetch={false}: /items/[id] doesn't exist yet — an in-viewport
-        // ItemCard would otherwise be auto-prefetched by next/link and
-        // produce a real 404 in the browser console.
-        <ItemCard key={item.id} item={item} path={path} href={`/items/${item.id}`} prefetch={false} />
+        <ItemCard key={item.id} item={item} path={path} href={`/items/${item.id}`} />
       ))}
     </div>
   );
