@@ -1,11 +1,11 @@
 import { formatRelativeShort } from "@/lib/format-relative-time";
 import type { Item } from "@/lib/fixtures/types";
-import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { LocationBreadcrumb, type LocationBreadcrumbSegment } from "@/components/location-breadcrumb";
 
 export interface ItemDetailProps {
   item: Item;
   /** Already-resolved breadcrumb for item.locationId — see LocationBreadcrumb. */
-  path: string[];
+  segments: LocationBreadcrumbSegment[];
 }
 
 interface Field {
@@ -47,14 +47,14 @@ function fieldsFor(item: Item): Field[] {
  * so it's directly unit-testable — mirrors the split StuffList already makes
  * for the home route's list.
  */
-export function ItemDetail({ item, path }: ItemDetailProps) {
+export function ItemDetail({ item, segments }: ItemDetailProps) {
   const fields = fieldsFor(item);
 
   return (
     <div className="flex flex-col gap-3">
       <div>
         <h1 className="text-[18px] font-semibold text-ink">{item.name}</h1>
-        <LocationBreadcrumb path={path} />
+        <LocationBreadcrumb segments={segments} />
       </div>
 
       {fields.length > 0 ? (
