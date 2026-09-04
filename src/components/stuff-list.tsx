@@ -1,15 +1,18 @@
 import { ItemCard } from "@/components/item-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { LocationBreadcrumbSegment } from "@/components/location-breadcrumb";
 import type { Item } from "@/lib/fixtures/types";
 
 export interface StuffListEntry {
   item: Item;
-  /** Root→leaf breadcrumb names for item.locationId — already resolved by the caller. */
-  path: string[];
+  /** Root→leaf breadcrumb segments for item.locationId — already resolved by the caller. */
+  segments: LocationBreadcrumbSegment[];
 }
 
 export interface StuffListProps {
   entries: readonly StuffListEntry[];
+  /** Forwarded to each ItemCard — see its own doc comment. Defaults to false. */
+  linkLocationSegments?: boolean;
 }
 
 /**
@@ -24,15 +27,21 @@ export interface StuffListProps {
  * parent's only (and therefore "last") child, silently dropping every
  * divider. Matches the existing /~components catalog page's pattern.
  */
-export function StuffList({ entries }: StuffListProps) {
+export function StuffList({ entries, linkLocationSegments = false }: StuffListProps) {
   if (entries.length === 0) {
     return <EmptyState title="No items yet" description="Stash your first thing to see it here." />;
   }
 
   return (
     <div>
-      {entries.map(({ item, path }) => (
-        <ItemCard key={item.id} item={item} path={path} href={`/items/${item.id}`} />
+      {entries.map(({ item, segments }) => (
+        <ItemCard
+          key={item.id}
+          item={item}
+          segments={segments}
+          href={`/items/${item.id}`}
+          linkLocationSegments={linkLocationSegments}
+        />
       ))}
     </div>
   );

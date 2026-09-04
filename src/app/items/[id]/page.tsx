@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ItemDetail } from "@/components/item-detail";
 import { ITEMS } from "@/lib/fixtures/items";
 import { LOCATIONS } from "@/lib/fixtures/locations";
-import { getBreadcrumbNames } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 
 // Item detail: same fixture-read shape as the home route (src/app/page.tsx)
 // — find the item, resolve its breadcrumb, render. `notFound()` for an
@@ -16,7 +16,7 @@ export default async function Page(props: PageProps<"/items/[id]">) {
     notFound();
   }
 
-  const path = getBreadcrumbNames(item.locationId, LOCATIONS);
+  const segments = getBreadcrumbSegments(item.locationId, LOCATIONS);
 
   return (
     <main className="flex flex-col gap-3 p-4">
@@ -26,7 +26,7 @@ export default async function Page(props: PageProps<"/items/[id]">) {
       >
         ‹ Back to Stuff
       </Link>
-      <ItemDetail item={item} path={path} />
+      <ItemDetail item={item} segments={segments} />
     </main>
   );
 }

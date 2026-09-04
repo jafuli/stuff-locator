@@ -1,7 +1,7 @@
 import { StuffList, type StuffListEntry } from "@/components/stuff-list";
 import { ITEMS } from "@/lib/fixtures/items";
 import { LOCATIONS } from "@/lib/fixtures/locations";
-import { getBreadcrumbNames } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 
 // Wireframe screen 02, "Home — everything (default)": search box + the full
 // item list, each row showing its full location path. The "All/By place/
@@ -10,7 +10,7 @@ import { getBreadcrumbNames } from "@/lib/fixtures/location-path";
 export default function Page() {
   const entries: StuffListEntry[] = ITEMS.map((item) => ({
     item,
-    path: getBreadcrumbNames(item.locationId, LOCATIONS),
+    segments: getBreadcrumbSegments(item.locationId, LOCATIONS),
   }));
 
   return (
@@ -43,7 +43,11 @@ export default function Page() {
         />
       </div>
 
-      <StuffList entries={entries} />
+      {/*
+        linkLocationSegments turns each row's breadcrumb into real links to
+        /browse/[id] (AC #4) — the home page's entry point into Browse.
+      */}
+      <StuffList entries={entries} linkLocationSegments />
     </main>
   );
 }
