@@ -10,7 +10,14 @@ const item: Item = {
   lastMovedAt: new Date(),
 };
 
-const entries: StuffListEntry[] = [{ item, path: ["Garage", "Closet", "Toolbox", "Red box"] }];
+const segments = [
+  { id: "garage", name: "Garage" },
+  { id: "garage-closet", name: "Closet" },
+  { id: "garage-closet-toolbox", name: "Toolbox" },
+  { id: "garage-closet-toolbox-red-box", name: "Red box" },
+];
+
+const entries: StuffListEntry[] = [{ item, segments }];
 
 test("renders the empty state when there are no entries", () => {
   render(<StuffList entries={[]} />);
@@ -24,4 +31,11 @@ test("renders one ItemCard per entry, linked by item id", () => {
   expect(screen.getByText("Spare house keys")).toBeDefined();
   const link = screen.getByRole("link");
   expect(link.getAttribute("href")).toBe("/items/spare-house-keys");
+});
+
+test("forwards linkLocationSegments so breadcrumb segments become links", () => {
+  render(<StuffList entries={entries} linkLocationSegments />);
+  const links = screen.getAllByRole("link");
+  expect(links).toHaveLength(1 + segments.length);
+  expect(links.some((link) => link.getAttribute("href") === "/browse/garage-closet")).toBe(true);
 });

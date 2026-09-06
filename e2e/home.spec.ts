@@ -26,7 +26,13 @@ test("home route boots cleanly, shows the item list, and is keyboard-reachable",
   await expect(page.getByRole("link", { name: "Stuff" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Activity" })).toBeVisible();
 
-  expect(await tabUntilFocused(page, "Activity")).toBe(true);
+  // Raised from tabUntilFocused's default max of 25: each item row now
+  // contributes one link per breadcrumb segment in addition to its own
+  // item link (AC #4 — Browse entry points from the home page), so there
+  // are more real tab stops before reaching the bottom nav than there used
+  // to be. Still a genuine keyboard-reachability check, just over a longer
+  // — and now more richly interactive — tab order.
+  expect(await tabUntilFocused(page, "Activity", 40)).toBe(true);
 
   expect(consoleErrors).toEqual([]);
 });

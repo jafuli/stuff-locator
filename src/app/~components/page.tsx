@@ -7,11 +7,11 @@ import { BottomNav } from "@/components/bottom-nav";
 import { AutocompleteDemo } from "./autocomplete-demo";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
-import { getBreadcrumbNames, getFullLocationPaths } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments, getFullLocationPaths } from "@/lib/fixtures/location-path";
 import { NAV_TABS } from "@/lib/nav-tabs";
 
 const locationOptions = getFullLocationPaths(LOCATIONS);
-const pathFor = (locationId: string) => getBreadcrumbNames(locationId, LOCATIONS);
+const segmentsFor = (locationId: string) => getBreadcrumbSegments(locationId, LOCATIONS);
 
 export default function ComponentsDemoPage() {
   return (
@@ -58,10 +58,24 @@ export default function ComponentsDemoPage() {
         <h2 id="breadcrumb-heading" className="text-base font-semibold text-ink">
           Location breadcrumb
         </h2>
-        <LocationBreadcrumb path={["Bedroom", "Filing box"]} />
+        <LocationBreadcrumb
+          segments={[
+            { id: "bedroom", name: "Bedroom" },
+            { id: "bedroom-filing-box", name: "Filing box" },
+          ]}
+        />
         <div className="max-w-[320px] rounded-[7px] bg-wash p-3">
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Wraps at 320px, never truncates</p>
-          <LocationBreadcrumb path={["Garage", "Closet", "Toolbox", "Locked cabinet", "Top shelf", "Red box"]} />
+          <LocationBreadcrumb
+            segments={[
+              { id: "garage", name: "Garage" },
+              { id: "garage-closet", name: "Closet" },
+              { id: "garage-closet-toolbox", name: "Toolbox" },
+              { id: "garage-closet-toolbox-locked-cabinet", name: "Locked cabinet" },
+              { id: "garage-closet-toolbox-locked-cabinet-top-shelf", name: "Top shelf" },
+              { id: "garage-closet-toolbox-locked-cabinet-top-shelf-red-box", name: "Red box" },
+            ]}
+          />
         </div>
       </section>
 
@@ -74,7 +88,7 @@ export default function ComponentsDemoPage() {
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Success</p>
           <div>
             {ITEMS.slice(0, 4).map((item) => (
-              <ItemCard key={item.id} item={item} path={pathFor(item.locationId)} href={`/items/${item.id}`} />
+              <ItemCard key={item.id} item={item} segments={segmentsFor(item.locationId)} href={`/items/${item.id}`} />
             ))}
           </div>
         </div>
