@@ -44,7 +44,7 @@ RLS isolation is proven by an integration test against the local stack — see `
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Run the unit/component test suite once (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
-| `npm run test:rls` | RLS household-isolation integration test — requires `npm run supabase:start`; auto-loads `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` from `.env.rls.local` if present (`cp .env.rls.example .env.rls.local` once), otherwise export them yourself from `npx supabase status -o env` |
+| `npm run test:rls` | RLS household-isolation integration test — requires `npm run supabase:start`; auto-loads `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` from a gitignored `.env.rls.local` if present (write one once, from `npx supabase status -o env`), otherwise export them yourself before running |
 | `npm run test:e2e` | Playwright UI-smoke check (builds, boots the app, checks it) |
 
 ## Layout
