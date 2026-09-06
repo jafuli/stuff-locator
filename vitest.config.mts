@@ -12,6 +12,11 @@ export default defineConfig({
     // Without this, Vitest's default glob also picks up e2e/*.spec.ts and
     // tries to run it as a Vitest test — it imports Playwright's
     // incompatible test()/expect(), so it fails immediately.
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    //
+    // supabase/tests/** holds integration tests that need a live local
+    // Supabase stack (`supabase start`) — excluded here so plain `npm run
+    // test` (what CI runs, no Docker there) stays hermetic. Run them via
+    // `npm run test:rls` (vitest.integration.config.mts) instead.
+    exclude: [...configDefaults.exclude, "e2e/**", "supabase/tests/**"],
   },
 });

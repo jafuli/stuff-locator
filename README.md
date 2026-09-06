@@ -6,7 +6,7 @@ Full product and architecture context lives in [`CLAUDE.md`](./CLAUDE.md) and th
 
 ## Status
 
-Infra scaffold only — no data layer yet. `supabase/migrations/` is intentionally empty. Schema, RLS policies, and the four atomic RPC functions (`move_item`, `move_container`, `delete_container`, `redeem_invite`) are deliberately deferred to a Pair session (see the working agreement in `CLAUDE.md`) rather than written unattended.
+Schema + RLS landed: `households`, `household_members`, `locations`, `items` exist in `supabase/migrations/`, with row level security isolating every table to its own household (see [ADR 0003](./docs/adr/0003-schema-rls-foundations.md)). The four atomic RPC functions (`move_item`, `move_container`, `delete_container`, `redeem_invite`), any `src/app/api/**` route handlers, and wiring the frontend off its fixtures are still deferred to a Pair session (see the working agreement in `CLAUDE.md`).
 
 ## Prerequisites
 
@@ -29,7 +29,9 @@ npm run db:types         # regenerate src/lib/database.types.ts after any migrat
 npm run supabase:stop
 ```
 
-`src/lib/database.types.ts` currently ships as a hand-written placeholder matching an empty-schema `db:types` output — see the comment at the top of that file.
+`src/lib/database.types.ts` is generated from the real local schema — regenerate it (`npm run db:types`) after any new migration.
+
+RLS isolation is proven by an integration test against the local stack — see `npm run test:rls` below.
 
 ## Scripts
 
@@ -42,6 +44,7 @@ npm run supabase:stop
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Run the unit/component test suite once (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm run test:rls` | RLS household-isolation integration test — requires `npm run supabase:start` and `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` exported (printed by `supabase:start`) |
 | `npm run test:e2e` | Playwright UI-smoke check (builds, boots the app, checks it) |
 
 ## Layout

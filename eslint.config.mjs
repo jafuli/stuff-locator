@@ -39,6 +39,12 @@ const eslintConfig = defineConfig([
     rules: {
       "@typescript-eslint/consistent-type-definitions": "off",
       "@typescript-eslint/consistent-indexed-object-style": "off",
+      // The generic `Enums<>`/`CompositeTypes<>` helpers `supabase gen types
+      // typescript` always emits union `keyof DefaultSchema["Enums"]` (etc.)
+      // with a `{ schema: ... }` branch — harmless, but reads as redundant
+      // once a schema (like this one, so far) declares zero native Postgres
+      // enums/composite types, since `keyof {}` is `never`.
+      "@typescript-eslint/no-redundant-type-constituents": "off",
     },
   },
   // Override default ignores of eslint-config-next.
@@ -48,6 +54,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Supabase CLI's own ephemeral local-dev scratch directory (gitignored
+    // via supabase/.gitignore) — `supabase start` populates it with things
+    // like an edge-runtime stub function that isn't part of this app's
+    // TypeScript project and shouldn't be linted.
+    "supabase/.temp/**",
   ]),
 ]);
 
