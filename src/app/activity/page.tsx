@@ -1,12 +1,24 @@
-// Minimal placeholder so /activity is a real destination rather than a dead
-// link — the real "catch up" activity feed (wireframe screen 07) is a
-// separate future task. No data fetching happens here, so there's no
-// loading/error boundary to write for this route.
+import { ActivityFeed, type ActivityFeedEntry } from "@/components/activity-feed";
+import { getActivityEvents } from "@/lib/fixtures/activity";
+import { ITEMS } from "@/lib/fixtures/items";
+import { LOCATIONS } from "@/lib/fixtures/locations";
+import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
+
+// Catch up, core flow #4: a chronological "who changed what" feed derived
+// from ITEMS' own add/move provenance fields — see
+// src/lib/fixtures/activity.ts. Replaces the earlier "coming soon"
+// placeholder (Wire-the-Stuff-home-screen task, PR #3).
 export default function ActivityPage() {
+  const events = getActivityEvents(ITEMS);
+  const entries: ActivityFeedEntry[] = events.map((event) => ({
+    event,
+    segments: getBreadcrumbSegments(event.item.locationId, LOCATIONS),
+  }));
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+    <main className="flex flex-col gap-3 p-4">
       <h1 className="text-[16px] font-semibold text-ink">Activity</h1>
-      <p className="text-[12.5px] text-mid">Coming soon — this is where you&apos;ll catch up on who moved what.</p>
+      <ActivityFeed entries={entries} />
     </main>
   );
 }
