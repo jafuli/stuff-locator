@@ -26,13 +26,17 @@ self-reference. It's read-only and never mutates anything, so it isn't one of
 the four excluded RPCs — it's plumbing the RLS design needs, not an atomic
 write operation.
 
-**`households` gets a second, narrower INSERT policy allowing any
-authenticated user.** The main policy (`is_household_member(id)`) covers
-select/update/delete correctly, but a brand-new household has no members yet
-— "must already be a member" is unsatisfiable for a household's own first
-row. Postgres OR's multiple permissive policies together, so a second
-`FOR INSERT WITH CHECK (true)` policy only loosens INSERT; select/update/delete
-stay member-gated through the first policy.
+**`households` is member-gated for every operation, including INSERT — with
+no bootstrap exception, and that's a correction, not the original design.**
+An earlier draft added a second, permissive `FOR INSERT WITH CHECK (true)`
+policy reasoning that a brand-new household has no members yet, so "must
+already be a member" is unsatisfiable for its own first row. Self-review
+caught that this policy was inert for any real client: PostgREST's
+`RETURNING` (what `supabase-js`'s `.insert().select()` sends) is itself
+gated by the SELECT policy, so a non-member creator could insert a household
+row but never read its id back — the policy was pure attack surface (blind
+inserts of arbitrary rows by any authenticated user) with no matching
+benefit, and had zero test coverage in either direction. Removed.
 
 **Explicit `GRANT`s to `authenticated`, none to `anon`.** Recent Supabase CLI
 defaults (see the `auto_expose_new_tables` comment in `supabase/config.toml`)
@@ -45,14 +49,21 @@ since older guides assume the legacy auto-expose behavior.
   *different* household than the item, or a location's `parent_id` crossing
   households. CLAUDE.md assigns this class of invariant to the future
   `move_item`/`move_container` RPCs ("under lock"), not to static schema.
-- The very first `household_members` row for a freshly-created household (the
-  founder adding themselves) has no RLS path — unlike `households`, a matching
-  bootstrap policy here would let any authenticated user insert *arbitrary*
-  membership rows, a real privilege-escalation hole. CLAUDE.md already
-  earmarks this exact shape of problem for a privileged path (`redeem_invite`,
-  run with the service-role key "where the caller isn't yet a household
-  member") — the founder case needs the same treatment in a follow-up
-  RPC/route-handler task.
+- Creating a household, and adding its first (founder) member, are the same
+  shape of problem and neither has an RLS path — both require the creator to
+  act before they're a member of anything. CLAUDE.md already earmarks this
+  exact shape of problem for a privileged path (`redeem_invite`, run with the
+  service-role key "where the caller isn't yet a household member") — a
+  future RPC needs to create the household row and the founder's membership
+  row together, atomically, under the service role, and hand the id back
+  directly rather than relying on the client re-reading through PostgREST.
+  Not solved here — RPCs are explicitly out of scope for this task.
+- `items.added_by` is `not null` (an item always has a creator), so unlike
+  `last_moved_by` it can't be `on delete set null` — it defaults to
+  `on delete no action`, meaning deleting an `auth.users` row (account
+  closure) fails with a FK violation for anyone who's ever added an item.
+  Not contradicted by the settled schema, but account deletion will need an
+  answer for this eventually.
 
 ## Rejected
 
@@ -83,3 +94,8 @@ since older guides assume the legacy auto-expose behavior.
 - The next data-layer task (the four RPCs) inherits two known, named gaps:
   cross-household referential consistency, and household/first-member
   bootstrap — both called out above rather than silently patched.
+- A same-PR self-review pass caught the inert `households` bootstrap policy
+  above by actually exercising it against a live local stack (`.insert()`
+  followed by a read-back as the same non-member user) rather than trusting
+  that "INSERT succeeds" meant "this works" — the shipped migration reflects
+  the fix, not the original draft.

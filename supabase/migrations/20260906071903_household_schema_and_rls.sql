@@ -58,6 +58,13 @@ create table public.items (
   location_id uuid not null references public.locations (id) on delete restrict,
   name text not null,
   detail text,
+  -- Not null (an item always has a creator) so, unlike last_moved_by below,
+  -- this can't be ON DELETE SET NULL — it defaults to ON DELETE NO ACTION,
+  -- meaning deleting an auth.users row (e.g. account closure) will fail with
+  -- a FK violation for anyone who has ever added an item. Not contradicted
+  -- by the settled schema (which doesn't specify on-delete behavior here)
+  -- and arguably desirable (preserves attribution), but account deletion
+  -- will need an answer for this — flagging for whoever builds that.
   added_by uuid not null references auth.users (id),
   added_at timestamptz not null default now(),
   last_moved_by uuid references auth.users (id) on delete set null,
@@ -118,31 +125,33 @@ grant select, insert, update, delete on public.household_members to authenticate
 grant select, insert, update, delete on public.locations to authenticated, service_role;
 grant select, insert, update, delete on public.items to authenticated, service_role;
 
--- households: member-gated for select/update/delete. A second, narrower
--- policy allows INSERT for any authenticated user — a brand-new household
--- has no members yet, so "must already be a member" is unsatisfiable for
--- its own first row. Postgres OR's multiple permissive policies together,
--- so this only loosens INSERT; select/update/delete stay member-gated.
+-- households and household_members are both member-gated for every
+-- operation, including INSERT — deliberately with no "any authenticated
+-- user" bootstrap policy for creating a brand-new household or adding its
+-- first member. An earlier draft added a permissive `FOR INSERT WITH CHECK
+-- (true)` policy on households reasoning that a brand-new household has no
+-- members yet, so "must already be a member" is unsatisfiable for its own
+-- first row — but that policy turned out to be inert for any real client:
+-- PostgREST's `RETURNING` (what `.insert().select()` sends) is itself
+-- gated by the SELECT policy, so a non-member creator could insert a
+-- household but never read its id back, making the bootstrap policy an
+-- attack surface (blind inserts of arbitrary rows) with no matching
+-- benefit. Removed rather than kept as false reassurance.
+--
+-- Both gaps — creating a household, and adding its first (founder) member —
+-- are the same shape of problem CLAUDE.md already earmarks a privileged
+-- path for (redeem_invite, run with the service-role key "where the caller
+-- isn't yet a household member"): a future RPC needs to create the
+-- household row and its founder's membership row together, atomically,
+-- under the service role, and hand the id back directly rather than
+-- relying on the client re-reading through PostgREST. Not solved here —
+-- RPCs are explicitly out of scope for this task.
 create policy households_member_access on public.households
   for all
   to authenticated
   using (public.is_household_member(id))
   with check (public.is_household_member(id));
 
-create policy households_insert_bootstrap on public.households
-  for insert
-  to authenticated
-  with check (true);
-
--- household_members: gated on its own household_id. Note this means the
--- very first membership row for a freshly-created household (the founder
--- adding themselves) has no policy path here — deliberately not solved by
--- a matching bootstrap policy, since (unlike households) letting any
--- authenticated user insert arbitrary membership rows would be a real
--- privilege-escalation hole. CLAUDE.md already earmarks this exact shape of
--- problem for a privileged path (redeem_invite, run with the service-role
--- key "where the caller isn't yet a household member") — the founder case
--- needs the same treatment in a follow-up RPC/route-handler task.
 create policy household_members_access on public.household_members
   for all
   to authenticated
