@@ -3,10 +3,13 @@
 // Supabase stack:
 //
 //   npm run supabase:start
-//   export SUPABASE_URL=http://127.0.0.1:54321       # API_URL from the start output
-//   export SUPABASE_ANON_KEY=<ANON_KEY from the start output>
-//   export SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY from the start output>
+//   cp .env.rls.example .env.rls.local   # once — see that file's header
 //   npm run test:rls
+//
+// `npm run test:rls` auto-loads SUPABASE_URL/SUPABASE_ANON_KEY/
+// SUPABASE_SERVICE_ROLE_KEY from .env.rls.local (via `node --env-file-if-exists`,
+// see package.json) if it exists; otherwise export them yourself from
+// `npx supabase status -o env`'s API_URL/ANON_KEY/SERVICE_ROLE_KEY.
 //
 // Seeds two households with one member each (via the service-role client,
 // which bypasses RLS — normal for test setup), then proves:
@@ -22,9 +25,10 @@ function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(
-      `Missing ${name}. Run \`npm run supabase:start\` and export the printed ` +
-        "API_URL/ANON_KEY/SERVICE_ROLE_KEY as SUPABASE_URL/SUPABASE_ANON_KEY/" +
-        "SUPABASE_SERVICE_ROLE_KEY before `npm run test:rls`.",
+      `Missing ${name}. Either \`cp .env.rls.example .env.rls.local\` (after ` +
+        "`npm run supabase:start`) so `npm run test:rls` loads it automatically, " +
+        "or export SUPABASE_URL/SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY " +
+        "yourself from `npx supabase status -o env`.",
     );
   }
   return value;
