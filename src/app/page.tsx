@@ -1,4 +1,5 @@
-import { StuffList, type StuffListEntry } from "@/components/stuff-list";
+import type { StuffListEntry } from "@/components/stuff-list";
+import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import { ITEMS } from "@/lib/fixtures/items";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -18,36 +19,13 @@ export default function Page() {
       <h1 className="text-[16px] font-semibold text-ink">Our stuff</h1>
 
       {/*
-        Visual-only per this task's scope — real search is a separate future
-        task. Enabled (not disabled) so it matches the wireframe's fidelity
-        and stays keyboard-focusable; uncontrolled (no value/onChange) so
-        typing is inert without React complaining about a value-less
-        controlled input. type="text" + explicit role="searchbox" rather
-        than type="search": Chromium injects a client-only inline style onto
-        native <input type="search"> elements (its own clear-button
-        bookkeeping), which caused a real hydration mismatch against the
-        server-rendered HTML. This sidesteps that while keeping the same
-        accessible role and visual result.
+        SearchableStuffList owns the search input's state and filters
+        `entries` client-side (src/lib/fixtures/search.ts) — a real,
+        working filter now, not the earlier visual-only placeholder.
+        Entries themselves are still resolved server-side here, not
+        fetched by the client component.
       */}
-      <div role="search">
-        <label htmlFor="stuff-search" className="sr-only">
-          Search your stuff
-        </label>
-        <input
-          id="stuff-search"
-          type="text"
-          role="searchbox"
-          placeholder="Search…"
-          autoComplete="off"
-          className="w-full rounded-[9px] border-[1.5px] border-line px-[10px] py-[8px] text-[12.5px] text-ink outline-none placeholder:text-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        />
-      </div>
-
-      {/*
-        linkLocationSegments turns each row's breadcrumb into real links to
-        /browse/[id] (AC #4) — the home page's entry point into Browse.
-      */}
-      <StuffList entries={entries} linkLocationSegments />
+      <SearchableStuffList entries={entries} />
     </main>
   );
 }
