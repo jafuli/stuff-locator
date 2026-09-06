@@ -20,27 +20,39 @@ export interface ActivityEvent {
  * fields — no new fields invented.
  *
  * - An "added" event fires when both `addedBy` and `addedAt` are set.
- * - A "moved" event fires only when `lastMovedBy` is set AND `lastMovedAt`
- *   is strictly after `addedAt` — i.e. a genuinely distinct event from the
- *   add, not just every item's move fields getting initialized to its add
- *   fields at creation time (which is how every never-moved fixture item is
- *   actually shaped: `lastMovedAt === addedAt`, no `lastMovedBy`). An item
- *   with `lastMovedBy` set but no `addedAt` to compare against is treated
- *   as a real move — there's nothing to compare it to, so the recorded
- *   mover is trusted.
+ * - A "moved" event fires whenever `lastMovedBy` and `lastMovedAt` are both
+ *   set, UNLESS it would just be a duplicate of the "added" event above —
+ *   i.e. only suppressed when an "added" event was actually pushed for this
+ *   item AND `lastMovedAt` doesn't postdate `addedAt`. This is how every
+ *   never-moved fixture item is actually shaped: `lastMovedAt === addedAt`,
+ *   no `lastMovedBy`, so the "moved" branch never even reaches the
+ *   duplicate check for those.
+ *
+ *   Deliberately NOT gated on "is this distinct from the add" when there's
+ *   no add event to be a duplicate of (`addedBy` or `addedAt` missing) —
+ *   a record with a genuine `lastMovedBy` but incomplete add provenance
+ *   (plausible once this reads from a real, evolving Supabase table
+ *   instead of a hand-written fixture) must still surface its move; the
+ *   earlier version of this logic compared `lastMovedAt` against `addedAt`
+ *   unconditionally and silently dropped that item from the feed entirely
+ *   when the comparison didn't favor it.
  */
 export function getActivityEvents(items: readonly Item[]): ActivityEvent[] {
   const events: ActivityEvent[] = [];
 
   for (const item of items) {
-    if (item.addedBy && item.addedAt) {
-      events.push({ id: `${item.id}:added`, verb: "added", actor: item.addedBy, item, at: item.addedAt });
+    const { addedBy, addedAt, lastMovedBy, lastMovedAt } = item;
+    const addedEventPushed = Boolean(addedBy && addedAt);
+
+    if (addedBy && addedAt) {
+      events.push({ id: `${item.id}:added`, verb: "added", actor: addedBy, item, at: addedAt });
     }
 
-    const { lastMovedBy, lastMovedAt, addedAt } = item;
-    const isDistinctMove = lastMovedBy && lastMovedAt && (!addedAt || lastMovedAt.getTime() > addedAt.getTime());
-    if (lastMovedBy && lastMovedAt && isDistinctMove) {
-      events.push({ id: `${item.id}:moved`, verb: "moved", actor: lastMovedBy, item, at: lastMovedAt });
+    if (lastMovedBy && lastMovedAt) {
+      const isDuplicateOfAdd = addedEventPushed && addedAt !== undefined && lastMovedAt.getTime() <= addedAt.getTime();
+      if (!isDuplicateOfAdd) {
+        events.push({ id: `${item.id}:moved`, verb: "moved", actor: lastMovedBy, item, at: lastMovedAt });
+      }
     }
   }
 
