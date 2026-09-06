@@ -5,12 +5,12 @@ import userEvent from "@testing-library/user-event";
 // would shadow the global Error class within this file.
 import ErrorBoundary from "@/app/error";
 
-test("renders the error state and calls reset when Retry is clicked", async () => {
-  const reset = vi.fn();
-  render(<ErrorBoundary error={new Error("boom")} reset={reset} />);
+test("renders the error state with a real heading and calls retry when Retry is clicked", async () => {
+  const retry = vi.fn();
+  render(<ErrorBoundary error={new Error("boom")} retry={retry} />);
 
-  expect(screen.getByText("Couldn't load your stuff")).toBeDefined();
+  expect(screen.getByRole("heading", { level: 1, name: "Couldn't load your stuff" })).toBeDefined();
 
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-  expect(reset).toHaveBeenCalledTimes(1);
+  expect(retry).toHaveBeenCalledTimes(1);
 });
