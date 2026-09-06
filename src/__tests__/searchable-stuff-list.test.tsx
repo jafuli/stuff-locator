@@ -46,3 +46,21 @@ test("clearing the input restores the full list", async () => {
   expect(screen.getByText("Passport")).toBeDefined();
   expect(screen.getByText("Camping tent")).toBeDefined();
 });
+
+test("narrowing the list announces the result count via a status region", async () => {
+  const user = userEvent.setup();
+  render(<SearchableStuffList entries={entries} />);
+
+  expect(screen.getByRole("status").textContent).toBe("");
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
+  expect(screen.getByRole("status").textContent).toBe("1 result found");
+});
+
+test("a query matching nothing announces zero results via the status region", async () => {
+  const user = userEvent.setup();
+  render(<SearchableStuffList entries={entries} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "nonexistent");
+  expect(screen.getByRole("status").textContent).toBe("0 results found");
+});

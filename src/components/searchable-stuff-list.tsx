@@ -27,6 +27,7 @@ export function SearchableStuffList({ entries }: SearchableStuffListProps) {
   const matchedIds = new Set(filterItems(entries.map((entry) => entry.item), query).map((item) => item.id));
   const visibleEntries = entries.filter((entry) => matchedIds.has(entry.item.id));
   const isSearching = query.trim() !== "";
+  const resultCount = visibleEntries.length;
 
   return (
     <>
@@ -55,6 +56,18 @@ export function SearchableStuffList({ entries }: SearchableStuffListProps) {
           className="w-full rounded-[9px] border-[1.5px] border-line px-[10px] py-[8px] text-[12.5px] text-ink outline-none placeholder:text-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         />
       </div>
+
+      {/*
+        Narrowing the list (or swapping to the "No matches" empty state) is
+        otherwise a silent DOM change — a screen reader user typing a query
+        gets no signal that anything happened. This sr-only status announces
+        the result count instead of the whole list, so it doesn't read out
+        every item's text on each keystroke; role="status" + aria-live are
+        both set (some assistive tech only picks up one or the other).
+      */}
+      <p aria-live="polite" role="status" className="sr-only">
+        {isSearching ? `${resultCount.toString()} ${resultCount === 1 ? "result" : "results"} found` : ""}
+      </p>
 
       {isSearching && visibleEntries.length === 0 ? (
         <EmptyState title="No matches" description="Nothing matches that search. Try another word." />
