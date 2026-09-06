@@ -31,17 +31,19 @@ Explicitly out of scope for v1: whole-house inventory, any LLM/generative featur
 
 ## Working agreement for this repo
 
+> **Pair-mode restriction lifted, for now (2026-09-03, Portfolio Hub Design Journal).** Itamar: "everything is Autonomous-safe. no pair programming limitations for now, in stuff locator and in general." The `Mode` gate below is currently **not enforced** — the scheduled task watcher picks the highest-priority `Ready for Claude` task regardless of Mode, and a `Pair`-tagged task can be dispatched and implemented unattended. Everything else (Teaching PR format, frontend DoD, never merging your own PR, flagging ambiguity instead of guessing) is unchanged. The `Mode` property still exists on task rows and still records what a task *would* be gated as — it's the mechanism to bring the restriction back, not dead metadata. This is explicitly reversible; if the restriction returns, revert this note and re-enable the Mode filter in the scheduled task's prompt.
+
 Every task in the Notion queue carries a **Mode** that governs whether it can be done unattended:
 
 | Mode | What happens | Runs unattended? |
 |---|---|---|
 | Autonomous | Claude builds it alone, opens a teaching PR. UI, components, styling, tests, content, config, refactors. | Yes |
 | Prep for Pair | Claude writes the spec, scaffolds files, stubs signatures, writes failing tests — then stops. No implementation. | Yes |
-| Pair | Itamar at the keyboard. Data layer, API routes, auth/login. Claude assists, does not drive. | **Never** |
+| Pair | Itamar at the keyboard. Data layer, API routes, auth/login. Claude assists, does not drive. | **Never**, unless the restriction above is lifted |
 
-For scheduled/unattended runs: only pick up tasks that are both `Ready for Claude` **and** `Autonomous`. If the only ready work is `Pair`, do nothing and say so — never implement a Pair task unattended, regardless of priority.
+For scheduled/unattended runs, while the restriction above is active: only pick up tasks that are both `Ready for Claude` **and** `Autonomous`. If the only ready work is `Pair`, do nothing and say so — never implement a Pair task unattended, regardless of priority.
 
-Why the split: the target roles interview hard on backend, which is the rusty area, so data layer / API routes / auth are written by Itamar so he can defend them in an interview. Everything else is delegated.
+Why the split exists at all: the target roles interview hard on backend, which is the rusty area, so data layer / API routes / auth were meant to be written by Itamar so he can defend them in an interview. That reasoning isn't wrong — it's just not the active constraint right now, per the note above.
 
 ### Teaching PR format
 
