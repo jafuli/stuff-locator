@@ -74,12 +74,13 @@ test("empty fields on sign-in show real inline errors and never navigate away", 
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
-test("no session means no sign-out control on /sign-in itself", async ({ page }) => {
-  // Regression coverage — see sign-up.spec.ts's matching comment.
-  // Previously visible and clickable here, which never actually redirected
-  // anywhere new (already on /sign-in) and left its own loading state
-  // stuck on "Signing out…" forever.
+test("the app's bottom nav (tabs and sign-out alike) doesn't appear on /sign-in itself", async ({ page }) => {
+  // Regression coverage — see sign-up.spec.ts's matching comment. The
+  // sign-out piece of this used to be visible and clickable here too,
+  // which never actually redirected anywhere new (already on /sign-in)
+  // and left its own loading state stuck on "Signing out…" forever.
   await page.goto("/sign-in");
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 });
 

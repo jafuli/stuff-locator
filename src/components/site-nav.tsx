@@ -6,6 +6,16 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { NAV_TABS } from "@/lib/nav-tabs";
 
 /**
+ * Standalone auth pages — not "the main app" in the sense this nav means.
+ * Not a route-group restructure (see git history/PR discussion): the app's
+ * one genuine not-found.tsx can only ever be scoped to the true root
+ * layout, so moving SiteNav into a nested group layout would also silently
+ * strip the nav off the existing 404 page — a bigger, riskier change than
+ * "don't show tabs on two auth pages" asked for.
+ */
+const ROUTES_WITHOUT_NAV = ["/sign-up", "/sign-in"];
+
+/**
  * The one place that reads the router. BottomNav itself is deliberately
  * prop-driven (see its own doc comment) so it stays a plain,
  * server-renderable, easily-testable component — Next.js doesn't support
@@ -17,13 +27,19 @@ import { NAV_TABS } from "@/lib/nav-tabs";
  * dedicated in-browser check.
  *
  * SignOutButton is rendered here (not inside BottomNav) so BottomNav's own
- * 2-tab contract stays untouched. It's self-contained about whether to show
- * anything at all (renders null with no active session — see its own doc
- * comment), so this stays a plain, unconditional render regardless of
- * auth state, including on /sign-up and /sign-in themselves.
+ * 2-tab contract stays untouched. It's already self-contained about
+ * whether to show anything (renders null with no active session — see its
+ * own doc comment), but that alone doesn't cover /sign-up/ /sign-in
+ * themselves for an already-signed-in visitor who navigates back to them
+ * manually — ROUTES_WITHOUT_NAV hides the whole nav there unconditionally,
+ * regardless of session state, since those pages are meant to be
+ * standalone either way.
  */
 export function SiteNav() {
   const pathname = usePathname();
+  if (ROUTES_WITHOUT_NAV.includes(pathname)) {
+    return null;
+  }
   return (
     <>
       <BottomNav tabs={NAV_TABS} activePath={pathname} />

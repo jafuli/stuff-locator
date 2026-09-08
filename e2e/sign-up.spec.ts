@@ -28,11 +28,13 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
 
   await expect(page.getByRole("heading", { level: 1, name: "Create your account" })).toBeVisible();
 
-  // Regression coverage: the sign-out control used to render unconditionally,
-  // including here — confusing on a page you can't be signed out of yet,
-  // and clicking it while already on /sign-in got its own loading state
-  // stuck (see sign-out-button.tsx's comment). It should be entirely absent
-  // until there's an actual session.
+  // Regression coverage: the app's bottom nav (Stuff/Activity tabs +
+  // sign-out control) used to render unconditionally, including here — the
+  // tabs point at fixture-backed app content unrelated to signing up, and
+  // showing "Sign out" on a page you can't be signed out of yet was its
+  // own bug (see site-nav.tsx / sign-out-button.tsx). Neither belongs on
+  // this standalone page, so the whole nav should be entirely absent.
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 
   const email = `e2e-signup-${randomUUID()}@example.com`;
@@ -43,7 +45,10 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await page.waitForURL("/");
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
 
-  // Now that signUp() actually returned a session, the control shows up.
+  // / is a real app route (not one of ROUTES_WITHOUT_NAV) and signUp()
+  // actually returned a session, so the nav — tabs and sign-out alike —
+  // is back.
+  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

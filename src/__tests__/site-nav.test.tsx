@@ -38,3 +38,15 @@ test("marks the Activity tab active on /activity", () => {
   expect(screen.getByRole("link", { name: "Activity" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "Stuff" }).getAttribute("aria-current")).toBeNull();
 });
+
+test("renders nothing on /sign-up — the Stuff/Activity tabs don't belong on a standalone auth page", () => {
+  usePathname.mockReturnValue("/sign-up");
+  const { container } = render(<SiteNav />);
+  expect(container.firstChild).toBeNull();
+});
+
+test("renders nothing on /sign-in", () => {
+  usePathname.mockReturnValue("/sign-in");
+  const { container } = render(<SiteNav />);
+  expect(container.firstChild).toBeNull();
+});
