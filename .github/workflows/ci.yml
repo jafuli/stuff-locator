@@ -9,9 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Placeholders, not secrets — nothing in this scaffold actually calls
-      # Supabase at build time. They only need to satisfy the Zod shape
-      # check in src/lib/env.ts.
+      # Placeholders, not secrets. Good enough for typecheck/lint/test/build
+      # and the pre-existing fixture-backed routes, none of which call
+      # Supabase — they only need to satisfy the Zod shape check in
+      # src/lib/env.ts. The new auth e2e specs need a real backend (there's
+      # no way to fake Supabase Auth), so the "Start Supabase" step below
+      # overwrites these with real local values via $GITHUB_ENV before the
+      # UI smoke test step runs.
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
     steps:
@@ -33,5 +37,28 @@ jobs:
       - run: npm run build
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+      # Real local Supabase stack, needed only from here on: the new
+      # sign-up/sign-in/sign-out specs exercise actual Supabase Auth, not a
+      # fake. `supabase` is already a devDependency, so `npx supabase`
+      # needs no separate install; `supabase start` applies
+      # supabase/migrations/ automatically. `supabase status -o env` prints
+      # API_URL/ANON_KEY/SERVICE_ROLE_KEY (see supabase/tests/
+      # rls-household-isolation.test.ts's own doc comment) — remapped here
+      # to the NEXT_PUBLIC_* names src/lib/env.ts expects, and appended to
+      # $GITHUB_ENV so every later step (including the rebuild inside
+      # Playwright's own webServer command) sees the real values. This has
+      # to happen before that rebuild specifically, because NEXT_PUBLIC_*
+      # vars are inlined at build time, not read at runtime.
+      - name: Start Supabase and wire real env vars for e2e
+        run: |
+          npx supabase start
+          npx supabase status -o env > /tmp/supabase-status.env
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$(grep '^API_URL=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
+          } >> "$GITHUB_ENV"
       - name: UI smoke test
         run: npm run test:e2e
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop
