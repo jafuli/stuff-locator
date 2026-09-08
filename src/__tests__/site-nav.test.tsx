@@ -10,7 +10,15 @@ vi.mock("next/navigation", () => ({ usePathname, useRouter: () => ({ push: vi.fn
 // to have real values in a bare `vitest run` outside of CI's placeholder
 // env block. Mocked here so this stays a true unit test of SiteNav's own
 // composition, not an incidental test of env validation.
-vi.mock("@/server/db/client", () => ({ createClient: () => ({ auth: { signOut: vi.fn() } }) }));
+vi.mock("@/server/db/client", () => ({
+  createClient: () => ({
+    auth: {
+      signOut: vi.fn(),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    },
+  }),
+}));
 
 // Static import is safe here: vi.mock calls are hoisted above imports, so
 // next/navigation and @/server/db/client are already mocked by the time

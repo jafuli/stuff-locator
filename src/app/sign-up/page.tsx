@@ -5,8 +5,9 @@ import { SignUpForm } from "@/components/sign-up-form";
 // description for what that means today: a freshly signed-up user has zero
 // households after this, and every other route keeps rendering fixtures
 // completely unchanged. Renders inside the app's one shared shell
-// (src/app/layout.tsx), so the bottom nav / sign-out strip show here too —
-// see site-nav.tsx's comment for why that's accepted rather than fixed here.
+// (src/app/layout.tsx), so the bottom nav shows here too — the sign-out
+// control doesn't, since SignOutButton only renders with an active session
+// (see its own comment), and there isn't one yet on this page.
 export default function SignUpPage() {
   return (
     <main className="flex flex-col gap-3 p-4">

@@ -28,6 +28,13 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
 
   await expect(page.getByRole("heading", { level: 1, name: "Create your account" })).toBeVisible();
 
+  // Regression coverage: the sign-out control used to render unconditionally,
+  // including here — confusing on a page you can't be signed out of yet,
+  // and clicking it while already on /sign-in got its own loading state
+  // stuck (see sign-out-button.tsx's comment). It should be entirely absent
+  // until there's an actual session.
+  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+
   const email = `e2e-signup-${randomUUID()}@example.com`;
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
@@ -35,6 +42,9 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
 
   await page.waitForURL("/");
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+
+  // Now that signUp() actually returned a session, the control shows up.
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

@@ -17,20 +17,17 @@ import { NAV_TABS } from "@/lib/nav-tabs";
  * dedicated in-browser check.
  *
  * SignOutButton is rendered here (not inside BottomNav) so BottomNav's own
- * 2-tab contract stays untouched. Because there's a single root layout with
- * no route groups yet, this whole shell — tabs and sign-out strip alike —
- * also renders on /sign-up and /sign-in themselves; see those pages' own
- * comment for why that's a deliberate, scoped-down call for this task
- * rather than an oversight.
+ * 2-tab contract stays untouched. It's self-contained about whether to show
+ * anything at all (renders null with no active session — see its own doc
+ * comment), so this stays a plain, unconditional render regardless of
+ * auth state, including on /sign-up and /sign-in themselves.
  */
 export function SiteNav() {
   const pathname = usePathname();
   return (
     <>
       <BottomNav tabs={NAV_TABS} activePath={pathname} />
-      <div className="flex justify-center border-t border-line bg-wash py-1.5">
-        <SignOutButton />
-      </div>
+      <SignOutButton />
     </>
   );
 }
