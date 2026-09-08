@@ -5,7 +5,7 @@ import { ITEMS } from "@/lib/fixtures/items";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 
-test("renders the home heading and a labelled, non-functional search input", () => {
+test("renders the home heading and a labelled, working search input", () => {
   render(<Page />);
   expect(screen.getByRole("heading", { level: 1, name: "Our stuff" })).toBeDefined();
 
