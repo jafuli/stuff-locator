@@ -41,11 +41,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         pins to the bottom of the viewport instead of getting pushed below
         the fold by page content — the content area scrolls independently.
         This also affects /~offline and /~components (both wired here at
-        the true root layout, not scoped to just / and /activity) — their
-        own <main>s still use min-h-dvh, which now leaves harmless extra
-        scroll slack on those two secondary/debug routes; flagged in the PR
-        rather than reworked here to keep the diff scoped to the real
-        Stuff/Activity flow.
+        the true root layout, not scoped to just / and /activity). /~offline
+        used to leave extra scroll slack under this shell (its own <main>
+        used min-h-dvh, forcing a full viewport height on top of this
+        already-constrained container) — fixed in ~offline/page.tsx
+        (min-h-full instead). /~components never had the same issue — its
+        content naturally scrolls within this shared container.
       */}
       <body className="flex h-dvh flex-col overflow-hidden">
         <SerwistProvider swUrl="/serwist/sw.js">
