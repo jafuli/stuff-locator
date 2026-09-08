@@ -20,11 +20,12 @@ const eslintConfig = defineConfig([
     languageOptions: {
       parserOptions: {
         projectService: {
-          // Root-level *.config.mjs files aren't part of tsconfig.json's
-          // `include` (and shouldn't be — they run under Node, not the app's
-          // DOM lib). Let typescript-eslint lint them without type info
-          // instead of erroring that they're outside the project.
-          allowDefaultProject: ["*.config.mjs"],
+          // Root-level *.config.mjs files (and scripts/*.mjs, e.g.
+          // free-port.mjs) aren't part of tsconfig.json's `include` (and
+          // shouldn't be — they run under Node, not the app's DOM lib). Let
+          // typescript-eslint lint them without type info instead of
+          // erroring that they're outside the project.
+          allowDefaultProject: ["*.config.mjs", "scripts/*.mjs"],
         },
         tsconfigRootDir: import.meta.dirname,
       },

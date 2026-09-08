@@ -6,8 +6,10 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "predev": "node scripts/free-port.mjs",
     "dev": "next dev",
     "build": "next build",
+    "prestart": "node scripts/free-port.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typegen": "next typegen",
