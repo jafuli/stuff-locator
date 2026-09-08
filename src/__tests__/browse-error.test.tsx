@@ -3,13 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 // Named ErrorBoundary locally — importing the default export as `Error`
 // would shadow the global Error class within this file.
-import ErrorBoundary from "@/app/items/[id]/error";
+import ErrorBoundary from "@/app/browse/error";
 
-test("renders the item-detail error state with a real heading and calls retry when Retry is clicked", async () => {
+test("renders the Browse error state with a real heading and calls retry when Retry is clicked", async () => {
   const retry = vi.fn();
   render(<ErrorBoundary error={new Error("boom")} retry={retry} />);
 
-  expect(screen.getByRole("heading", { level: 1, name: "Couldn't load this item" })).toBeDefined();
+  expect(screen.getByRole("heading", { level: 1, name: "Couldn't load rooms" })).toBeDefined();
 
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);

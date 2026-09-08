@@ -12,9 +12,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 //
 // Uses `retry` (stable as of Next 16.3, per node_modules/next/dist/docs) —
 // the currently-recommended prop name, documented as preferred over
-// `reset` in most cases. The pre-existing root error.tsx still uses
-// `reset` (written before this stabilized); flagged as a follow-up in the
-// PR rather than migrated here, to keep this diff scoped to the new route.
+// `reset` in most cases. The root error.tsx now also uses `retry` (see its
+// own comment) — every error boundary in the repo is consistent.
+//
+// Renders EmptyState as this page's only content: the success-case
+// items/[id] route has its own <h1> (the item's name), but that isn't in
+// the tree here — an error boundary replaces the segment's content, it
+// doesn't sit alongside it. So titleAs="h1" gives this route its own real
+// heading instead of shipping with none.
 export default function Error({
   error,
   retry,
@@ -33,6 +38,7 @@ export default function Error({
     <main className="flex flex-1 flex-col items-center justify-center p-6">
       <EmptyState
         title="Couldn't load this item"
+        titleAs="h1"
         description="Something went wrong. Check your connection and try again."
         action={
           <Button variant="secondary" onClick={retry}>

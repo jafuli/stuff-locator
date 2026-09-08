@@ -14,3 +14,14 @@ test("omits description and action when not supplied", () => {
   expect(screen.getByText("No items yet")).toBeDefined();
   expect(screen.queryByRole("button")).toBeNull();
 });
+
+test("renders the title as plain text with no heading role when titleAs is omitted", () => {
+  render(<EmptyState title="No items yet" />);
+  expect(screen.queryByRole("heading")).toBeNull();
+  expect(screen.getByText("No items yet").tagName).toBe("P");
+});
+
+test("renders the title as the specified heading role when titleAs is passed", () => {
+  render(<EmptyState title="Couldn't load your stuff" titleAs="h1" />);
+  expect(screen.getByRole("heading", { level: 1, name: "Couldn't load your stuff" })).toBeDefined();
+});
