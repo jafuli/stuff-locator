@@ -160,7 +160,18 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+#
+# The two localhost entries are needed for the password-recovery flow
+# specifically: Playwright's baseURL (playwright.config.ts) is
+# "http://localhost:3000", not "127.0.0.1" like site_url above — without an
+# exact match here, GoTrue silently falls back to site_url alone (dropping
+# the /reset-password path) for any redirectTo it doesn't recognize,
+# verified empirically against this local stack while building that flow.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://localhost:3000",
+  "http://localhost:3000/reset-password",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

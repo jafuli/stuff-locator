@@ -102,6 +102,12 @@ test("the sign-in form is keyboard-reachable in a sensible order with real label
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Password")).toBeFocused();
 
+  // "Forgot your password?" sits between the password field and the
+  // submit button (added by the forgot/reset-password task) — keyboard
+  // order follows visual order, so it comes before "Sign in".
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Forgot your password?" })).toBeFocused();
+
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Sign in" })).toBeFocused();
 });

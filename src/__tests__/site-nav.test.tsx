@@ -50,3 +50,15 @@ test("renders nothing on /sign-in", () => {
   const { container } = render(<SiteNav />);
   expect(container.firstChild).toBeNull();
 });
+
+test("renders nothing on /forgot-password", () => {
+  usePathname.mockReturnValue("/forgot-password");
+  const { container } = render(<SiteNav />);
+  expect(container.firstChild).toBeNull();
+});
+
+test("renders nothing on /reset-password", () => {
+  usePathname.mockReturnValue("/reset-password");
+  const { container } = render(<SiteNav />);
+  expect(container.firstChild).toBeNull();
+});
