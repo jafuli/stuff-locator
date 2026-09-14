@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -12,10 +12,20 @@ vi.mock("@/server/db/client", () => ({ createClient: () => ({ auth: { signUp } }
 // vi.mock calls above are hoisted above imports.
 import { SignUpForm } from "@/components/sign-up-form";
 
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
+
+beforeEach(() => {
+  // Household bootstrap succeeds by default — tests below that care about
+  // its failure path override this per-test.
+  fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) });
+});
+
 afterEach(() => {
   push.mockReset();
   refresh.mockReset();
   signUp.mockReset();
+  fetchMock.mockReset();
 });
 
 test("submitting with empty fields shows inline errors and never calls signUp", async () => {
@@ -55,7 +65,7 @@ test("a rejected signUp surfaces Supabase's own error message verbatim", async (
   expect(push).not.toHaveBeenCalled();
 });
 
-test("a successful signUp with a returned session redirects to /", async () => {
+test("a successful signUp with a returned session bootstraps a household, then redirects to /", async () => {
   signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
   const user = userEvent.setup();
   render(<SignUpForm />);
@@ -68,6 +78,32 @@ test("a successful signUp with a returned session redirects to /", async () => {
     expect(push).toHaveBeenCalledWith("/");
   });
   expect(refresh).toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledWith("/api/household/bootstrap", { method: "POST" });
+});
+
+test("a household-bootstrap failure shows a dismissible notice, logs it, and never blocks reaching /", async () => {
+  signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
+  fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({ ok: false }) });
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const user = userEvent.setup();
+  render(<SignUpForm />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toMatch(/couldn.t finish setting up your household/i);
+  expect(consoleError).toHaveBeenCalled();
+  // Doesn't navigate the instant the notice appears — the auto-continue
+  // timer (exercised for real in e2e) hasn't fired yet.
+  expect(push).not.toHaveBeenCalled();
+
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  expect(push).toHaveBeenCalledWith("/");
+  expect(refresh).toHaveBeenCalled();
+
+  consoleError.mockRestore();
 });
 
 test("a successful signUp with no session shows the check-your-email state instead of redirecting", async () => {

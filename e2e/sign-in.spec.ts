@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { countHouseholdsForUser } from "./supabase-test-client";
 
 // Runs against a real local Supabase stack — see sign-up.spec.ts's header
 // comment. Each test creates its own fresh account through the real
@@ -43,6 +44,14 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
+
+  // The account was bootstrapped once on sign-up and household-bootstrap
+  // ran again on this sign-in (SignInForm calls it unconditionally on
+  // every success) — still exactly one household, not two.
+  // create_household is intentionally non-idempotent (see
+  // src/server/services/household.ts), so this is the real regression this
+  // task exists to prevent.
+  expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(1);
 });
 
 test("wrong password on a real account shows Supabase's actual error message, not a generic one", async ({ page }) => {

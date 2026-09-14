@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
+import { countHouseholdsForUser } from "./supabase-test-client";
+import { tabUntilFocused } from "./utils";
 
 // Runs against a real local Supabase stack — there's no way to fake
 // Supabase Auth. `npm run supabase:start` must be running first; see the
@@ -52,6 +54,56 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
+
+  // The household-bootstrap call (POST /api/household/bootstrap, fired
+  // right before this redirect) should have given this brand-new account
+  // exactly one household — not zero (nothing called create_household) and
+  // not more than one (create_household is intentionally non-idempotent;
+  // see src/server/services/household.ts).
+  expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(1);
+});
+
+test("a household-bootstrap failure still reaches / with a visible, keyboard-reachable notice", async ({ page }) => {
+  // ensureHousehold itself runs server-side (inside the /api/household/
+  // bootstrap route handler), so intercepting Supabase's own REST endpoint
+  // from the browser wouldn't touch it at all — the request never leaves
+  // the Next.js server process. Intercepting the form's own same-origin
+  // call to that route handler is what the form actually depends on, and
+  // is exactly the failure surface this test cares about: "the bootstrap
+  // endpoint didn't return ok".
+  await page.route("**/api/household/bootstrap", async (route) => {
+    await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ ok: false }) });
+  });
+
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  await page.goto("/sign-up");
+  const email = `e2e-signup-bootstrap-fail-${randomUUID()}@example.com`;
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  const alert = page.getByRole("alert").filter({ hasText: /couldn.t finish setting up your household/i });
+  await expect(alert).toBeVisible();
+
+  // Same convention as this file's own keyboard-reachability test: focus a
+  // known field first, then prove the target is actually Tab-reachable
+  // from there (rather than only checking it's focusable via .focus()).
+  await page.getByLabel("Password").focus();
+  expect(await tabUntilFocused(page, "Continue", 5)).toBe(true);
+
+  // Non-blocking: even with no interaction, the auto-continue timer takes
+  // this to / on its own — never traps the user on the auth page.
+  await page.waitForURL("/", { timeout: 10_000 });
+  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+
+  // The failure is genuinely observable, not silently swallowed.
+  expect(consoleErrors.some((message) => /household-bootstrap/i.test(message))).toBe(true);
 });
 
 test("empty fields show real inline errors and never navigate away", async ({ page }) => {

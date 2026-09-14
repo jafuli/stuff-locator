@@ -110,8 +110,10 @@ anticipated needing a privileged RPC for, just not yet named there.
   call with no resolvable `sub` claim would require hand-crafting a JWT,
   which isn't worth the complexity for a defense-in-depth line that only
   matters if the GRANT is ever loosened.
-- Still deferred, per `src/server/services/README.md`: `redeem_invite` (a
-  separate future task for joining an *existing* household), a route
-  handler/service wrapper for `create_household`, and any UI to call it —
-  this PR ships only the database-layer primitive; the app continues to run
-  on fixtures until a future task wires it up.
+- The route handler/service wrapper for `create_household` and the UI to
+  call it shipped in the household-bootstrap PR
+  (`src/server/services/household.ts`, `src/app/api/household/bootstrap/`,
+  wired into `SignUpForm`/`SignInForm`) — no longer deferred. `redeem_invite`
+  (joining an *existing* household) remains a separate future task; the
+  rest of the app (`/`, `/browse`, `/items/[id]`, `/activity`) still runs on
+  fixtures until later tasks wire it to real household data.
