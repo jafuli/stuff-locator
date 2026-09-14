@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -12,10 +12,20 @@ vi.mock("@/server/db/client", () => ({ createClient: () => ({ auth: { signInWith
 // vi.mock calls above are hoisted above imports.
 import { SignInForm } from "@/components/sign-in-form";
 
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
+
+beforeEach(() => {
+  // Household bootstrap succeeds by default — tests below that care about
+  // its failure path override this per-test.
+  fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) });
+});
+
 afterEach(() => {
   push.mockReset();
   refresh.mockReset();
   signInWithPassword.mockReset();
+  fetchMock.mockReset();
 });
 
 test("submitting with empty fields shows inline errors and never calls signInWithPassword", async () => {
@@ -58,7 +68,7 @@ test("wrong credentials surface Supabase's own error message verbatim, not a gen
   expect(push).not.toHaveBeenCalled();
 });
 
-test("valid credentials redirect to /", async () => {
+test("valid credentials bootstrap a household, then redirect to /", async () => {
   signInWithPassword.mockResolvedValue({
     data: { user: { id: "1" }, session: { access_token: "t" } },
     error: null,
@@ -74,6 +84,33 @@ test("valid credentials redirect to /", async () => {
     expect(push).toHaveBeenCalledWith("/");
   });
   expect(refresh).toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledWith("/api/household/bootstrap", { method: "POST" });
+});
+
+test("a household-bootstrap failure shows a dismissible notice, logs it, and never blocks reaching /", async () => {
+  signInWithPassword.mockResolvedValue({
+    data: { user: { id: "1" }, session: { access_token: "t" } },
+    error: null,
+  });
+  fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({ ok: false }) });
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const user = userEvent.setup();
+  render(<SignInForm />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "correct-password");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toMatch(/couldn.t finish setting up your household/i);
+  expect(consoleError).toHaveBeenCalled();
+  expect(push).not.toHaveBeenCalled();
+
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  expect(push).toHaveBeenCalledWith("/");
+  expect(refresh).toHaveBeenCalled();
+
+  consoleError.mockRestore();
 });
 
 test("submit shows a real loading state while signInWithPassword is in flight", async () => {

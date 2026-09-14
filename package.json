@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "node --env-file-if-exists=.env.rls.local node_modules/vitest/vitest.mjs run --config vitest.integration.config.mts",
-    "test:e2e": "playwright test",
+    "test:e2e": "node --env-file-if-exists=.env.rls.local node_modules/.bin/playwright test",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts"

@@ -6,7 +6,7 @@ Full product and architecture context lives in [`CLAUDE.md`](./CLAUDE.md) and th
 
 ## Status
 
-Schema + RLS landed: `households`, `household_members`, `locations`, `items` exist in `supabase/migrations/`, with row level security isolating every table to its own household (see [ADR 0003](./docs/adr/0003-schema-rls-foundations.md)). The four atomic RPC functions (`move_item`, `move_container`, `delete_container`, `redeem_invite`), any `src/app/api/**` route handlers, and wiring the frontend off its fixtures are still deferred to a Pair session (see the working agreement in `CLAUDE.md`).
+Schema + RLS landed: `households`, `household_members`, `locations`, `items` exist in `supabase/migrations/`, with row level security isolating every table to its own household (see [ADR 0003](./docs/adr/0003-schema-rls-foundations.md)). `create_household` (see [ADR 0004](./docs/adr/0004-create-household-rpc.md)) is wired up end to end — every sign-up/sign-in now bootstraps a household via `src/app/api/household/bootstrap`. The remaining atomic RPC functions (`move_item`, `move_container`, `delete_container`, `redeem_invite`) and wiring the rest of the frontend off its fixtures are still deferred to a Pair session (see the working agreement in `CLAUDE.md`).
 
 ## Prerequisites
 
@@ -45,14 +45,14 @@ RLS isolation is proven by an integration test against the local stack — see `
 | `npm run test` | Run the unit/component test suite once (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run test:rls` | RLS household-isolation integration test — requires `npm run supabase:start`; auto-loads `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` from a gitignored `.env.rls.local` if present (write one once, from `npx supabase status -o env`), otherwise export them yourself before running |
-| `npm run test:e2e` | Playwright UI-smoke check (builds, boots the app, checks it) — the sign-up/sign-in/sign-out specs need a real backend, so run `npm run supabase:start` first |
+| `npm run test:e2e` | Playwright UI-smoke check (builds, boots the app, checks it) — the sign-up/sign-in/sign-out specs need a real backend, so run `npm run supabase:start` first. Its household-count assertions also need `SUPABASE_URL`/`SUPABASE_ANON_KEY` (same `.env.rls.local` file as `test:rls`, auto-loaded the same way) |
 
 ## Layout
 
 ```
 src/app/**          UI — never imports src/server
-src/app/api/**       HTTP boundary (empty — Pair session)
-src/server/services/** Validation, authorisation, orchestration (empty — Pair session)
+src/app/api/**       HTTP boundary — one route so far (household bootstrap); the rest is still empty
+src/server/services/** Validation, authorisation, orchestration — one service so far (household bootstrap); the rest is still empty
 src/server/db/**     Supabase client factories (browser + server, JWT-forwarding)
 src/lib/**           Env validation, shared types/schemas
 supabase/migrations/** Schema, RLS, RPC functions (empty — Pair session)

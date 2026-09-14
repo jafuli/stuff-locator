@@ -8,4 +8,4 @@ The HTTP boundary. Route handlers here do exactly three things:
 
 No business logic lives here — that belongs in `src/server/services`. No direct Supabase calls either; go through the service layer.
 
-Empty for now. This fills in during a Pair session, alongside the data layer it depends on (see `supabase/migrations/`).
+One route so far: `household/bootstrap` (ensures the calling user belongs to a household — see `src/server/services/household.ts`). The rest fills in during a Pair session, alongside the data layer it depends on (see `supabase/migrations/`).
