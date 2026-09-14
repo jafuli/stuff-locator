@@ -3,8 +3,11 @@
 -- Closes the last unimplemented write-with-invariants named in the
 -- settled architecture doc ("writes carrying invariants: move_item,
 -- move_container, delete_container, redeem_invite go through route
--- handlers into plpgsql functions"). move_item is already shipped;
--- move_container and redeem_invite are separate tasks.
+-- handlers into plpgsql functions"). move_item is a separate, already-
+-- opened PR not yet merged to main as of this branch; move_container and
+-- redeem_invite are separate tasks too. This migration has no dependency
+-- on any of them — it only needs the already-merged households/locations/
+-- items schema.
 --
 -- Deliberate scope decision: this function only ever removes a genuinely
 -- empty container — no cascade delete, no reassigning children/items to
