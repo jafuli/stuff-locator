@@ -39,6 +39,28 @@ test("submitting with an empty name shows a specific inline error, associated to
   expect(screen.queryByRole("status")).toBeNull();
 });
 
+test("typing a new location without selecting it invalidates the pre-filled selection instead of silently keeping it", async () => {
+  const user = userEvent.setup();
+  render(<ItemEditForm item={ITEM} locationOptions={OPTIONS} locations={LOCATIONS} />);
+
+  // Starts pre-filled with the item's current location.
+  expect(screen.getByText("Selected: Garage")).toBeDefined();
+
+  await user.type(screen.getByRole("combobox"), "Closet");
+  // The stale "Selected: Garage" caption disappears the moment typing
+  // diverges from a confirmed selection — no on-screen contradiction
+  // between what the combobox shows and what's actually selected.
+  expect(screen.queryByText("Selected: Garage")).toBeNull();
+
+  // Never actually selected a suggestion — submitting must fail, not
+  // silently keep using the original ("Garage") location.
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(
+    screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
+  ).toBeDefined();
+  expect(screen.queryByRole("status")).toBeNull();
+});
+
 test("clearing the location and picking the '+ New place' row rejects it instead of silently accepting it", async () => {
   const user = userEvent.setup();
   render(<ItemEditForm item={ITEM} locationOptions={OPTIONS} locations={LOCATIONS} />);

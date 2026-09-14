@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { LocationAutocomplete, type AutocompleteSelection } from "@/components/location-autocomplete";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -60,16 +60,54 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
   const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(
     initialLocation ? { type: "existing", option: initialLocation } : null,
   );
+  // Mirrors LocationAutocomplete's own raw input text (see its onInputChange
+  // doc comment). Because this form — unlike Stash's blank one — starts
+  // with a real selection already in place, typing into the combobox
+  // without finishing a new selection would otherwise leave that stale
+  // selection standing with no error and no visible indication that it no
+  // longer matches what's on screen. Tracked here purely to catch that.
+  const [pendingLocationQuery, setPendingLocationQuery] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [mode, setMode] = useState<Mode>("editing");
   const [captured, setCaptured] = useState<CapturedEdit | null>(null);
 
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteHeadingRef = useRef<HTMLHeadingElement>(null);
+  const cameFromConfirmRef = useRef(false);
+
+  // Moves focus into the confirmation panel when it appears (so a screen
+  // reader announces it rather than leaving focus on a now-unmounted
+  // button), and back to the "Delete item" trigger when Cancel returns to
+  // the ordinary form — mirrors this doc comment's own "not a new
+  // interaction model" stance by keeping the mechanics plain (no focus
+  // trap, no modal role), just making sure focus actually goes somewhere
+  // sensible on both transitions instead of falling back to <body>.
+  useEffect(() => {
+    if (mode === "confirming-delete") {
+      cameFromConfirmRef.current = true;
+      deleteHeadingRef.current?.focus();
+    } else if (mode === "editing" && cameFromConfirmRef.current) {
+      cameFromConfirmRef.current = false;
+      deleteTriggerRef.current?.focus();
+    }
+  }, [mode]);
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    // Dangling typed text that never became a real selection is treated
+    // the same as an unresolved location — including when it's shadowing a
+    // perfectly valid `locationSelection` left over from before the user
+    // started typing again (see pendingLocationQuery's own comment above).
+    const locationError =
+      validateLocationSelection(locationSelection) ??
+      (pendingLocationQuery.trim() !== ""
+        ? "Pick an existing location from the list — adding a new one isn't supported here yet."
+        : undefined);
+
     const errors: FieldErrors = {
       name: validateItemName(name),
-      location: validateLocationSelection(locationSelection),
+      location: locationError,
     };
     setFieldErrors(errors);
 
@@ -144,7 +182,12 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
   if (mode === "confirming-delete") {
     return (
       <div className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
-        <h2 className="text-[13px] font-semibold text-ink">Delete this item?</h2>
+        {/* tabIndex={-1}: programmatically focusable (see the effect above)
+            without joining the regular tab order — the heading itself
+            isn't an action, the two buttons below it are. */}
+        <h2 ref={deleteHeadingRef} tabIndex={-1} className="text-[13px] font-semibold text-ink outline-none">
+          Delete this item?
+        </h2>
         <p className="text-[11px] text-mid">
           {item.name} will be removed. This can&apos;t be undone.
         </p>
@@ -177,9 +220,10 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
             label="Location"
             options={locationOptions}
             onSelect={handleLocationSelect}
+            onInputChange={setPendingLocationQuery}
             describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
           />
-          {locationSelection?.type === "existing" ? (
+          {locationSelection?.type === "existing" && pendingLocationQuery.trim() === "" ? (
             <p className="mt-1 text-[11px] text-mid">Selected: {locationSelection.option.path}</p>
           ) : null}
           {fieldErrors.location ? (
@@ -202,7 +246,7 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
         </Button>
       </form>
 
-      <Button type="button" variant="secondary" onClick={() => { setMode("confirming-delete"); }}>
+      <Button ref={deleteTriggerRef} type="button" variant="secondary" onClick={() => { setMode("confirming-delete"); }}>
         Delete item
       </Button>
     </div>

@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, Ref } from "react";
 import { cn } from "@/lib/cn";
 
 export type ButtonVariant = "primary" | "secondary";
@@ -7,6 +7,13 @@ export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
   variant?: ButtonVariant;
   /** Shows an inline spinner and disables the button without changing its label. */
   isLoading?: boolean;
+  /**
+   * React 19 accepts `ref` as a plain prop on function components (no
+   * `forwardRef` needed) — declared explicitly here so a caller can
+   * restore focus to a specific button (e.g. after dismissing a
+   * confirmation panel it opened) without reaching past this component.
+   */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const baseClasses =
@@ -27,10 +34,12 @@ export function Button({
   className,
   children,
   type = "button",
+  ref,
   ...rest
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(baseClasses, variantClasses[variant], className)}
       disabled={disabled ?? isLoading}
