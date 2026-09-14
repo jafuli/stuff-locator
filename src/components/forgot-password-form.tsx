@@ -40,12 +40,22 @@ export function ForgotPasswordForm() {
     }
 
     setIsSubmitting(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) {
-      console.error("[forgot-password]", error.message);
+    // A try/catch here, not just checking the returned `error`: Supabase's
+    // own client re-throws (rather than resolving to `{ error }`) for
+    // anything it doesn't recognize as a structured AuthError — a raw
+    // network failure, for instance. Without this, that case would leave
+    // the button stuck on "Sending…" forever instead of reaching the same
+    // determinate confirmation state every other outcome already does.
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        console.error("[forgot-password]", error.message);
+      }
+    } catch (error) {
+      console.error("[forgot-password]", error);
     }
     setIsSubmitting(false);
     setSubmitted(true);

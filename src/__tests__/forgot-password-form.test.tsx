@@ -59,3 +59,24 @@ test("even an error from resetPasswordForEmail still shows the same generic conf
 
   consoleError.mockRestore();
 });
+
+test("resetPasswordForEmail throwing (not resolving to { error }) still reaches the same generic confirmation, not a stuck loading state", async () => {
+  // @supabase/auth-js re-throws for anything it doesn't recognize as a
+  // structured AuthError (e.g. a raw network failure) rather than
+  // resolving to { error } — this proves that path doesn't leave the
+  // button stuck on "Sending…" forever.
+  resetPasswordForEmail.mockRejectedValue(new TypeError("Failed to fetch"));
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const user = userEvent.setup();
+  render(<ForgotPasswordForm />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+  const status = await screen.findByRole("status");
+  expect(status.textContent).toMatch(/if an account exists for that email/i);
+  expect(screen.queryByRole("button", { name: "Sending…" })).toBeNull();
+  expect(consoleError).toHaveBeenCalled();
+
+  consoleError.mockRestore();
+});

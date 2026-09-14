@@ -77,14 +77,27 @@ export function ResetPasswordForm() {
 
     setSubmitError(null);
     setIsSubmitting(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password });
-    setIsSubmitting(false);
-
-    if (error) {
-      setSubmitError(error.message);
+    // A try/catch here, not just checking the returned `error`: Supabase's
+    // own client re-throws (rather than resolving to `{ error }`) for
+    // anything it doesn't recognize as a structured AuthError — a raw
+    // network failure, for instance. Without this, that case would leave
+    // the button stuck on "Updating…" forever instead of reaching the same
+    // determinate outcome (an error the user can see and retry from) every
+    // other failure already does.
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setSubmitError(error.message);
+        setIsSubmitting(false);
+        return;
+      }
+    } catch {
+      setSubmitError("Something went wrong. Please try again.");
+      setIsSubmitting(false);
       return;
     }
+    setIsSubmitting(false);
     setStatus("updated");
   }
 
@@ -98,18 +111,26 @@ export function ResetPasswordForm() {
 
   if (status === "invalid") {
     return (
-      <EmptyState
-        title="This reset link is invalid or has expired"
-        description="Request a new one to keep going."
-        action={
-          <Link
-            href="/forgot-password"
-            className="inline-flex items-center justify-center rounded-[8px] border-[1.5px] border-line bg-transparent px-[10px] py-[10px] text-[13px] [font-weight:640] text-mid outline-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            Request a new link
-          </Link>
-        }
-      />
+      // role="status": this replaces the "checking" state's own live
+      // region after the page has already loaded and been read, so a
+      // screen-reader user needs this transition actually announced, not
+      // just visually swapped in — unlike EmptyState's other callers
+      // (error.tsx/not-found.tsx boundaries), which render into their
+      // final state on first load rather than transitioning into it.
+      <div role="status">
+        <EmptyState
+          title="This reset link is invalid or has expired"
+          description="Request a new one to keep going."
+          action={
+            <Link
+              href="/forgot-password"
+              className="inline-flex items-center justify-center rounded-[8px] border-[1.5px] border-line bg-transparent px-[10px] py-[10px] text-[13px] [font-weight:640] text-mid outline-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              Request a new link
+            </Link>
+          }
+        />
+      </div>
     );
   }
 

@@ -102,3 +102,23 @@ test("an updateUser error surfaces Supabase's own message and stays on the form"
   expect(alert.textContent).toBe("Auth session missing.");
   expect(screen.queryByRole("status")).toBeNull();
 });
+
+test("updateUser throwing (not resolving to { error }) surfaces an error too, not a stuck loading state", async () => {
+  // @supabase/auth-js re-throws for anything it doesn't recognize as a
+  // structured AuthError (e.g. a raw network failure) rather than
+  // resolving to { error } — this proves that path doesn't leave the
+  // button stuck on "Updating…" forever.
+  mockRecoverySession();
+  updateUser.mockRejectedValue(new TypeError("Failed to fetch"));
+  const user = userEvent.setup();
+  render(<ResetPasswordForm />);
+
+  await user.type(screen.getByLabelText("New password"), "longenough1");
+  await user.type(screen.getByLabelText("Confirm new password"), "longenough1");
+  await user.click(screen.getByRole("button", { name: "Update password" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe("Something went wrong. Please try again.");
+  expect(screen.queryByRole("button", { name: "Updating…" })).toBeNull();
+  expect(screen.queryByRole("status")).toBeNull();
+});
