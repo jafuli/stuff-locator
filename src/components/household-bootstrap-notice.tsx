@@ -18,7 +18,8 @@ export function HouseholdBootstrapNotice({ onContinue }: HouseholdBootstrapNotic
   return (
     <div role="alert" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
       <p className="text-[11.5px] text-mid">
-        We couldn&apos;t finish setting up your household. You can still continue — this will be retried later.
+        We couldn&apos;t finish setting up your household. You can still continue — we&apos;ll try again next time you sign
+        in.
       </p>
       <Button type="button" variant="secondary" onClick={onContinue} className="self-start">
         Continue

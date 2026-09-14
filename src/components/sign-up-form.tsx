@@ -81,15 +81,23 @@ export function SignUpForm() {
     setIsSubmitting(true);
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({ email, password });
-    setIsSubmitting(false);
 
     if (error) {
+      setIsSubmitting(false);
       setSubmitError(error.message);
       return;
     }
 
     if (data.session) {
+      // Deliberately still isSubmitting through this await, not just the
+      // signUp call above: re-enabling the button here would let an
+      // impatient double-click start a second signUp/bootstrap cycle for
+      // the same brand-new user before this one's household check has
+      // even run, which is exactly the "two concurrent bootstrap calls"
+      // race ensureHousehold's own doc comment names as a rare edge case —
+      // there's no reason to make it trivially reachable from one tab.
       const bootstrapped = await triggerHouseholdBootstrap();
+      setIsSubmitting(false);
       if (!bootstrapped) {
         console.error("[household-bootstrap] failed to ensure a household after sign-up");
         setShowBootstrapNotice(true);
@@ -100,6 +108,7 @@ export function SignUpForm() {
       return;
     }
 
+    setIsSubmitting(false);
     // signUp succeeded but returned no session — email confirmation is
     // required for this project. Not the local default, but handled for
     // real rather than assumed away.

@@ -73,14 +73,22 @@ export function SignInForm() {
     setIsSubmitting(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setIsSubmitting(false);
 
     if (error) {
+      setIsSubmitting(false);
       setSubmitError(error.message);
       return;
     }
 
+    // Deliberately still isSubmitting through this await, not just the
+    // signInWithPassword call above: re-enabling the button here would let
+    // an impatient double-click start a second sign-in/bootstrap cycle for
+    // the same user before this one's household check has even run —
+    // exactly the "two concurrent bootstrap calls" race
+    // src/server/services/household.ts's own doc comment names as a rare
+    // edge case, made trivially reachable from one tab otherwise.
     const bootstrapped = await triggerHouseholdBootstrap();
+    setIsSubmitting(false);
     if (!bootstrapped) {
       console.error("[household-bootstrap] failed to ensure a household after sign-in");
       setShowBootstrapNotice(true);
