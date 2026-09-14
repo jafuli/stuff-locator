@@ -21,6 +21,13 @@ test("renders full item detail, breadcrumb, and a back link for a known id", asy
   expect(backLink.getAttribute("href")).toBe("/");
 });
 
+test("has an entry point into the Edit flow", async () => {
+  render(await Page(pageProps("passport")));
+
+  const editLink = screen.getByRole("link", { name: "Edit" });
+  expect(editLink.getAttribute("href")).toBe("/items/passport/edit");
+});
+
 test("calls notFound() for an id with no matching item", async () => {
   await expect(Page(pageProps("does-not-exist"))).rejects.toThrow();
 });
