@@ -21,12 +21,19 @@ test("renders every fixture item with its full location path", () => {
   }
 
   // One link per item (its own detail link) plus one link per breadcrumb
-  // segment (AC #4 — each segment now navigates to /browse/[id]).
+  // segment (AC #4 — each segment now navigates to /browse/[id]), plus the
+  // one "+ Add item" entry point into the Stash flow (Stash task, AC #2).
   const breadcrumbLinkCount = ITEMS.reduce(
     (total, item) => total + getBreadcrumbSegments(item.locationId, LOCATIONS).length,
     0,
   );
-  expect(screen.getAllByRole("link")).toHaveLength(ITEMS.length + breadcrumbLinkCount);
+  expect(screen.getAllByRole("link")).toHaveLength(ITEMS.length + breadcrumbLinkCount + 1);
+});
+
+test("has a visible entry point into the Stash (add item) flow", () => {
+  render(<Page />);
+  const addItemLink = screen.getByRole("link", { name: "+ Add item" });
+  expect(addItemLink.getAttribute("href")).toBe("/items/new");
 });
 
 test("a breadcrumb segment under an item links to that location's /browse/[id]", () => {

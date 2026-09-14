@@ -1,0 +1,19 @@
+// Next's loading.tsx convention, scoped to this segment: without it, the
+// root loading.tsx (home-page-shaped, "Our stuff" heading + search
+// skeleton) would cascade here, which is wrong content for Stash. Real
+// today — but LOCATIONS is a synchronous fixture read, so nothing currently
+// suspends, so this rarely shows in practice. Ready for when a real (async)
+// Supabase read replaces the fixture import; see the PR description.
+export default function Loading() {
+  return (
+    <main className="flex flex-col gap-3 p-4" aria-busy="true" aria-live="polite">
+      <div className="h-[18px] w-32 animate-pulse rounded bg-wash" aria-hidden="true" />
+      <div className="flex flex-col gap-3">
+        <div className="h-[34px] animate-pulse rounded-[9px] border-[1.5px] border-line bg-wash" aria-hidden="true" />
+        <div className="h-[34px] animate-pulse rounded-[9px] border-[1.5px] border-line bg-wash" aria-hidden="true" />
+        <div className="h-[34px] animate-pulse rounded-[9px] border-[1.5px] border-line bg-wash" aria-hidden="true" />
+      </div>
+      <span className="sr-only">Loading the add-item form…</span>
+    </main>
+  );
+}
