@@ -105,3 +105,17 @@ test("shows the error message via a live region", () => {
   render(<LocationAutocomplete options={OPTIONS} onSelect={vi.fn()} error="Couldn't load your places." />);
   expect(screen.getByRole("alert").textContent).toBe("Couldn't load your places.");
 });
+
+test("wires a caller-supplied describedBy onto the input and flags it as invalid", () => {
+  render(<LocationAutocomplete options={OPTIONS} onSelect={vi.fn()} describedBy="some-error-id" />);
+  const input = screen.getByRole("combobox");
+  expect(input.getAttribute("aria-describedby")).toBe("some-error-id");
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+});
+
+test("omits aria-describedby/aria-invalid when no describedBy is given", () => {
+  render(<LocationAutocomplete options={OPTIONS} onSelect={vi.fn()} />);
+  const input = screen.getByRole("combobox");
+  expect(input.hasAttribute("aria-describedby")).toBe(false);
+  expect(input.hasAttribute("aria-invalid")).toBe(false);
+});

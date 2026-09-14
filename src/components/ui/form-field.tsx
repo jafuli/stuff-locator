@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 export interface FormFieldProps {
   id: string;
   label: string;
-  type: "email" | "password";
+  type: "email" | "password" | "text";
   value: string;
   onChange: (value: string) => void;
   error?: string;
@@ -15,7 +15,10 @@ export interface FormFieldProps {
 /**
  * A real labelled input + inline error, matching LocationAutocomplete's
  * label/input/error styling (src/components/location-autocomplete.tsx) so
- * the auth forms don't invent a second visual language for the same thing.
+ * forms across the app don't invent a second visual language for the same
+ * thing. `type="text"` exists alongside email/password for plain fields
+ * (e.g. stash-form.tsx's Name/Detail) that need this same label+error
+ * wiring but aren't auth inputs.
  * `noValidate` lives on the parent <form> — this input keeps `type`/
  * `required`-adjacent semantics (mobile keyboard, autofill) but the forms
  * that use it decide what counts as valid and when to show it.

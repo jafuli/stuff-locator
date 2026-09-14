@@ -29,6 +29,14 @@ export interface LocationAutocompleteProps {
   isLoading?: boolean;
   /** Set when the caller's location list failed to load. Doesn't block typing a new place. */
   error?: string | null;
+  /**
+   * Id of an element describing a validation error for this field (the
+   * caller's own `<p role="alert">`, e.g. "Choose a location for this
+   * item."). Also drives `aria-invalid` on the input. This is a separate
+   * concept from `error` above, which is about the *options list* failing to
+   * load, not about what the caller chose from it.
+   */
+  describedBy?: string;
 }
 
 /** Case-insensitive substring match over each option's full path. */
@@ -90,6 +98,7 @@ export function LocationAutocomplete({
   placeholder,
   isLoading = false,
   error = null,
+  describedBy,
 }: LocationAutocompleteProps) {
   const [inputValue, setInputValue] = useState("");
 
@@ -136,7 +145,10 @@ export function LocationAutocomplete({
       </label>
       <div>
         <input
-          {...getInputProps()}
+          {...getInputProps({
+            "aria-describedby": describedBy,
+            "aria-invalid": describedBy ? true : undefined,
+          })}
           placeholder={placeholder}
           className={cn(
             "w-full rounded-[7px] border-[1.5px] px-[9px] py-[7px] text-[12.5px] text-ink outline-none",

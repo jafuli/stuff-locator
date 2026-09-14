@@ -36,3 +36,30 @@ test("home route boots cleanly, shows the item list, and is keyboard-reachable",
 
   expect(consoleErrors).toEqual([]);
 });
+
+test("home has a visible, keyboard-reachable entry point into the Stash flow", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text());
+    }
+  });
+  page.on("pageerror", (err) => {
+    consoleErrors.push(err.message);
+  });
+
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  const addItemLink = page.getByRole("link", { name: "+ Add item" });
+  await expect(addItemLink).toBeVisible();
+
+  // It's one of the very first tab stops on the page, right beside the h1.
+  expect(await tabUntilFocused(page, "+ Add item", 5)).toBe(true);
+
+  await addItemLink.click();
+  await page.waitForURL("/items/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Add an item" })).toBeVisible();
+
+  expect(consoleErrors).toEqual([]);
+});
