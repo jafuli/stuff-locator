@@ -81,6 +81,47 @@ export type Database = {
         }
         Relationships: []
       }
+      invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          household_id: string
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          household_id: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          household_id?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           added_at: string
