@@ -43,6 +43,23 @@ test("picking the '+ New place' row rejects the location instead of silently acc
   expect(screen.queryByRole("status")).toBeNull();
 });
 
+test("correcting the location after a rejected submit clears the stale error instead of contradicting the new selection", async () => {
+  const user = userEvent.setup();
+  render(<StashForm locationOptions={OPTIONS} locations={LOCATIONS} />);
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+
+  await user.type(screen.getByRole("combobox"), "Closet");
+  await user.keyboard("{ArrowDown}{Enter}");
+
+  expect(screen.queryByText("Choose a location for this item.")).toBeNull();
+  expect(screen.getByText("Selected: Garage › Closet")).toBeDefined();
+  expect(screen.getByRole("combobox").getAttribute("aria-invalid")).toBeNull();
+  expect(screen.getByRole("combobox").getAttribute("aria-describedby")).toBeNull();
+});
+
 test("a valid fill-and-submit shows the success panel with the exact name, full breadcrumb, and detail", async () => {
   const user = userEvent.setup();
   render(<StashForm locationOptions={OPTIONS} locations={LOCATIONS} />);

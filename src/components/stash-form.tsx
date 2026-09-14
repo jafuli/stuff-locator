@@ -70,6 +70,18 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
     });
   }
 
+  function handleLocationSelect(selection: AutocompleteSelection) {
+    setLocationSelection(selection);
+    // Clears a stale "Choose a location…" error the moment the user actually
+    // resolves one — without this, picking a real location left the old
+    // error (and the aria-invalid/aria-describedby pointing at it) visible
+    // right next to the new "Selected: …" confirmation line until the next
+    // submit, which is a real self-contradiction, not just staleness.
+    if (selection.type === "existing") {
+      setFieldErrors((previous) => ({ ...previous, location: undefined }));
+    }
+  }
+
   function handleAddAnother() {
     setName("");
     setDetail("");
@@ -113,7 +125,7 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
         <LocationAutocomplete
           label="Location"
           options={locationOptions}
-          onSelect={setLocationSelection}
+          onSelect={handleLocationSelect}
           describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
         />
         {locationSelection?.type === "existing" ? (
