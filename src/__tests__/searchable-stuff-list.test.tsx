@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import Link from "next/link";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import type { StuffListEntry } from "@/components/stuff-list";
 import type { Item } from "@/lib/fixtures/types";
@@ -63,4 +64,24 @@ test("a query matching nothing announces zero results via the status region", as
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "nonexistent");
   expect(screen.getByRole("status").textContent).toBe("0 results found");
+});
+
+test("forwards emptyStateAction to StuffList's zero-entries empty state, not the no-matches one", async () => {
+  const user = userEvent.setup();
+  render(
+    <SearchableStuffList
+      entries={[]}
+      emptyStateAction={<Link href="/items/new">Stash your first item</Link>}
+    />,
+  );
+  // Zero total entries, no query typed — StuffList's own empty state, with
+  // the action.
+  expect(screen.getByRole("link", { name: "Stash your first item" })).toBeDefined();
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "anything");
+  // A search that matches nothing shows a *different* empty state
+  // ("No matches") — the CTA belongs to "you have no items", not "your
+  // search found nothing", so it must not appear here.
+  expect(screen.getByText("No matches")).toBeDefined();
+  expect(screen.queryByRole("link", { name: "Stash your first item" })).toBeNull();
 });

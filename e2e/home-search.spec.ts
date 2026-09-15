@@ -1,4 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
+import { seedItem, seedLocationChain } from "./supabase-test-client";
+
+// Home's search now filters real household items (see home.spec.ts's
+// header comment for why every test here signs up first) instead of the
+// ITEMS fixture — filterItems itself (src/lib/fixtures/search.ts) is
+// unchanged and structurally source-agnostic, so this only needed real
+// data to search over, not a rewrite of the search wiring itself.
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+async function signUpFreshAccount(page: Page): Promise<string> {
+  const email = `e2e-home-search-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+  return email;
+}
 
 test("searching the home item list filters, shows no-matches, and clears back to the full list", async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -10,6 +29,13 @@ test("searching the home item list filters, shows no-matches, and clears back to
   page.on("pageerror", (err) => {
     consoleErrors.push(err.message);
   });
+
+  const email = await signUpFreshAccount(page);
+  const passportName = `Passport ${randomUUID()}`;
+  const keysName = `Spare house keys ${randomUUID()}`;
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom"]);
+  await seedItem(email, TEST_PASSWORD, { name: passportName, locationId });
+  await seedItem(email, TEST_PASSWORD, { name: keysName, locationId });
 
   await page.goto("/");
   await page.waitForLoadState("networkidle");
@@ -32,10 +58,10 @@ test("searching the home item list filters, shows no-matches, and clears back to
   const focusedId = await page.evaluate(() => document.activeElement?.id ?? null);
   expect(focusedId).toBe("stuff-search");
 
-  // A query matching exactly one fixture item narrows the list to it.
+  // A query matching exactly one real item narrows the list to it.
   await search.fill("passport");
-  await expect(page.getByText("Passport")).toBeVisible();
-  await expect(page.getByText("Spare house keys")).toHaveCount(0);
+  await expect(page.getByText(passportName)).toBeVisible();
+  await expect(page.getByText(keysName)).toHaveCount(0);
 
   // A query matching nothing shows the dedicated no-matches empty state.
   await search.fill("this matches nothing at all");
@@ -43,8 +69,8 @@ test("searching the home item list filters, shows no-matches, and clears back to
 
   // Clearing the input restores the full original list.
   await search.fill("");
-  await expect(page.getByText("Passport")).toBeVisible();
-  await expect(page.getByText("Spare house keys")).toBeVisible();
+  await expect(page.getByText(passportName)).toBeVisible();
+  await expect(page.getByText(keysName)).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

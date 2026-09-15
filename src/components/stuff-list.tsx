@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ItemCard } from "@/components/item-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { LocationBreadcrumbSegment } from "@/components/location-breadcrumb";
@@ -13,6 +14,15 @@ export interface StuffListProps {
   entries: readonly StuffListEntry[];
   /** Forwarded to each ItemCard — see its own doc comment. Defaults to false. */
   linkLocationSegments?: boolean;
+  /**
+   * Optional call to action rendered in the zero-entries empty state (e.g.
+   * a link to /items/new for the home route's "no items in this household
+   * yet" case). Left undefined by default so every other caller of this
+   * shared component — this list is reused wherever "everything at this
+   * location/query" needs rendering — keeps its exact current empty state,
+   * unchanged.
+   */
+  emptyStateAction?: ReactNode;
 }
 
 /**
@@ -27,9 +37,15 @@ export interface StuffListProps {
  * parent's only (and therefore "last") child, silently dropping every
  * divider. Matches the existing /~components catalog page's pattern.
  */
-export function StuffList({ entries, linkLocationSegments = false }: StuffListProps) {
+export function StuffList({ entries, linkLocationSegments = false, emptyStateAction }: StuffListProps) {
   if (entries.length === 0) {
-    return <EmptyState title="No items yet" description="Stash your first thing to see it here." />;
+    return (
+      <EmptyState
+        title="No items yet"
+        description="Stash your first thing to see it here."
+        action={emptyStateAction}
+      />
+    );
   }
 
   return (
