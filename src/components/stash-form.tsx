@@ -9,12 +9,17 @@ import { FormField } from "@/components/ui/form-field";
 import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
+import { createClient } from "@/server/db/client";
 
 export interface StashFormProps {
   /** Full-path options to feed LocationAutocomplete. */
   locationOptions: readonly LocationOption[];
   /** Raw location tree, needed to resolve a selected id into breadcrumb segments for the success state. */
   locations: readonly Location[];
+  /** The signed-in caller's household — every insert is scoped to this. */
+  householdId: string;
+  /** The signed-in caller's id — written as `added_by` on the inserted row. */
+  userId: string;
 }
 
 interface FieldErrors {
@@ -23,6 +28,7 @@ interface FieldErrors {
 }
 
 interface CapturedStash {
+  id: string;
   name: string;
   segments: LocationBreadcrumbSegment[];
   detail?: string;
@@ -31,22 +37,25 @@ interface CapturedStash {
 const LOCATION_ERROR_ID = "stash-location-error";
 
 /**
- * Fixture-only add-item form. There is deliberately no backend call anywhere
- * in this component — "submit" just moves local state into a success view,
- * the same way sign-up-form.tsx renders its "check your email" state inline
- * rather than as a separate route. The captured item is never written back
- * into ITEMS (src/lib/fixtures/items.ts), so it will not appear on Home,
- * Browse, or in Find after this — that lands with the future real-data-
- * wiring task, not here.
+ * Add-item form, backed by a real Supabase write: submit INSERTs into
+ * `items` directly from the browser client (RLS-gated, no route handler —
+ * this is a plain single-table write with no cross-table invariant, unlike
+ * move_item/move_container/delete_container/redeem_invite, so it doesn't
+ * need the RPC treatment CLAUDE.md reserves for writes that carry
+ * invariants). A location outside the caller's household is rejected by RLS
+ * itself (`items_access`'s `is_household_member(household_id)` check) —
+ * this component adds no redundant check of its own, per this task's AC.
  */
-export function StashForm({ locationOptions, locations }: StashFormProps) {
+export function StashForm({ locationOptions, locations, householdId, userId }: StashFormProps) {
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
   const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [captured, setCaptured] = useState<CapturedStash | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const errors: FieldErrors = {
@@ -63,10 +72,41 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
       return;
     }
 
+    const trimmedName = name.trim();
+    const trimmedDetail = detail.trim();
+    const locationId = locationSelection.option.id;
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("items")
+      .insert({
+        name: trimmedName,
+        location_id: locationId,
+        detail: trimmedDetail === "" ? null : trimmedDetail,
+        household_id: householdId,
+        added_by: userId,
+      })
+      .select()
+      .single();
+
+    setIsSubmitting(false);
+
+    if (error) {
+      // Surfaced verbatim (matches sign-in-form.tsx's precedent for
+      // Supabase-originated messages) — field values are left exactly as
+      // typed so the user can just hit submit again, not re-enter anything.
+      setSubmitError(error.message);
+      return;
+    }
+
     setCaptured({
-      name: name.trim(),
-      segments: getBreadcrumbSegments(locationSelection.option.id, locations),
-      detail: detail.trim() === "" ? undefined : detail.trim(),
+      id: data.id,
+      name: data.name,
+      segments: getBreadcrumbSegments(locationId, locations),
+      detail: data.detail ?? undefined,
     });
   }
 
@@ -100,9 +140,16 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
         <LocationBreadcrumb segments={captured.segments} />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
         <p className="text-[10.5px] text-mid">
-          This is a fixture-only preview — added items don&apos;t show up on Home, Browse, or Find yet.
+          Saved. It won&apos;t show up on Home, Browse, or Find yet — those still read fixture data until their own
+          real-data-wiring tasks land.
         </p>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/items/${captured.id}`}
+            className="inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            View item
+          </Link>
           <Button type="button" variant="secondary" onClick={handleAddAnother}>
             Add another
           </Button>
@@ -118,8 +165,16 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <FormField id="stash-name" label="Name" type="text" value={name} onChange={setName} error={fieldErrors.name} />
+    <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
+      <FormField
+        id="stash-name"
+        label="Name"
+        type="text"
+        value={name}
+        onChange={setName}
+        error={fieldErrors.name}
+        disabled={isSubmitting}
+      />
 
       <div>
         <LocationAutocomplete
@@ -138,10 +193,23 @@ export function StashForm({ locationOptions, locations }: StashFormProps) {
         ) : null}
       </div>
 
-      <FormField id="stash-detail" label="Detail (optional)" type="text" value={detail} onChange={setDetail} />
+      <FormField
+        id="stash-detail"
+        label="Detail (optional)"
+        type="text"
+        value={detail}
+        onChange={setDetail}
+        disabled={isSubmitting}
+      />
 
-      <Button type="submit" variant="primary">
-        Add item
+      {submitError ? (
+        <p role="alert" className="text-[11.5px] text-mid">
+          {submitError}
+        </p>
+      ) : null}
+
+      <Button type="submit" variant="primary" isLoading={isSubmitting}>
+        {isSubmitting ? "Adding…" : "Add item"}
       </Button>
     </form>
   );
