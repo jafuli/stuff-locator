@@ -271,6 +271,22 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      move_container: {
+        Args: { p_location_id: string; p_new_parent_id: string }
+        Returns: {
+          created_at: string
+          household_id: string
+          id: string
+          name: string
+          parent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "locations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       move_item: {
         Args: { p_item_id: string; p_new_location_id: string }
         Returns: {
