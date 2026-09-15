@@ -74,22 +74,24 @@ begin
   -- Idempotent: a caller who already belongs to this household (e.g. the
   -- invite's own creator, or a second member who joined some other way
   -- before anyone used this particular code) doesn't get a duplicate row
-  -- or an error — household_members' composite PK on
-  -- (household_id, user_id) is what a bare INSERT would otherwise
-  -- violate, so this is checked explicitly rather than caught as a
-  -- constraint-violation exception.
-  if not exists (
-    select 1
-    from public.household_members
-    where household_id = v_invite.household_id
-      and user_id = auth.uid()
-  ) then
-    insert into public.household_members (household_id, user_id)
-    values (v_invite.household_id, auth.uid());
-    -- role defaults to 'member' (see household_members' own check
-    -- constraint/default in 20260906071903_household_schema_and_rls.sql)
-    -- — an invited joiner is never made 'owner' by redemption alone.
-  end if;
+  -- or an error. `ON CONFLICT DO NOTHING` on household_members' own
+  -- composite PK (household_id, user_id) — not a separate "if not
+  -- exists" check-then-insert — because a plain existence check has
+  -- exactly the same TOCTOU race the redeemed_at re-check below defends
+  -- against: two concurrent redemptions by the SAME user (e.g. a
+  -- double-clicked redeem button, or the same user racing two different
+  -- still-valid codes for this household) could both see "not a member
+  -- yet" before either commits, and the second INSERT would then hit the
+  -- PK head-on with a raw, unhandled 23505 unique-violation instead of
+  -- this function's own clean exceptions. ON CONFLICT DO NOTHING makes
+  -- the insert itself race-safe at the database level, matching the
+  -- redeemed_at recheck's intent rather than only covering half of it.
+  insert into public.household_members (household_id, user_id)
+  values (v_invite.household_id, auth.uid())
+  on conflict (household_id, user_id) do nothing;
+  -- role defaults to 'member' (see household_members' own check
+  -- constraint/default in 20260906071903_household_schema_and_rls.sql) —
+  -- an invited joiner is never made 'owner' by redemption alone.
 
   -- Re-checks redeemed_at IS NULL at the write itself, not just in the
   -- read above: two concurrent redemptions of the same code could both
@@ -98,8 +100,10 @@ begin
   -- doesn't re-validate itself at UPDATE time. Without this, the second
   -- transaction's UPDATE would silently succeed after the first commits,
   -- overwriting redeemed_by and effectively letting the code be consumed
-  -- twice. This is the same defense-in-depth shape move_item and
-  -- delete_container already use for their own concurrent-write windows.
+  -- twice. Together with the ON CONFLICT DO NOTHING above, this closes
+  -- the concurrent-redemption race on both rows this function touches —
+  -- the same defense-in-depth shape move_item and delete_container
+  -- already use for their own concurrent-write windows.
   update public.invites
   set redeemed_at = now(), redeemed_by = auth.uid()
   where id = v_invite.id

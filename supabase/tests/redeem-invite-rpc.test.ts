@@ -302,4 +302,78 @@ describe("redeem_invite RPC", () => {
       .in("user_id", [first.userId, second.userId]);
     expect(rows).toHaveLength(1);
   });
+
+  test("the SAME user concurrently redeeming the same code twice gets a clean rejection, not a raw unique-violation", async () => {
+    // Distinct from the cross-user race above: both calls here share a
+    // user_id, so the household_members INSERT's own ON CONFLICT
+    // (household_id, user_id) is what's actually being exercised — a
+    // plain "if not exists then insert" (this function's earlier,
+    // now-fixed shape) has a TOCTOU race here that a cross-user race
+    // never reaches, since two different users can't collide on that PK.
+    const user = await createTestUser("self-race-same-code");
+    createdUserIds.push(user.userId);
+    const invite = await createInvite(householdId, owner.userId);
+    const client = await signInAs(user.email, user.password);
+
+    const [first, second] = await Promise.all([
+      client.rpc("redeem_invite", { p_code: invite.code }),
+      client.rpc("redeem_invite", { p_code: invite.code }),
+    ]);
+
+    const results = [first, second];
+    const succeeded = results.filter((result) => result.error === null);
+    const failed = results.filter((result) => result.error !== null);
+
+    expect(succeeded).toHaveLength(1);
+    expect(failed).toHaveLength(1);
+    // The bug this test guards against: without ON CONFLICT DO NOTHING,
+    // the loser surfaces a raw Postgres 23505 (unique_violation) instead
+    // of this function's own clean exception.
+    expect(failed[0]?.error?.code).not.toBe("23505");
+    expect(failed[0]?.error?.message).toMatch(/already redeemed|redeemed concurrently/);
+
+    const { data: rows } = await serviceClient
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId)
+      .eq("user_id", user.userId);
+    expect(rows).toHaveLength(1);
+  });
+
+  test("the SAME user concurrently redeeming two DIFFERENT still-valid codes for the same household: both succeed, one membership row", async () => {
+    // The other half of the same TOCTOU race: here both invites are
+    // genuinely valid and distinct, so both UPDATEs on `invites` target
+    // different rows and should both succeed — the only shared resource
+    // is the household_members row, which ON CONFLICT DO NOTHING must
+    // resolve without aborting either transaction.
+    const user = await createTestUser("self-race-two-codes");
+    createdUserIds.push(user.userId);
+    const inviteA = await createInvite(householdId, owner.userId);
+    const inviteB = await createInvite(householdId, owner.userId);
+    const client = await signInAs(user.email, user.password);
+
+    const [resultA, resultB] = await Promise.all([
+      client.rpc("redeem_invite", { p_code: inviteA.code }),
+      client.rpc("redeem_invite", { p_code: inviteB.code }),
+    ]);
+
+    expect(resultA.error).toBeNull();
+    expect(resultB.error).toBeNull();
+
+    const { data: invites } = await serviceClient
+      .from("invites")
+      .select("id, redeemed_by")
+      .in("id", [inviteA.id, inviteB.id]);
+    expect(invites).toHaveLength(2);
+    for (const invite of invites ?? []) {
+      expect(invite.redeemed_by).toBe(user.userId);
+    }
+
+    const { data: rows } = await serviceClient
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId)
+      .eq("user_id", user.userId);
+    expect(rows).toHaveLength(1); // not two — the second insert was a no-op
+  });
 });
