@@ -120,6 +120,12 @@ export function SignInForm() {
         error={fieldErrors.password}
         disabled={isSubmitting}
       />
+      <Link
+        href="/forgot-password"
+        className="w-fit text-[11.5px] text-mid underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        Forgot your password?
+      </Link>
       {submitError ? (
         <p role="alert" className="text-[11.5px] text-mid">
           {submitError}

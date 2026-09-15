@@ -28,6 +28,12 @@ afterEach(() => {
   fetchMock.mockReset();
 });
 
+test("has an entry point into the forgot-password flow", () => {
+  render(<SignInForm />);
+  const link = screen.getByRole("link", { name: "Forgot your password?" });
+  expect(link.getAttribute("href")).toBe("/forgot-password");
+});
+
 test("submitting with empty fields shows inline errors and never calls signInWithPassword", async () => {
   const user = userEvent.setup();
   render(<SignInForm />);

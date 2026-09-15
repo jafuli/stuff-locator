@@ -48,3 +48,19 @@ export function validateSignInPassword(password: string): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * Confirm-password check for the reset-password form. The new password
+ * field itself reuses validateSignUpPassword directly (identical "at least
+ * MIN_PASSWORD_LENGTH" rule, not duplicated) — this handles the one check
+ * that's genuinely specific to having two fields: they have to agree.
+ */
+export function validatePasswordConfirmation(password: string, confirmation: string): string | undefined {
+  if (confirmation === "") {
+    return "Confirm your new password.";
+  }
+  if (confirmation !== password) {
+    return "Passwords don't match.";
+  }
+  return undefined;
+}

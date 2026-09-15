@@ -13,7 +13,7 @@ import { NAV_TABS } from "@/lib/nav-tabs";
  * strip the nav off the existing 404 page — a bigger, riskier change than
  * "don't show tabs on two auth pages" asked for.
  */
-const ROUTES_WITHOUT_NAV = ["/sign-up", "/sign-in"];
+const ROUTES_WITHOUT_NAV = ["/sign-up", "/sign-in", "/forgot-password", "/reset-password"];
 
 /**
  * The one place that reads the router. BottomNav itself is deliberately

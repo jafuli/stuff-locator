@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import {
   MIN_PASSWORD_LENGTH,
   validateEmail,
+  validatePasswordConfirmation,
   validateSignInPassword,
   validateSignUpPassword,
 } from "@/lib/auth-validation";
@@ -38,4 +39,16 @@ test("validateSignUpPassword accepts a password at exactly the minimum length", 
 test("validateSignInPassword rejects only an empty value, not a short one", () => {
   expect(validateSignInPassword("")).toBe("Enter your password.");
   expect(validateSignInPassword("a")).toBeUndefined();
+});
+
+test("validatePasswordConfirmation rejects an empty confirmation", () => {
+  expect(validatePasswordConfirmation("longenough1", "")).toBe("Confirm your new password.");
+});
+
+test("validatePasswordConfirmation rejects a mismatched confirmation", () => {
+  expect(validatePasswordConfirmation("longenough1", "different1")).toBe("Passwords don't match.");
+});
+
+test("validatePasswordConfirmation accepts a matching confirmation", () => {
+  expect(validatePasswordConfirmation("longenough1", "longenough1")).toBeUndefined();
 });
