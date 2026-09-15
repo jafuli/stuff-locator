@@ -204,3 +204,81 @@ describe("home route's real read path", () => {
     expect(items).toHaveLength(0);
   });
 });
+
+// Separate, self-contained test: create_household's own migration notes
+// multi-household membership is intentionally unrestricted (composite PK on
+// household_members, not unique on user_id), and page.tsx resolves which
+// household to show via `.order("joined_at", { ascending: true }).limit(1)`
+// specifically so that choice is deterministic rather than whatever
+// unordered order Postgres happens to return. This proves that ordering
+// actually works — inserting the two memberships in the OPPOSITE order from
+// their joined_at values, so a pass here can only mean the ORDER BY is
+// doing the work, not insertion order coincidentally matching.
+test("a user who belongs to two households resolves to the earliest-joined one, deterministically", async () => {
+  const email = `home-read-test-multi-${randomUUID()}@example.com`;
+  const password = "a-long-enough-test-password-1!";
+
+  const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (userError) {
+    throw new Error(`failed to create test user: ${userError.message}`);
+  }
+
+  const { data: earlierHousehold, error: earlierHouseholdError } = await serviceClient
+    .from("households")
+    .insert({ name: "Multi-household test: earlier" })
+    .select()
+    .single();
+  if (earlierHouseholdError) {
+    throw new Error(`failed to seed earlier household: ${earlierHouseholdError.message}`);
+  }
+
+  const { data: laterHousehold, error: laterHouseholdError } = await serviceClient
+    .from("households")
+    .insert({ name: "Multi-household test: later" })
+    .select()
+    .single();
+  if (laterHouseholdError) {
+    throw new Error(`failed to seed later household: ${laterHouseholdError.message}`);
+  }
+
+  // Later-joined membership inserted FIRST, earlier-joined SECOND —
+  // deliberately reversed from joined_at order.
+  const { error: laterMemberError } = await serviceClient.from("household_members").insert({
+    household_id: laterHousehold.id,
+    user_id: userData.user.id,
+    joined_at: "2020-01-02T00:00:00Z",
+  });
+  if (laterMemberError) {
+    throw new Error(`failed to seed later membership: ${laterMemberError.message}`);
+  }
+  const { error: earlierMemberError } = await serviceClient.from("household_members").insert({
+    household_id: earlierHousehold.id,
+    user_id: userData.user.id,
+    joined_at: "2020-01-01T00:00:00Z",
+  });
+  if (earlierMemberError) {
+    throw new Error(`failed to seed earlier membership: ${earlierMemberError.message}`);
+  }
+
+  try {
+    const client = await signInAs(email, password);
+    // The exact query page.tsx runs to resolve which household to show.
+    const { data: membership, error } = await client
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", userData.user.id)
+      .order("joined_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(membership?.household_id).toBe(earlierHousehold.id);
+  } finally {
+    await serviceClient.from("households").delete().in("id", [earlierHousehold.id, laterHousehold.id]);
+    await serviceClient.auth.admin.deleteUser(userData.user.id);
+  }
+});

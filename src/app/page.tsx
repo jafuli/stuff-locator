@@ -30,10 +30,20 @@ export default async function Page() {
     redirect("/sign-in");
   }
 
+  // create_household's own migration notes multi-household membership is
+  // intentionally unrestricted (composite PK, not unique on user_id) — a
+  // caller could belong to more than one. Without an explicit order, which
+  // one comes back first is undefined and can vary between requests; this
+  // orders by joined_at so the choice is at least deterministic (oldest
+  // membership first) rather than arbitrary. Not a full multi-household
+  // answer (there's no UI anywhere for a member to choose or switch
+  // households), same known limitation as ensureHousehold's identical
+  // unordered read in src/server/services/household.ts.
   const { data: membership, error: membershipError } = await supabase
     .from("household_members")
     .select("household_id")
     .eq("user_id", user.id)
+    .order("joined_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -45,7 +55,15 @@ export default async function Page() {
   }
 
   const [itemsResult, locationsResult] = await Promise.all([
-    supabase.from("items").select("*").eq("household_id", membership.household_id),
+    // Most-recently-added first — without an explicit order, Postgres row
+    // order isn't guaranteed to stay stable across requests (e.g. after an
+    // UPDATE from move_item), so the list could otherwise visibly reshuffle
+    // on an unrelated reload.
+    supabase
+      .from("items")
+      .select("*")
+      .eq("household_id", membership.household_id)
+      .order("added_at", { ascending: false }),
     supabase.from("locations").select("id, parent_id, name").eq("household_id", membership.household_id),
   ]);
 
