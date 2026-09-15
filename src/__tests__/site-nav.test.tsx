@@ -32,6 +32,16 @@ test("marks the Stuff tab active on /", () => {
   expect(screen.getByRole("link", { name: "Activity" }).getAttribute("aria-current")).toBeNull();
 });
 
+test("has a visible Invite partner link to /settings/invite, distinct from the two BottomNav tabs", () => {
+  usePathname.mockReturnValue("/");
+  render(<SiteNav />);
+  const inviteLink = screen.getByRole("link", { name: "Invite partner" });
+  expect(inviteLink.getAttribute("href")).toBe("/settings/invite");
+  // Still exactly two BottomNav tabs — this is a separate nav link, not a
+  // third tab (nav-tabs.ts's own settled 2-tab decision is unchanged).
+  expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(2);
+});
+
 test("marks the Activity tab active on /activity", () => {
   usePathname.mockReturnValue("/activity");
   render(<SiteNav />);
