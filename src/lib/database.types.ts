@@ -251,6 +251,26 @@ export type Database = {
         Args: { target_household_id: string }
         Returns: boolean
       }
+      location_subtree_items: {
+        Args: { p_location_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          detail: string | null
+          household_id: string
+          id: string
+          last_moved_at: string | null
+          last_moved_by: string | null
+          location_id: string
+          name: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       move_item: {
         Args: { p_item_id: string; p_new_location_id: string }
         Returns: {
