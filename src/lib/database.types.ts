@@ -231,6 +231,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_container: {
+        Args: { p_location_id: string }
+        Returns: {
+          created_at: string
+          household_id: string
+          id: string
+          name: string
+          parent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "locations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_household_member: {
         Args: { target_household_id: string }
         Returns: boolean
