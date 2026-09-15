@@ -27,6 +27,8 @@ export interface LocationAutocompleteProps {
   placeholder?: string;
   /** True while the caller's location list hasn't arrived yet. */
   isLoading?: boolean;
+  /** Disables the input outright — e.g. while a parent form's submit is in flight. Distinct from `isLoading`, which is about the options list, not the field itself. */
+  disabled?: boolean;
   /** Set when the caller's location list failed to load. Doesn't block typing a new place. */
   error?: string | null;
   /**
@@ -110,6 +112,7 @@ export function LocationAutocomplete({
   label = "Where?",
   placeholder,
   isLoading = false,
+  disabled = false,
   error = null,
   describedBy,
   onInputChange,
@@ -180,11 +183,12 @@ export function LocationAutocomplete({
           {...getInputProps({
             "aria-describedby": describedBy,
             "aria-invalid": describedBy ? true : undefined,
+            disabled,
           })}
           placeholder={placeholder}
           className={cn(
             "w-full rounded-[7px] border-[1.5px] px-[9px] py-[7px] text-[12.5px] text-ink outline-none",
-            "placeholder:text-[#b0b0b0]",
+            "placeholder:text-[#b0b0b0] disabled:opacity-60",
             "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
             inputValue.length > 0 ? "border-ink" : "border-line",
           )}
