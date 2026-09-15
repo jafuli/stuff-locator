@@ -182,6 +182,7 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
           options={locationOptions}
           onSelect={handleLocationSelect}
           describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
+          disabled={isSubmitting}
         />
         {locationSelection?.type === "existing" ? (
           <p className="mt-1 text-[11px] text-mid">Selected: {locationSelection.option.path}</p>

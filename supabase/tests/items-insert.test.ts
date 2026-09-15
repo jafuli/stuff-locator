@@ -196,6 +196,35 @@ describe("items insert (Stash flow real write)", () => {
     expect(rows).toHaveLength(0);
   });
 
+  test("added_by must be the caller's own id — attributing an item to a different real user is rejected", async () => {
+    // household B's owner is a real, existing auth.users row (so this
+    // isn't rejected by the added_by foreign key) — just not the caller.
+    // Location/household are internally consistent (both A's own), which
+    // isolates this as purely an added_by check, not the location/
+    // household trigger case above.
+    const { data, error } = await clientA
+      .from("items")
+      .insert({
+        name: "Misattributed item",
+        location_id: householdA.locationId,
+        household_id: householdA.householdId,
+        added_by: householdB.userId,
+      })
+      .select()
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+    expect(error?.message).toMatch(/added_by must be the authenticated caller/);
+
+    const { data: rows } = await serviceClient
+      .from("items")
+      .select("id")
+      .eq("household_id", householdA.householdId)
+      .eq("name", "Misattributed item");
+    expect(rows).toHaveLength(0);
+  });
+
   test("a household_id the caller isn't a member of is rejected, whether or not the location also matches it", async () => {
     // household_id and location_id are both genuinely household B's own
     // (internally consistent, so the new trigger's own row-shape check

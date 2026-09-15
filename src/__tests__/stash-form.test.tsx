@@ -169,6 +169,7 @@ test("the button shows a loading state and disables fields while the insert is i
   expect(submitButton.disabled).toBe(true);
   expect(screen.getByLabelText<HTMLInputElement>("Name").disabled).toBe(true);
   expect(screen.getByLabelText<HTMLInputElement>("Detail (optional)").disabled).toBe(true);
+  expect(screen.getByRole<HTMLInputElement>("combobox").disabled).toBe(true);
 
   resolveInsert({
     data: {
