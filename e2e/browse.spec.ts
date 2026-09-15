@@ -52,31 +52,17 @@ test("drilling down through nested locations from /browse reaches an item, and b
   expect(consoleErrors).toEqual([]);
 });
 
-test("clicking a home-page breadcrumb segment lands on the matching /browse/[id]", async ({ page }) => {
-  const consoleErrors: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      consoleErrors.push(msg.text());
-    }
-  });
-  page.on("pageerror", (err) => {
-    consoleErrors.push(err.message);
-  });
-
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
-
-  // Passport's breadcrumb is "Bedroom › Filing box"; its leaf segment links
-  // to /browse/bedroom-filing-box.
-  await page.getByRole("link", { name: "Filing box" }).click();
-  await page.waitForLoadState("networkidle");
-
-  await expect(page).toHaveURL(/\/browse\/bedroom-filing-box$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Filing box" })).toBeVisible();
-  await expect(page.getByText("Passport")).toBeVisible();
-
-  expect(consoleErrors).toEqual([]);
-});
+// The former "clicking a home-page breadcrumb segment lands on the
+// matching /browse/[id]" test lived here, coupling this file to Home's
+// fixture-rendered breadcrumb links. Home now reads real household data
+// (see home.spec.ts) — its item breadcrumbs link to real /browse/[uuid]
+// paths that this still-fixture-only Browse route can never resolve
+// (LOCATIONS only knows fixture ids), so asserting on Browse's *rendered
+// content* after that click is no longer possible to do honestly. The part
+// of that test actually about Home (a real item's breadcrumb segment
+// linking to the right /browse/[id] href) now lives in home.spec.ts
+// instead, without navigating into Browse itself — see this task's AC #6
+// (Browse reads are explicitly out of scope) and the PR description.
 
 test("an unknown location id renders the not-found state, not a raw crash", async ({ page }) => {
   const consoleErrors: string[] = [];

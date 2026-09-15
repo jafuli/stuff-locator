@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
+import Link from "next/link";
 import { StuffList, type StuffListEntry } from "@/components/stuff-list";
 import type { Item } from "@/lib/fixtures/types";
 
@@ -24,6 +25,16 @@ test("renders the empty state when there are no entries", () => {
   expect(screen.getByText("No items yet")).toBeDefined();
   expect(screen.getByText("Stash your first thing to see it here.")).toBeDefined();
   expect(screen.queryByRole("link")).toBeNull();
+});
+
+test("renders a caller-supplied emptyStateAction in the zero-entries empty state", () => {
+  render(
+    <StuffList
+      entries={[]}
+      emptyStateAction={<Link href="/items/new">Stash your first item</Link>}
+    />,
+  );
+  expect(screen.getByRole("link", { name: "Stash your first item" }).getAttribute("href")).toBe("/items/new");
 });
 
 test("renders one ItemCard per entry, linked by item id", () => {

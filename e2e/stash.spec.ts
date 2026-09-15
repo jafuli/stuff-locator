@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
 
 // Stash (/items/new) is fixture-only — there is no backend call anywhere in
@@ -6,6 +7,21 @@ import { tabUntilFocused } from "./utils";
 // item list. None of these tests assert the captured item shows up on
 // Home/Browse/Find afterward, by design (see the PR description) — that's
 // deliberately out of scope here, not an oversight.
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+// Only the happy-path test below needs this: it navigates back to "/" at
+// the end, and Home now reads real household data and redirects an
+// unauthenticated visitor to /sign-in instead (see home.spec.ts). The other
+// tests in this file never leave /items/new, so they're unaffected and
+// left unauthenticated on purpose.
+async function signUpFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-stash-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+}
 
 test("filling a valid name, an existing location via the autocomplete, and an optional detail succeeds with the exact captured values", async ({
   page,
@@ -20,6 +36,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
     consoleErrors.push(err.message);
   });
 
+  await signUpFreshAccount(page);
   await page.goto("/items/new");
   await page.waitForLoadState("networkidle");
 
