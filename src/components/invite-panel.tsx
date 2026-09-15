@@ -47,6 +47,11 @@ export function InvitePanel({ code }: InvitePanelProps) {
       await navigator.clipboard.writeText(link);
       setCopied(true);
     } catch {
+      // Clears any earlier success too — otherwise a failed retry after a
+      // prior successful copy (e.g. clipboard permission revoked
+      // mid-session) would show "Copied!" and the error message at the
+      // same time, a real contradiction a caught-in-review bug produced.
+      setCopied(false);
       setCopyError("Couldn't copy automatically — copy the link above manually.");
     }
   }

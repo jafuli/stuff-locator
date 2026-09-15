@@ -50,3 +50,20 @@ test("a failed copy shows a visible error instead of a silent failure", async ()
   expect(error.getAttribute("role")).toBe("alert");
   expect(screen.queryByText("Copied!")).toBeNull();
 });
+
+test("a failed copy after an earlier successful one clears the stale 'Copied!' instead of showing both at once", async () => {
+  const { user, writeText } = setupUserWithMockedClipboard();
+  render(<InvitePanel code="abc123" />);
+  const copyButton = screen.getByRole("button", { name: "Copy link" });
+
+  await user.click(copyButton);
+  expect(await screen.findByText("Copied!")).toBeDefined();
+
+  writeText.mockRejectedValueOnce(new Error("denied"));
+  await user.click(copyButton);
+
+  await screen.findByText("Couldn't copy automatically — copy the link above manually.");
+  // The bug this guards against: without clearing `copied` on failure,
+  // both the stale success text and the new error rendered simultaneously.
+  expect(screen.queryByText("Copied!")).toBeNull();
+});

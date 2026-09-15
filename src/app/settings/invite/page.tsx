@@ -58,6 +58,15 @@ export default async function Page() {
 
   const reusable = findReusableInvite(candidates, new Date());
 
+  // Known accepted limitation, same shape as ensureHousehold's own
+  // documented one (src/server/services/household.ts): the read above and
+  // the insert below are two separate PostgREST requests, not one atomic
+  // operation. Two concurrent loads of this page for the same household
+  // (two tabs, or a double-navigation) can each observe no reusable invite
+  // and each create one, producing two live rows instead of the intended
+  // reuse. Low-severity (a spare unredeemed code, not a security or
+  // data-integrity issue) and not something a partial unique index or an
+  // RPC is used to close here — flagged rather than silently accepted.
   let code: string;
   if (reusable) {
     code = reusable.code;

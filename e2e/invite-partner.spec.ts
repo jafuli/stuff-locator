@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
 
-// Invite-partner UI (/settings/invite) needs a real signed-in session (it
-// redirects an unauthenticated visitor to /sign-in, same guard shape as
-// Stash/Home's own real-data-wiring tasks) — every test signs up a fresh
-// real account first, matching the account-per-test pattern already
-// established in sign-in.spec.ts / sign-up.spec.ts / stash.spec.ts.
+// Invite-partner UI (/settings/invite) needs a real signed-in session — it
+// redirects an unauthenticated visitor to /sign-in (src/app/settings/invite/
+// page.tsx), the first route in this app to gate on auth this way. Every
+// test signs up a fresh real account first, matching the account-per-test
+// pattern already established in sign-in.spec.ts / sign-up.spec.ts.
 //
 // Clipboard permissions: Chromium needs explicit grants for
 // navigator.clipboard.writeText to actually succeed in a headless test
