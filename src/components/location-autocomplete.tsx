@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCombobox } from "downshift";
 import { cn } from "@/lib/cn";
 import type { LocationOption } from "@/lib/fixtures/location-path";
@@ -37,6 +37,19 @@ export interface LocationAutocompleteProps {
    * load, not about what the caller chose from it.
    */
   describedBy?: string;
+  /**
+   * Fires with the raw input text on every change — both real typing and
+   * the internal reset back to `""` right after a selection — so it always
+   * mirrors this component's own `inputValue` faithfully. Optional: a
+   * caller whose selection state always starts `null` (e.g. Stash's fresh
+   * add-item form) has nothing stale to invalidate and can ignore it. A
+   * caller that pre-fills an existing selection (e.g. an edit form) should
+   * use this to clear that selection the moment the user starts typing
+   * again — otherwise an edit abandoned mid-type (typed something, never
+   * actually selected a row) can silently keep the old selection instead
+   * of failing validation, since `onSelect` alone never fires for that.
+   */
+  onInputChange?: (value: string) => void;
 }
 
 /** Case-insensitive substring match over each option's full path. */
@@ -99,8 +112,18 @@ export function LocationAutocomplete({
   isLoading = false,
   error = null,
   describedBy,
+  onInputChange,
 }: LocationAutocompleteProps) {
   const [inputValue, setInputValue] = useState("");
+  // Downshift's default reducer, when Enter/click selects an item, updates
+  // its internal inputValue to that item's stringified form as part of the
+  // SAME dispatch that fires onSelectedItemChange — which means
+  // onInputValueChange still fires afterward with that non-empty value,
+  // even though onSelectedItemChange (below) already forced inputValue
+  // back to "". Without this guard, that trailing call would silently
+  // resurrect the just-cleared text (and re-notify onInputChange with it),
+  // undoing the "picker, not a tag input" reset a moment after it happened.
+  const justSelectedRef = useRef(false);
 
   const trimmedQuery = inputValue.trim();
   const matches = isLoading ? [] : filterLocationOptions(options, inputValue);
@@ -114,7 +137,14 @@ export function LocationAutocomplete({
     inputValue,
     itemToString,
     onInputValueChange: ({ inputValue: nextValue }) => {
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        setInputValue("");
+        onInputChange?.("");
+        return;
+      }
       setInputValue(nextValue);
+      onInputChange?.(nextValue);
     },
     // Controlled to null: this is a picker, not a tag input — a selection
     // fires onSelect and clears back to an empty field rather than
@@ -124,12 +154,14 @@ export function LocationAutocomplete({
       if (!selectedItem) {
         return;
       }
+      justSelectedRef.current = true;
       if (selectedItem.kind === "create") {
         onSelect({ type: "new", name: selectedItem.query });
       } else {
         onSelect({ type: "existing", option: selectedItem.option });
       }
       setInputValue("");
+      onInputChange?.("");
     },
   });
 
