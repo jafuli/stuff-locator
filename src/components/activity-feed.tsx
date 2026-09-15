@@ -53,7 +53,11 @@ export function ActivityFeed({ entries }: ActivityFeedProps) {
             </Link>
           </p>
           <LocationBreadcrumb segments={segments} linked />
-          <time dateTime={event.at.toISOString()} title={event.at.toLocaleString()} className="text-[9.5px] text-[#a0a0a0]">
+          {/* text-mid, not the lighter --dim token: axe-core flagged
+              --dim's 2.81:1 contrast against the paper background as a
+              WCAG AA failure (needs 4.5:1 for text this size) — text-mid
+              clears it at 5.33:1. */}
+          <time dateTime={event.at.toISOString()} title={event.at.toLocaleString()} className="text-[9.5px] text-mid">
             {formatRelativeLong(event.at)}
           </time>
         </li>
