@@ -19,3 +19,9 @@ test("has a way back to the home stuff list", () => {
   const backLink = screen.getByRole("link", { name: "‹ Back to Stuff" });
   expect(backLink.getAttribute("href")).toBe("/");
 });
+
+test("has an entry point into the Add-location flow", () => {
+  render(<Page />);
+  const addLocationLink = screen.getByRole("link", { name: "+ Add location" });
+  expect(addLocationLink.getAttribute("href")).toBe("/locations/new");
+});
