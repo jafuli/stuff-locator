@@ -307,6 +307,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      redeem_invite: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          household_id: string
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
