@@ -1,16 +1,25 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
+import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 
-// Item-detail is still fixture-only (a separate, future wiring task — see
-// CLAUDE.md/the Home task's own AC #6) and reachable by anyone, so these
-// two tests navigate to it directly by URL rather than clicking through
-// from Home: Home now reads real household data and redirects an
-// unauthenticated visitor to /sign-in (see home.spec.ts), so it can no
-// longer be relied on to render these fixture items at all. The click-
-// through/tab-through interaction itself (an item row linking to its own
-// /items/[id]) is unit-tested directly against real data in
-// src/__tests__/stuff-list.test.tsx; what's left to verify here is
-// item-detail's own rendering, which direct navigation isolates cleanly.
+// Item detail (/items/[id]) now reads real household data — every test
+// signs up a fresh real account first (the route redirects an
+// unauthenticated visitor to /sign-in) and seeds a real location/item via
+// the service-role client, matching the account-per-test pattern already
+// established in stash.spec.ts / browse.spec.ts.
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+async function signUpFreshAccount(page: Page): Promise<string> {
+  const email = `e2e-item-detail-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+  return email;
+}
+
 test("item-detail shows the item's full detail", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
@@ -22,7 +31,15 @@ test("item-detail shows the item's full detail", async ({ page }) => {
     consoleErrors.push(err.message);
   });
 
-  await page.goto("/items/passport");
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, {
+    name: "Passport",
+    detail: "with the birth certificates",
+    locationId,
+  });
+
+  await page.goto(`/items/${itemId}`);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Passport" })).toBeVisible();
@@ -34,7 +51,11 @@ test("item-detail shows the item's full detail", async ({ page }) => {
 });
 
 test("the detail page's back link is keyboard-reachable", async ({ page }) => {
-  await page.goto("/items/spare-house-keys");
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox", "Red box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Spare house keys", locationId });
+
+  await page.goto(`/items/${itemId}`);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeVisible();
@@ -52,6 +73,10 @@ test("an unknown item id renders the not-found state, not a raw crash", async ({
     consoleErrors.push(err.message);
   });
 
+  await signUpFreshAccount(page);
+  // Not a valid uuid at all — exercises the malformed-id branch (Postgres
+  // 22P02) folded into the same not-found state as a well-formed but
+  // nonexistent id, rather than crashing into error.tsx.
   await page.goto("/items/does-not-exist");
   await page.waitForLoadState("networkidle");
 

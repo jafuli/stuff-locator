@@ -42,12 +42,17 @@ test("drilling down through nested locations from /browse reaches an item, and b
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: "Toolbox" })).toBeVisible();
 
-  // Drill back down and open the item itself.
+  // Drill back down. Its row links to the item's own id — verified via
+  // href, not by navigating in: item-detail now reads real data (see that
+  // task's PR) and this fixture id ("spare-house-keys") was never
+  // something its real reads could resolve — Browse itself is still
+  // fixture-only until its own separate wiring task lands.
   await page.getByRole("link", { name: "Red box" }).click();
   await page.waitForLoadState("networkidle");
-  await page.getByText("Spare house keys", { exact: true }).click();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Spare house keys" })).toHaveAttribute(
+    "href",
+    "/items/spare-house-keys",
+  );
 
   expect(consoleErrors).toEqual([]);
 });

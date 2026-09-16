@@ -70,9 +70,10 @@ test("filling a valid name, an existing location via the autocomplete, and an op
   await expect(status.getByText("Top shelf, behind the shoebox")).toBeVisible();
 
   // Real persistence, not a fixture echo: query the row back directly and
-  // confirm the "View item" link genuinely points at that row's own id
-  // (not left to 404-navigate against, since /items/[id]'s own read is
-  // still fixture-only — a separate, unwired surface flagged in the PR).
+  // confirm the "View item" link genuinely points at that row's own id.
+  // Doesn't navigate in — item-detail's own rendering is covered directly
+  // by item-detail.spec.ts (see that task's PR); this only proves Stash's
+  // own link target is correct.
   const persisted = await findItemByName(itemName);
   if (!persisted) {
     throw new Error(`expected a persisted item named "${itemName}"`);

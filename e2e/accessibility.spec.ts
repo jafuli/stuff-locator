@@ -32,12 +32,15 @@ async function signUpAndSeedHomeItem(page: Page): Promise<void> {
 }
 
 // Automated accessibility pass (axe-core) across every currently-merged
-// route with real content. Explicitly out of scope: the three fixture-only
-// routes not yet merged as of this task (/items/new, /locations/new,
-// /items/[id]/edit) — a natural follow-up once they land. Also out of
-// scope: any manual/subjective accessibility review beyond what axe
-// catches — this is an automated-tooling pass, not a substitute for a
-// manual screen-reader pass.
+// route with real content. Item detail and Edit-item are both real now too
+// (see this task's PR description) — their own dynamic-id tests live below
+// the loop, same reason the "nested child" Browse case does: a real seeded
+// id can't be a static path in this table. Explicitly out of scope:
+// /locations/new, the one remaining fixture-only route as of this task — a
+// natural follow-up once its own wiring task lands. Also out of scope: any
+// manual/subjective accessibility review beyond what axe catches — this is
+// an automated-tooling pass, not a substitute for a manual screen-reader
+// pass.
 //
 // Every rule still runs (no `disableRules`, no ruleset filtering) — a
 // violation only stops failing the test if it's genuinely fixed. Only the
@@ -55,7 +58,6 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   // seeds a real item rather than testing only the empty state).
   { path: "/browse/garage-closet", name: "browse/[id] (a location with a nested child)" },
   { path: "/activity", name: "activity" },
-  { path: "/items/passport", name: "item detail" },
   { path: "/this-route-does-not-exist", name: "root not-found" },
   { path: "/~offline", name: "offline fallback" },
 ];
@@ -77,3 +79,37 @@ for (const route of ROUTES) {
     expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
   });
 }
+
+// Item detail and Edit-item both need a real seeded item id (computed at
+// test time), which the static ROUTES table above can't express, so they
+// live as their own tests rather than table entries — same reason the
+// "nested child" Browse case does above.
+test("item detail (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", detail: "with the birth certificates", locationId });
+
+  await page.goto(`/items/${itemId}`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
+
+test("item edit (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });
+
+  await page.goto(`/items/${itemId}/edit`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
