@@ -50,12 +50,12 @@ jobs:
       # to happen before that rebuild specifically, because NEXT_PUBLIC_*
       # vars are inlined at build time, not read at runtime.
       #
-      # Also exported unprefixed (SUPABASE_URL/SUPABASE_ANON_KEY) — the
-      # e2e specs' own Node process reads these directly (see
-      # e2e/supabase-test-client.ts) to verify household_members row counts
-      # against the real backend; Next's NEXT_PUBLIC_* auto-loading doesn't
-      # cover that, since it's the Playwright test runner reading them, not
-      # the Next.js app.
+      # Also exported unprefixed (SUPABASE_URL/SUPABASE_ANON_KEY/
+      # SUPABASE_SERVICE_ROLE_KEY) — the e2e specs' own Node process reads
+      # these directly (see e2e/supabase-test-client.ts) to seed fixtures
+      # and verify household_members row counts against the real backend;
+      # Next's NEXT_PUBLIC_* auto-loading doesn't cover that, since it's
+      # the Playwright test runner reading them, not the Next.js app.
       - name: Start Supabase and wire real env vars for e2e
         run: |
           npx supabase start
@@ -65,6 +65,7 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_URL=$(grep '^API_URL=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
           } >> "$GITHUB_ENV"
       - name: UI smoke test
         run: npm run test:e2e
