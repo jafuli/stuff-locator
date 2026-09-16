@@ -8,6 +8,7 @@ import { FormField } from "@/components/ui/form-field";
 import { HouseholdBootstrapNotice } from "@/components/household-bootstrap-notice";
 import { BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS, triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
 import { validateEmail, validateSignInPassword } from "@/lib/auth-validation";
+import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
 import { createClient } from "@/server/db/client";
 
 interface FieldErrors {
@@ -15,10 +16,24 @@ interface FieldErrors {
   password?: string;
 }
 
+export interface SignInFormProps {
+  /**
+   * When set, a successful sign-in redeems this invite code BEFORE the
+   * usual household-bootstrap check runs, instead of navigating to "/" —
+   * see SignUpFormProps' own doc comment (identical reasoning) and
+   * /join/[code]/page.tsx.
+   */
+  invite?: {
+    code: string;
+    onRedeemed: (result: RedeemInviteResult) => void;
+  };
+}
+
 /**
  * Standalone sign-in form — calls the browser Supabase client directly
- * (src/server/db/client.ts). Always redirects to "/" on success; there's no
- * confirmation branch here the way there is for sign-up.
+ * (src/server/db/client.ts). Always redirects to "/" on success (or, with
+ * `invite` set, redeems the invite instead); there's no confirmation branch
+ * here the way there is for sign-up.
  *
  * The rejected-credentials error surfaces Supabase's own message verbatim
  * (e.g. "Invalid login credentials") rather than a generic "wrong email or
@@ -31,7 +46,7 @@ interface FieldErrors {
  * session — so this is also where a user who signed up under
  * enable_confirmations=true gets bootstrapped for the first time.
  */
-export function SignInForm() {
+export function SignInForm({ invite }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,6 +92,18 @@ export function SignInForm() {
     if (error) {
       setIsSubmitting(false);
       setSubmitError(error.message);
+      return;
+    }
+
+    if (invite) {
+      // Redeem BEFORE bootstrap — same reasoning as SignUpFormProps' own
+      // doc comment. Bootstrap still runs afterward regardless of whether
+      // redemption succeeded (see that comment for why it's safe either
+      // way).
+      const result = await redeemInviteAndGetHouseholdName(supabase, invite.code);
+      await triggerHouseholdBootstrap();
+      setIsSubmitting(false);
+      invite.onRedeemed(result);
       return;
     }
 
@@ -135,12 +162,16 @@ export function SignInForm() {
       <Button type="submit" variant="primary" isLoading={isSubmitting}>
         {isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
-      <p className="text-center text-[11.5px] text-mid">
-        Don&apos;t have an account?{" "}
-        <Link href="/sign-up" className="font-semibold text-ink underline underline-offset-2">
-          Sign up
-        </Link>
-      </p>
+      {/* Same reasoning as SignUpForm's own suppressed footer link — see
+          that component's comment. */}
+      {!invite ? (
+        <p className="text-center text-[11.5px] text-mid">
+          Don&apos;t have an account?{" "}
+          <Link href="/sign-up" className="font-semibold text-ink underline underline-offset-2">
+            Sign up
+          </Link>
+        </p>
+      ) : null}
     </form>
   );
 }

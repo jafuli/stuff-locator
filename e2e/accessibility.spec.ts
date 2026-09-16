@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { seedInviteForNewHousehold, seedItem, seedLocationChain } from "./supabase-test-client";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -77,3 +77,21 @@ for (const route of ROUTES) {
     expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
   });
 }
+
+// /join/[code] needs a real, redeemable invite code (computed at test
+// time), which the static ROUTES table above can't express, so it lives as
+// its own test — same reason the "nested child" Browse case does.
+// Signed-out state, the route's default entry point (see join-invite.spec.ts
+// for the already-signed-in variant).
+test("join a household (/join/[code], signed out) has no critical or serious axe violations", async ({ page }) => {
+  const { code } = await seedInviteForNewHousehold("A11y test household");
+
+  await page.goto(`/join/${code}`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});

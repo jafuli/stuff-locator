@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -126,6 +127,54 @@ export async function findItemByName(name: string): Promise<{ id: string; househ
     throw new Error(`failed to query item "${name}" back: ${error.message}`);
   }
   return data;
+}
+
+/**
+ * Seeds a brand-new household (with a real owner user, not the test's own
+ * caller) plus one unredeemed invite for it, via the service-role client.
+ * Returns the invite's real code and the household's id — used by
+ * join-invite.spec.ts, which needs a real, redeemable invite to land on
+ * without also driving the full Invite-partner UI (already covered
+ * end-to-end by invite-partner.spec.ts) just to get one.
+ */
+export async function seedInviteForNewHousehold(householdName: string): Promise<{ code: string; householdId: string }> {
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+
+  const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
+    email: `e2e-join-inviter-${randomUUID()}@example.com`,
+    password: "a-long-enough-test-password-1!",
+    email_confirm: true,
+  });
+  if (userError) {
+    throw new Error(`failed to seed inviter user: ${userError.message}`);
+  }
+
+  const { data: household, error: householdError } = await serviceClient
+    .from("households")
+    .insert({ name: householdName })
+    .select()
+    .single();
+  if (householdError) {
+    throw new Error(`failed to seed household "${householdName}": ${householdError.message}`);
+  }
+
+  const { error: memberError } = await serviceClient
+    .from("household_members")
+    .insert({ household_id: household.id, user_id: userData.user.id, role: "owner" });
+  if (memberError) {
+    throw new Error(`failed to seed inviter membership: ${memberError.message}`);
+  }
+
+  const { data: invite, error: inviteError } = await serviceClient
+    .from("invites")
+    .insert({ household_id: household.id, created_by: userData.user.id })
+    .select("code")
+    .single();
+  if (inviteError) {
+    throw new Error(`failed to seed invite: ${inviteError.message}`);
+  }
+
+  return { code: invite.code, householdId: household.id };
 }
 
 /**
