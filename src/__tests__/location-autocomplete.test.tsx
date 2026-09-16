@@ -101,6 +101,13 @@ test("shows a loading hint and no selectable options while isLoading", () => {
   expect(screen.queryAllByRole("option")).toHaveLength(0);
 });
 
+test("disables the input outright when disabled is set, independent of isLoading", () => {
+  render(<LocationAutocomplete options={OPTIONS} onSelect={vi.fn()} disabled />);
+  expect(screen.getByRole<HTMLInputElement>("combobox").disabled).toBe(true);
+  // Distinct from isLoading — no "Loading places…" hint for a plain disable.
+  expect(screen.queryByText("Loading places…")).toBeNull();
+});
+
 test("shows the error message via a live region", () => {
   render(<LocationAutocomplete options={OPTIONS} onSelect={vi.fn()} error="Couldn't load your places." />);
   expect(screen.getByRole("alert").textContent).toBe("Couldn't load your places.");

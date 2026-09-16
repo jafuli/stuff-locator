@@ -1,5 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
+
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+// Only the Stash-entry-point test below needs this: /items/new now
+// redirects an unauthenticated visitor to /sign-in (see stash.spec.ts's
+// header comment), so following the "+ Add item" link all the way through
+// needs a real signed-in session. Home itself is still fixture-only and
+// unauthenticated in this task's scope — see the boot test above, which is
+// intentionally left as-is.
+async function signUpFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-home-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+}
 
 test("home route boots cleanly, shows the item list, and is keyboard-reachable", async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -48,6 +66,7 @@ test("home has a visible, keyboard-reachable entry point into the Stash flow", a
     consoleErrors.push(err.message);
   });
 
+  await signUpFreshAccount(page);
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
