@@ -52,10 +52,11 @@ jobs:
       #
       # Also exported unprefixed (SUPABASE_URL/SUPABASE_ANON_KEY/
       # SUPABASE_SERVICE_ROLE_KEY) — the e2e specs' own Node process reads
-      # these directly (see e2e/supabase-test-client.ts) to seed fixtures
-      # and verify household_members row counts against the real backend;
-      # Next's NEXT_PUBLIC_* auto-loading doesn't cover that, since it's
-      # the Playwright test runner reading them, not the Next.js app.
+      # these directly (see e2e/supabase-test-client.ts) to verify
+      # household_members row counts and seed/read rows via the
+      # service-role client, bypassing RLS for setup; Next's NEXT_PUBLIC_*
+      # auto-loading doesn't cover that, since it's the Playwright test
+      # runner reading them, not the Next.js app.
       - name: Start Supabase and wire real env vars for e2e
         run: |
           npx supabase start

@@ -1,29 +1,35 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { findItemByName, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 
-// Stash (/items/new) is fixture-only — there is no backend call anywhere in
-// this flow, and a successful "add" is never written back into the fixture
-// item list. None of these tests assert the captured item shows up on
-// Home/Browse/Find afterward, by design (see the PR description) — that's
+// Stash (/items/new) now makes a real Supabase write (see the PR
+// description) — every test signs up a fresh real account first (the route
+// redirects an unauthenticated visitor to /sign-in, and stash-form.tsx
+// needs a real household_id/userId from the signed-in session), matching
+// the account-per-test pattern already established in sign-in.spec.ts /
+// sign-up.spec.ts. The happy-path and keyboard tests additionally seed a
+// real "Garage > Closet > Toolbox > Red box" location chain into that
+// household via the service-role client, since the autocomplete now reads
+// real rows instead of the LOCATIONS fixture.
+//
+// None of these tests assert the captured item shows up on Home/Browse/Find
+// afterward — those routes are still fixture-backed until their own
+// real-data-wiring tasks land (see this task's own AC #5) — that's
 // deliberately out of scope here, not an oversight.
 const TEST_PASSWORD = "correct-horse-battery-1";
 
-// Only the happy-path test below needs this: it navigates back to "/" at
-// the end, and Home now reads real household data and redirects an
-// unauthenticated visitor to /sign-in instead (see home.spec.ts). The other
-// tests in this file never leave /items/new, so they're unaffected and
-// left unauthenticated on purpose.
-async function signUpFreshAccount(page: Page): Promise<void> {
+async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-stash-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("/");
+  return email;
 }
 
-test("filling a valid name, an existing location via the autocomplete, and an optional detail succeeds with the exact captured values", async ({
+test("filling a valid name, an existing location via the autocomplete, and an optional detail succeeds with a real persisted row", async ({
   page,
 }) => {
   const consoleErrors: string[] = [];
@@ -36,13 +42,17 @@ test("filling a valid name, an existing location via the autocomplete, and an op
     consoleErrors.push(err.message);
   });
 
-  await signUpFreshAccount(page);
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox", "Red box"]);
+
+  const itemName = `Bike pump ${randomUUID()}`;
+
   await page.goto("/items/new");
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Add an item" })).toBeVisible();
 
-  await page.getByLabel("Name").fill("Bike pump");
+  await page.getByLabel("Name").fill(itemName);
 
   await page.getByRole("combobox").fill("Red box");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
@@ -55,9 +65,19 @@ test("filling a valid name, an existing location via the autocomplete, and an op
 
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
-  await expect(status.getByText("Bike pump", { exact: true })).toBeVisible();
+  await expect(status.getByText(itemName, { exact: true })).toBeVisible();
   await expect(status.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
   await expect(status.getByText("Top shelf, behind the shoebox")).toBeVisible();
+
+  // Real persistence, not a fixture echo: query the row back directly and
+  // confirm the "View item" link genuinely points at that row's own id
+  // (not left to 404-navigate against, since /items/[id]'s own read is
+  // still fixture-only — a separate, unwired surface flagged in the PR).
+  const persisted = await findItemByName(itemName);
+  if (!persisted) {
+    throw new Error(`expected a persisted item named "${itemName}"`);
+  }
+  await expect(status.getByRole("link", { name: "View item" })).toHaveAttribute("href", `/items/${persisted.id}`);
 
   await status.getByRole("link", { name: "Back to home" }).click();
   await page.waitForURL("/");
@@ -69,6 +89,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
 test("submitting with an empty name and no location shows specific inline errors and never navigates away", async ({
   page,
 }) => {
+  await signUpFreshAccount(page);
   await page.goto("/items/new");
 
   await page.getByRole("button", { name: "Add item" }).click();
@@ -82,6 +103,7 @@ test("submitting with an empty name and no location shows specific inline errors
 test("a location that's typed but never resolved to an existing place is rejected with its own specific message", async ({
   page,
 }) => {
+  await signUpFreshAccount(page);
   await page.goto("/items/new");
 
   await page.getByLabel("Name").fill("Mystery gadget");
@@ -101,7 +123,11 @@ test("a location that's typed but never resolved to an existing place is rejecte
 });
 
 test("the whole form, including the autocomplete, is operable keyboard-only", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox", "Red box"]);
+
   await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
 
   await page.getByLabel("Name").focus();
   await expect(page.getByLabel("Name")).toBeFocused();
@@ -140,6 +166,7 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await expect(status.getByText("Passport")).toBeVisible();
   await expect(status.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
 
-  // The "Back to home" link is still reachable without leaving the keyboard.
+  // The "View item" / "Add another" / "Back to home" row is still reachable
+  // without leaving the keyboard.
   expect(await tabUntilFocused(page, "Back to home", 5)).toBe(true);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BottomNav } from "@/components/bottom-nav";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -34,6 +35,15 @@ const ROUTES_WITHOUT_NAV = ["/sign-up", "/sign-in", "/forgot-password", "/reset-
  * manually — ROUTES_WITHOUT_NAV hides the whole nav there unconditionally,
  * regardless of session state, since those pages are meant to be
  * standalone either way.
+ *
+ * The "Invite partner" link (the Invite-partner-UI task's entry point,
+ * AC #3) is a plain nav link in its own row, not a third BottomNav tab —
+ * the 2-tab count is a settled, documented decision (see nav-tabs.ts's own
+ * comment: the wireframe's 3rd "Home" tab was deliberately dropped), and
+ * reopening it wasn't what this task asked for. Always rendered (unlike
+ * SignOutButton) since it's ordinary navigation to a page that gates on
+ * its own session check, the same way BottomNav's own tabs don't hide
+ * themselves based on auth state either.
  */
 export function SiteNav() {
   const pathname = usePathname();
@@ -43,6 +53,14 @@ export function SiteNav() {
   return (
     <>
       <BottomNav tabs={NAV_TABS} activePath={pathname} />
+      <div className="flex justify-center border-t border-line bg-wash py-1.5">
+        <Link
+          href="/settings/invite"
+          className="px-2 py-1 text-[10px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          Invite partner
+        </Link>
+      </div>
       <SignOutButton />
     </>
   );

@@ -67,7 +67,7 @@ async function insertOneLocation(
  * client (bypasses RLS for setup, same convention as seedHouseholdWithOwner
  * in supabase/tests/). Returns the leaf location's real id. Used by specs
  * whose pages now read real household data instead of the LOCATIONS
- * fixture (home.spec.ts, home-search.spec.ts, browse.spec.ts).
+ * fixture (home.spec.ts, home-search.spec.ts, browse.spec.ts, stash.spec.ts).
  */
 export async function seedLocationChain(email: string, password: string, names: readonly string[]): Promise<string> {
   const { householdId } = await signInForHouseholdId(email, password);
@@ -111,6 +111,21 @@ export async function seedItem(
     throw new Error(`failed to seed item "${params.name}": ${error.message}`);
   }
   return data.id;
+}
+
+/**
+ * Reads a real item row back by name via the service-role client — proof
+ * that stash-form.tsx's submit produced an actual persisted row, not just a
+ * UI echo. Names used in these tests are unique per test run, so a plain
+ * name match is unambiguous.
+ */
+export async function findItemByName(name: string): Promise<{ id: string; household_id: string } | null> {
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+  const { data, error } = await serviceClient.from("items").select("id, household_id").eq("name", name).maybeSingle();
+  if (error) {
+    throw new Error(`failed to query item "${name}" back: ${error.message}`);
+  }
+  return data;
 }
 
 /**
