@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
 
 // Add-location (/locations/new) is fixture-only — there is no backend call
@@ -6,8 +7,25 @@ import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
 // the fixture location list. None of these tests assert the new location
 // shows up on Browse/Home/Stash afterward, by design (see the PR
 // description) — that's deliberately out of scope here, not an oversight.
+//
+// Browse itself now reads real household data (see that separate task's
+// PR) and redirects an unauthenticated visitor to /sign-in — the two tests
+// below that navigate to/from /browse sign up a fresh real account first
+// purely so that redirect doesn't fire; this form's own fixture-only
+// behavior is otherwise untouched.
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+async function signUpFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-locations-new-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+}
 
 test("has a visible, keyboard-reachable entry point from Browse", async ({ page }) => {
+  await signUpFreshAccount(page);
   await page.goto("/browse");
   const addLocationLink = page.getByRole("link", { name: "+ Add location" });
   await expect(addLocationLink).toBeVisible();
@@ -29,6 +47,7 @@ test("filling a name and picking an existing parent succeeds, showing the full b
     consoleErrors.push(err.message);
   });
 
+  await signUpFreshAccount(page);
   await page.goto("/locations/new");
   await page.waitForLoadState("networkidle");
 

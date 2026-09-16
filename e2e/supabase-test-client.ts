@@ -70,17 +70,34 @@ async function insertOneLocation(
  * fixture (home.spec.ts, home-search.spec.ts, browse.spec.ts, stash.spec.ts).
  */
 export async function seedLocationChain(email: string, password: string, names: readonly string[]): Promise<string> {
+  const ids = await seedLocationChainAllIds(email, password, names);
+  return ids[ids.length - 1];
+}
+
+/**
+ * Same seeding as seedLocationChain, but returns every id in the chain
+ * (root first) instead of just the leaf — used where a test needs an
+ * ANCESTOR's id specifically (e.g. Browse's own page for a location with a
+ * nested child, not the child itself).
+ */
+export async function seedLocationChainAllIds(
+  email: string,
+  password: string,
+  names: readonly string[],
+): Promise<string[]> {
   const { householdId } = await signInForHouseholdId(email, password);
   const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
+  const ids: string[] = [];
   let parentId: string | null = null;
   for (const name of names) {
     parentId = await insertOneLocation(serviceClient, householdId, name, parentId);
+    ids.push(parentId);
   }
-  if (parentId === null) {
-    throw new Error("seedLocationChain: names must be non-empty");
+  if (ids.length === 0) {
+    throw new Error("seedLocationChainAllIds: names must be non-empty");
   }
-  return parentId;
+  return ids;
 }
 
 /**
