@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { StuffList, type StuffListEntry } from "@/components/stuff-list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,6 +9,8 @@ import { filterItems } from "@/lib/fixtures/search";
 export interface SearchableStuffListProps {
   /** Every item's already-resolved entry (item + breadcrumb segments) — the page's full, unfiltered list. */
   entries: readonly StuffListEntry[];
+  /** Forwarded to StuffList's zero-entries empty state — see its own doc comment. Never shown for the "no search matches" case, which is a different, unrelated empty state below. */
+  emptyStateAction?: ReactNode;
 }
 
 /**
@@ -21,7 +24,7 @@ export interface SearchableStuffListProps {
  * (entries) is still resolved server-side in page.tsx and passed down —
  * this component only filters an already-computed list, it doesn't fetch.
  */
-export function SearchableStuffList({ entries }: SearchableStuffListProps) {
+export function SearchableStuffList({ entries, emptyStateAction }: SearchableStuffListProps) {
   const [query, setQuery] = useState("");
 
   const matchedIds = new Set(filterItems(entries.map((entry) => entry.item), query).map((item) => item.id));
@@ -72,7 +75,7 @@ export function SearchableStuffList({ entries }: SearchableStuffListProps) {
       {isSearching && visibleEntries.length === 0 ? (
         <EmptyState title="No matches" description="Nothing matches that search. Try another word." />
       ) : (
-        <StuffList entries={visibleEntries} linkLocationSegments />
+        <StuffList entries={visibleEntries} linkLocationSegments emptyStateAction={emptyStateAction} />
       )}
     </>
   );

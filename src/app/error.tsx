@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
 // Next's error.tsx convention: a Client Component error boundary for this
-// segment. Real today — but ITEMS/LOCATIONS are synchronous fixture reads,
-// so nothing currently throws here in practice. Ready for when a real
-// (fallible) Supabase read replaces the fixture import.
+// segment. page.tsx's household/items/locations reads are real Supabase
+// calls now and throw into this boundary on failure.
 //
 // Uses `retry` — stable as of Next 16.3.0 (this repo runs 16.3.1; verified
 // against node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md,

@@ -1,11 +1,15 @@
-// MOCK DATA — hand-authored for the src/components demo/catalog. This is NOT
-// the real schema. The real data layer (Supabase-generated types, RLS,
-// atomic RPCs) is Pair-session work — see CLAUDE.md and src/lib/database.types.ts.
+// Originally MOCK DATA shapes for the src/components demo/catalog and the
+// fixture arrays in this directory — NOT the real schema (see
+// src/lib/database.types.ts for that). Home (src/app/page.tsx) now also
+// reuses these same shapes as its mapping target for real Supabase rows:
+// filterItems/StuffList/ItemCard/getBreadcrumbSegments all operate on this
+// shape structurally, so real rows are adapted into it at the read
+// boundary rather than duplicating a parallel set of real-data components.
 
 /**
  * A storage location. Self-references via `parentId` so nesting can go as
  * deep as `garage → closet → toolbox → red box` — mirrors the real data
- * model described in CLAUDE.md, just without a database behind it yet.
+ * model described in CLAUDE.md (and, for Home, is populated from it).
  */
 export interface Location {
   id: string;

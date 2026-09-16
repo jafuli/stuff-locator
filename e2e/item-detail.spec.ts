@@ -1,7 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
+import { tabUntilFocused } from "./utils";
 
-test("navigating from an item row to its detail page shows the item's full detail", async ({ page }) => {
+// Item-detail is still fixture-only (a separate, future wiring task — see
+// CLAUDE.md/the Home task's own AC #6) and reachable by anyone, so these
+// two tests navigate to it directly by URL rather than clicking through
+// from Home: Home now reads real household data and redirects an
+// unauthenticated visitor to /sign-in (see home.spec.ts), so it can no
+// longer be relied on to render these fixture items at all. The click-
+// through/tab-through interaction itself (an item row linking to its own
+// /items/[id]) is unit-tested directly against real data in
+// src/__tests__/stuff-list.test.tsx; what's left to verify here is
+// item-detail's own rendering, which direct navigation isolates cleanly.
+test("item-detail shows the item's full detail", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") {
@@ -12,11 +22,7 @@ test("navigating from an item row to its detail page shows the item's full detai
     consoleErrors.push(err.message);
   });
 
-  await page.goto("/");
-  // Click the item's name text — it's a descendant of ItemCard's anchor, so
-  // the click bubbles to (and navigates via) the enclosing <a>, same as a
-  // real user tapping anywhere on the row.
-  await page.getByText("Passport", { exact: true }).click();
+  await page.goto("/items/passport");
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Passport" })).toBeVisible();
@@ -27,12 +33,8 @@ test("navigating from an item row to its detail page shows the item's full detai
   expect(consoleErrors).toEqual([]);
 });
 
-test("the item link and the detail page's back link are keyboard-reachable", async ({ page }) => {
-  await page.goto("/");
-  // ItemCard's accessible name concatenates name + breadcrumb + detail +
-  // relative-time badge, so match by href rather than by name text.
-  expect(await tabUntilHrefFocused(page, "/items/spare-house-keys")).toBe(true);
-  await page.keyboard.press("Enter");
+test("the detail page's back link is keyboard-reachable", async ({ page }) => {
+  await page.goto("/items/spare-house-keys");
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeVisible();

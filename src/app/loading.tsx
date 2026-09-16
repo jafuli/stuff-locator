@@ -1,10 +1,9 @@
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
 
 // Next's loading.tsx convention: wraps page.tsx in this segment in a
-// Suspense boundary. Real today — but since ITEMS/LOCATIONS are synchronous
-// fixture reads, nothing currently suspends, so this rarely shows in
-// practice. It's ready for when a real (async) Supabase read replaces the
-// fixture import; see the PR description.
+// Suspense boundary. page.tsx is now an async Server Component (real
+// household/items/locations reads), so Next suspends on it and this
+// fallback genuinely shows while that resolves.
 export default function Loading() {
   return (
     <main className="flex flex-col gap-3 p-4" aria-busy="true" aria-live="polite">

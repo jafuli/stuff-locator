@@ -1,4 +1,20 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
+
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+// This test's "Back to Stuff" link lands on "/", which now reads real
+// household data and redirects an unauthenticated visitor to /sign-in
+// instead (see home.spec.ts) — signing up first keeps this test's own
+// point (the app's 404 page links back to a working Home) intact.
+async function signUpFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-not-found-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+}
 
 // Unlike a segment-level notFound() (items/[id], browse/[id] — both return
 // 200, verified against this Next version's actual build output), an
@@ -22,6 +38,8 @@ test("an unmatched route renders the app's own 404, not Next's default, and link
     consoleErrors.push(err.message);
   });
 
+  await signUpFreshAccount(page);
+
   const response = await page.goto("/this-route-does-not-exist");
   await page.waitForLoadState("networkidle");
 
@@ -38,7 +56,11 @@ test("an unmatched route renders the app's own 404, not Next's default, and link
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
-  await expect(page.getByText("Spare house keys")).toBeVisible();
+  // Not "Spare house keys" — a brand-new signed-up account's household has
+  // no items yet, so Home's real empty state shows instead (see
+  // home.spec.ts). This test's own point is that "Back to Stuff" lands on
+  // a working Home, not what Home's content happens to be.
+  await expect(page.getByText("No items yet")).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

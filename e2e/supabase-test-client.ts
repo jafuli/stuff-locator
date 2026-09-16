@@ -44,14 +44,6 @@ async function signInForHouseholdId(email: string, password: string): Promise<{ 
   return { userId: data.user.id, householdId: membership.household_id };
 }
 
-/**
- * Seeds a nested chain of locations (e.g. ["Garage", "Closet", "Toolbox",
- * "Red box"] -> Garage > Closet > Toolbox > Red box) into `email`'s
- * household, via the service-role client (bypasses RLS for setup, same
- * convention as seedHouseholdWithOwner in supabase/tests/). Used by
- * stash.spec.ts, whose real /items/new locations autocomplete now reads
- * this household's actual location rows instead of a fixture.
- */
 async function insertOneLocation(
   serviceClient: SupabaseClient<Database>,
   householdId: string,
@@ -69,7 +61,15 @@ async function insertOneLocation(
   return data.id;
 }
 
-export async function seedLocationChain(email: string, password: string, names: readonly string[]): Promise<void> {
+/**
+ * Seeds a nested chain of locations (e.g. ["Bedroom", "Filing box"] ->
+ * Bedroom > Filing box) into `email`'s household via the service-role
+ * client (bypasses RLS for setup, same convention as seedHouseholdWithOwner
+ * in supabase/tests/). Returns the leaf location's real id. Used by specs
+ * whose pages now read real household data instead of the LOCATIONS
+ * fixture (home.spec.ts, home-search.spec.ts, browse.spec.ts, stash.spec.ts).
+ */
+export async function seedLocationChain(email: string, password: string, names: readonly string[]): Promise<string> {
   const { householdId } = await signInForHouseholdId(email, password);
   const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
@@ -77,6 +77,40 @@ export async function seedLocationChain(email: string, password: string, names: 
   for (const name of names) {
     parentId = await insertOneLocation(serviceClient, householdId, name, parentId);
   }
+  if (parentId === null) {
+    throw new Error("seedLocationChain: names must be non-empty");
+  }
+  return parentId;
+}
+
+/**
+ * Seeds one real item into `email`'s household at `locationId` (from
+ * seedLocationChain) via the service-role client. Returns the item's real
+ * id.
+ */
+export async function seedItem(
+  email: string,
+  password: string,
+  params: { name: string; locationId: string; detail?: string },
+): Promise<string> {
+  const { userId, householdId } = await signInForHouseholdId(email, password);
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+
+  const { data, error } = await serviceClient
+    .from("items")
+    .insert({
+      household_id: householdId,
+      location_id: params.locationId,
+      name: params.name,
+      detail: params.detail,
+      added_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    throw new Error(`failed to seed item "${params.name}": ${error.message}`);
+  }
+  return data.id;
 }
 
 /**
