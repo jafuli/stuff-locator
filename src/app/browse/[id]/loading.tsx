@@ -1,9 +1,8 @@
 // Next's loading.tsx convention, scoped to this segment: without it, the
 // root loading.tsx (home-page-shaped) would cascade here, which is wrong
-// content for a location's contents route. Real today — but LOCATIONS/ITEMS
-// are synchronous fixture reads, so nothing currently suspends, so this
-// rarely shows in practice. Ready for when a real (async) Supabase read
-// replaces the fixture import.
+// content for a location's contents route. page.tsx is now an async Server
+// Component (real location/child-location/subtree-item reads), so Next
+// suspends on it and this fallback genuinely shows while that resolves.
 export default function Loading() {
   return (
     <main className="flex flex-col gap-3 p-4" aria-busy="true" aria-live="polite">

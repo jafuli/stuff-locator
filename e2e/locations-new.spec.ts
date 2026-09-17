@@ -13,10 +13,11 @@ import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
 // since the autocomplete now reads real rows instead of the LOCATIONS
 // fixture.
 //
-// This location still won't show up on Browse/Home/Stash afterward — those
-// routes are still fixture-backed until their own real-data-wiring tasks
-// land (see this task's own AC #5) — that's deliberately out of scope here,
-// not an oversight.
+// Browse itself is also now wired to real reads (see that separate task's
+// PR) — the tests below that navigate to/from /browse don't need any extra
+// handling for that beyond the real account signup already required here;
+// Home and Stash remain fixture-backed until their own real-data-wiring
+// tasks land, so a newly added location still won't show up there.
 const TEST_PASSWORD = "correct-horse-battery-1";
 
 async function signUpFreshAccount(page: Page): Promise<string> {
