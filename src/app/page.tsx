@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GuidedOnboarding } from "@/components/guided-onboarding";
 import type { StuffListEntry } from "@/components/stuff-list";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
-import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments, getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
 
@@ -54,7 +55,7 @@ export default async function Page() {
     throw new Error("home: signed-in user has no household");
   }
 
-  const [itemsResult, locationsResult] = await Promise.all([
+  const [itemsResult, locationsResult, householdResult] = await Promise.all([
     // Most-recently-added first — without an explicit order, Postgres row
     // order isn't guaranteed to stay stable across requests (e.g. after an
     // UPDATE from move_item), so the list could otherwise visibly reshuffle
@@ -65,6 +66,10 @@ export default async function Page() {
       .eq("household_id", membership.household_id)
       .order("added_at", { ascending: false }),
     supabase.from("locations").select("id, parent_id, name").eq("household_id", membership.household_id),
+    // Whether Guided onboarding has already run its course for this
+    // household — see guided-onboarding.tsx's own doc comment for why
+    // "zero items" alone can't answer that on its own.
+    supabase.from("households").select("onboarding_completed_at").eq("id", membership.household_id).single(),
   ]);
 
   if (itemsResult.error) {
@@ -72,6 +77,9 @@ export default async function Page() {
   }
   if (locationsResult.error) {
     throw new Error(locationsResult.error.message);
+  }
+  if (householdResult.error) {
+    throw new Error(householdResult.error.message);
   }
 
   const locations: Location[] = locationsResult.data.map((row) => ({
@@ -100,6 +108,12 @@ export default async function Page() {
     segments: getBreadcrumbSegments(item.locationId, locations),
   }));
 
+  // Guided onboarding replaces the plain empty state, not the whole page,
+  // and only for a household that's both actually empty AND hasn't already
+  // run the sequence to completion (see households.onboarding_completed_at
+  // and guided-onboarding.tsx's own doc comment on why both checks matter).
+  const showOnboarding = items.length === 0 && householdResult.data.onboarding_completed_at === null;
+
   return (
     <main className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -109,24 +123,34 @@ export default async function Page() {
         </Link>
       </div>
 
-      {/*
-        SearchableStuffList owns the search input's state and filters
-        `entries` client-side (src/lib/fixtures/search.ts) — a real,
-        working filter now, not the earlier visual-only placeholder.
-        Entries themselves are still resolved server-side here, not
-        fetched by the client component. emptyStateAction only ever shows
-        for the true "this household has zero items" case (StuffList's own
-        empty state) — a "no search matches" query shows a different,
-        unrelated empty state that isn't a candidate for this CTA.
-      */}
-      <SearchableStuffList
-        entries={entries}
-        emptyStateAction={
-          <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
-            Stash your first item
-          </Link>
-        }
-      />
+      {showOnboarding ? (
+        <GuidedOnboarding
+          householdId={membership.household_id}
+          userId={user.id}
+          locationOptions={getFullLocationPaths(locations)}
+          locations={locations}
+        />
+      ) : (
+        /*
+          SearchableStuffList owns the search input's state and filters
+          `entries` client-side (src/lib/fixtures/search.ts) — a real,
+          working filter now, not the earlier visual-only placeholder.
+          Entries themselves are still resolved server-side here, not
+          fetched by the client component. emptyStateAction only ever shows
+          for the true "this household has zero items" case (StuffList's
+          own empty state) — a "no search matches" query shows a
+          different, unrelated empty state that isn't a candidate for this
+          CTA.
+        */
+        <SearchableStuffList
+          entries={entries}
+          emptyStateAction={
+            <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
+              Stash your first item
+            </Link>
+          }
+        />
+      )}
     </main>
   );
 }
