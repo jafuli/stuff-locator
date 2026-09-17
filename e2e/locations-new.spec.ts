@@ -1,27 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
 
-// Add-location (/locations/new) is fixture-only — there is no backend call
-// anywhere in this flow, and a successful "add" is never written back into
-// the fixture location list. None of these tests assert the new location
-// shows up on Browse/Home/Stash afterward, by design (see the PR
-// description) — that's deliberately out of scope here, not an oversight.
+// Add-location (/locations/new) now makes a real Supabase write (see the PR
+// description) — every test signs up a fresh real account first (the route
+// redirects an unauthenticated visitor to /sign-in, and add-location-form.tsx
+// needs a real household_id from the signed-in session), matching the
+// account-per-test pattern already established in stash.spec.ts. The
+// happy-path and keyboard tests additionally seed a real "Garage > Closet >
+// Toolbox" location chain into that household via the service-role client,
+// since the autocomplete now reads real rows instead of the LOCATIONS
+// fixture.
 //
-// Browse itself now reads real household data (see that separate task's
-// PR) and redirects an unauthenticated visitor to /sign-in — the two tests
-// below that navigate to/from /browse sign up a fresh real account first
-// purely so that redirect doesn't fire; this form's own fixture-only
-// behavior is otherwise untouched.
+// Browse itself is also now wired to real reads (see that separate task's
+// PR) — the tests below that navigate to/from /browse don't need any extra
+// handling for that beyond the real account signup already required here;
+// Home and Stash remain fixture-backed until their own real-data-wiring
+// tasks land, so a newly added location still won't show up there.
 const TEST_PASSWORD = "correct-horse-battery-1";
 
-async function signUpFreshAccount(page: Page): Promise<void> {
+async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-locations-new-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("/");
+  return email;
 }
 
 test("has a visible, keyboard-reachable entry point from Browse", async ({ page }) => {
@@ -36,7 +42,9 @@ test("has a visible, keyboard-reachable entry point from Browse", async ({ page 
   await expect(page.getByRole("heading", { level: 1, name: "Add a location" })).toBeVisible();
 });
 
-test("filling a name and picking an existing parent succeeds, showing the full breadcrumb path", async ({ page }) => {
+test("filling a name and picking an existing parent succeeds with a real persisted row, showing the full breadcrumb path", async ({
+  page,
+}) => {
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") {
@@ -47,15 +55,15 @@ test("filling a name and picking an existing parent succeeds, showing the full b
     consoleErrors.push(err.message);
   });
 
-  await signUpFreshAccount(page);
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox"]);
+
   await page.goto("/locations/new");
   await page.waitForLoadState("networkidle");
 
   await page.getByLabel("Name").fill("Spare batteries");
 
   await page.getByRole("combobox").fill("Toolbox");
-  // "Toolbox" also substring-matches its own child "Toolbox › Red box" —
-  // exact: true picks the Toolbox location itself, not that descendant.
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox", exact: true })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
@@ -76,6 +84,7 @@ test("filling a name and picking an existing parent succeeds, showing the full b
 });
 
 test("filling a name with no parent succeeds, showing just the new location's name", async ({ page }) => {
+  await signUpFreshAccount(page);
   await page.goto("/locations/new");
 
   await page.getByLabel("Name").fill("Attic");
@@ -93,6 +102,7 @@ test("filling a name with no parent succeeds, showing just the new location's na
 });
 
 test("submitting with an empty name shows a specific inline error and never navigates away", async ({ page }) => {
+  await signUpFreshAccount(page);
   await page.goto("/locations/new");
 
   await page.getByRole("button", { name: "Add location" }).click();
@@ -105,6 +115,7 @@ test("submitting with an empty name shows a specific inline error and never navi
 test("a parent that's typed but never resolved to an existing place is rejected with its own specific message", async ({
   page,
 }) => {
+  await signUpFreshAccount(page);
   await page.goto("/locations/new");
 
   await page.getByLabel("Name").fill("Spare batteries");
@@ -124,7 +135,11 @@ test("a parent that's typed but never resolved to an existing place is rejected 
 });
 
 test("the whole form, including the autocomplete, is operable keyboard-only", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox"]);
+
   await page.goto("/locations/new");
+  await page.waitForLoadState("networkidle");
 
   await page.getByLabel("Name").focus();
   await expect(page.getByLabel("Name")).toBeFocused();
@@ -137,8 +152,6 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await page.keyboard.press("Tab");
   await expect(page.getByRole("combobox")).toBeFocused();
   await page.keyboard.type("Toolbox", { delay: 20 });
-  // "Toolbox" also substring-matches its own child "Toolbox › Red box" —
-  // exact: true picks the Toolbox location itself, not that descendant.
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox", exact: true })).toBeVisible();
 
   // Escape closes the menu without leaving the field.
