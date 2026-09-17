@@ -5,8 +5,14 @@ import userEvent from "@testing-library/user-event";
 const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
-const { signUp } = vi.hoisted(() => ({ signUp: vi.fn() }));
-vi.mock("@/server/db/client", () => ({ createClient: () => ({ auth: { signUp } }) }));
+const { signUp, rpc, maybeSingle } = vi.hoisted(() => ({ signUp: vi.fn(), rpc: vi.fn(), maybeSingle: vi.fn() }));
+vi.mock("@/server/db/client", () => ({
+  createClient: () => ({
+    auth: { signUp },
+    rpc,
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+  }),
+}));
 
 // Static import is safe here for the same reason as site-nav.test.tsx: the
 // vi.mock calls above are hoisted above imports.
@@ -25,6 +31,8 @@ afterEach(() => {
   push.mockReset();
   refresh.mockReset();
   signUp.mockReset();
+  rpc.mockReset();
+  maybeSingle.mockReset();
   fetchMock.mockReset();
 });
 
@@ -144,4 +152,53 @@ test("submit shows a real loading state while signUp is in flight", async () => 
   await waitFor(() => {
     expect(screen.getByRole("status")).toBeDefined();
   });
+});
+
+test("with an invite code, a successful sign-up redeems it before bootstrapping, and never navigates itself", async () => {
+  signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
+  rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
+  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  const onRedeemed = vi.fn();
+
+  const user = userEvent.setup();
+  render(<SignUpForm invite={{ code: "abc123", onRedeemed }} />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  await waitFor(() => {
+    expect(onRedeemed).toHaveBeenCalledWith({ ok: true, householdName: "Maayan's home" });
+  });
+  expect(rpc).toHaveBeenCalledWith("redeem_invite", { p_code: "abc123" });
+  // Bootstrap still runs (safe no-op — see the component's own comment),
+  // but this form never navigates itself for the invite path; the caller
+  // (JoinInviteFlow) owns what happens after onRedeemed.
+  expect(fetchMock).toHaveBeenCalledWith("/api/household/bootstrap", { method: "POST" });
+  expect(push).not.toHaveBeenCalled();
+});
+
+test("with an invite code, a rejected redemption still bootstraps as a fallback and reports the error up", async () => {
+  signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
+  rpc.mockResolvedValue({ data: null, error: { message: "redeem_invite: invite expired" } });
+  maybeSingle.mockResolvedValue({ data: null });
+  const onRedeemed = vi.fn();
+
+  const user = userEvent.setup();
+  render(<SignUpForm invite={{ code: "expired-code", onRedeemed }} />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  await waitFor(() => {
+    expect(onRedeemed).toHaveBeenCalledWith({ ok: false, error: "redeem_invite: invite expired" });
+  });
+  // Not left stranded with zero households despite the bad code.
+  expect(fetchMock).toHaveBeenCalledWith("/api/household/bootstrap", { method: "POST" });
+});
+
+test("with an invite code, the 'already have an account' footer link is suppressed", () => {
+  render(<SignUpForm invite={{ code: "abc123", onRedeemed: vi.fn() }} />);
+  expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
 });
