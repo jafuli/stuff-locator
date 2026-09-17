@@ -73,9 +73,10 @@ test("drilling down through nested locations from /browse reaches an item, and b
   await expect(page.getByRole("heading", { level: 1, name: "Toolbox" })).toBeVisible();
 
   // Drill back down. Its row links to the real item's own id — verified via
-  // href, not by navigating in: /items/[id] is still fixture-only until its
-  // own separate wiring task lands (same "out of scope here" precedent
-  // stash.spec.ts already established for this exact coupling).
+  // href, not by navigating in (same "out of scope here" precedent
+  // stash.spec.ts established): item-detail now reads real data too (see
+  // this task's PR description), so this id would actually resolve if
+  // followed, but that's covered by item-detail.spec.ts, not here.
   await page.getByRole("link", { name: "Red box", exact: true }).click();
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("link", { name: "Spare house keys" })).toHaveAttribute("href", `/items/${itemId}`);
