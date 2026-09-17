@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { seedInviteForNewHousehold, seedItem, seedLocationChain, seedLocationChainAllIds } from "./supabase-test-client";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -31,13 +31,24 @@ async function signUpAndSeedHomeItem(page: Page): Promise<void> {
   await seedItem(email, TEST_PASSWORD, { name: `Spare key ${randomUUID()}`, locationId });
 }
 
+// Browse now reads real household data (see this task's PR description) —
+// a fresh account has zero locations, so this genuinely scans the real
+// "No rooms yet" empty state, not the impossible-with-fixtures branch the
+// old comment here used to describe.
+async function signUpOnly(page: Page): Promise<void> {
+  await signUpFreshAccount(page);
+}
+
 // Automated accessibility pass (axe-core) across every currently-merged
-// route with real content. Explicitly out of scope: the three fixture-only
-// routes not yet merged as of this task (/items/new, /locations/new,
-// /items/[id]/edit) — a natural follow-up once they land. Also out of
-// scope: any manual/subjective accessibility review beyond what axe
-// catches — this is an automated-tooling pass, not a substitute for a
-// manual screen-reader pass.
+// route with real content. Item detail and Edit-item are both real now too
+// (see this task's PR description) — their own dynamic-id tests live below
+// the loop, same reason the "nested child" Browse case does: a real seeded
+// id can't be a static path in this table. Explicitly out of scope:
+// /locations/new, the one remaining fixture-only route as of this task — a
+// natural follow-up once its own wiring task lands. Also out of scope: any
+// manual/subjective accessibility review beyond what axe catches — this is
+// an automated-tooling pass, not a substitute for a manual screen-reader
+// pass.
 //
 // Every rule still runs (no `disableRules`, no ruleset filtering) — a
 // violation only stops failing the test if it's genuinely fixed. Only the
@@ -46,16 +57,14 @@ async function signUpAndSeedHomeItem(page: Page): Promise<void> {
 // fail) but don't fail the build, per the AC's "critical or serious" bar.
 const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void> }[] = [
   { path: "/", name: "home (populated, real household state)", setup: signUpAndSeedHomeItem },
-  { path: "/browse", name: "browse (root)" },
-  // A location with BOTH a nested child location and a directly-placed
-  // item doesn't exist anywhere in LOCATIONS/ITEMS (checked) — picked for
-  // its nested child (exercises LocationList + breadcrumb one level deep);
-  // a leaf with direct items would exercise ItemCard instead, but that
-  // shape is already covered by "/" above (now genuinely, since "/"
-  // seeds a real item rather than testing only the empty state).
-  { path: "/browse/garage-closet", name: "browse/[id] (a location with a nested child)" },
+  // Browse now reads real household data too (see this task's PR
+  // description) — a fresh account has zero locations, so this scans the
+  // real empty state. The "a location with a nested child" case moved to
+  // its own standalone test below the loop: it needs a real seeded id
+  // computed at test time, which this table's static `path` string can't
+  // express.
+  { path: "/browse", name: "browse (root)", setup: signUpOnly },
   { path: "/activity", name: "activity" },
-  { path: "/items/passport", name: "item detail" },
   { path: "/this-route-does-not-exist", name: "root not-found" },
   { path: "/~offline", name: "offline fallback" },
 ];
@@ -77,3 +86,75 @@ for (const route of ROUTES) {
     expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
   });
 }
+
+// A location with a nested child location — exercises LocationList +
+// breadcrumb one level deep. Needs a real seeded id (computed at test time),
+// which the static ROUTES table above can't express, so this lives as its
+// own test rather than a table entry. A leaf with direct items would
+// exercise ItemCard instead, but that shape is already covered by "/" above.
+test("browse/[id] (a location with a nested child) has no critical or serious axe violations", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const [parentId] = await seedLocationChainAllIds(email, TEST_PASSWORD, ["Garage", "Closet"]);
+
+  await page.goto(`/browse/${parentId}`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
+
+// Item detail and Edit-item both need a real seeded item id (computed at
+// test time), which the static ROUTES table above can't express, so they
+// live as their own tests rather than table entries — same reason the
+// "nested child" Browse case does above.
+test("item detail (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", detail: "with the birth certificates", locationId });
+
+  await page.goto(`/items/${itemId}`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
+
+test("item edit (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });
+
+  await page.goto(`/items/${itemId}/edit`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
+
+// /join/[code] needs a real, redeemable invite code (computed at test
+// time), which the static ROUTES table above can't express, so it lives as
+// its own test — same reason the other dynamic-id cases above do.
+// Signed-out state, the route's default entry point (see join-invite.spec.ts
+// for the already-signed-in variant).
+test("join a household (/join/[code], signed out) has no critical or serious axe violations", async ({ page }) => {
+  const { code } = await seedInviteForNewHousehold("A11y test household");
+
+  await page.goto(`/join/${code}`);
+  await page.waitForLoadState("networkidle");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});

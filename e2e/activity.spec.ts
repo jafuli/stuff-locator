@@ -26,19 +26,26 @@ test("the activity feed shows real entries, not the old placeholder, and links o
   await expect(topEntry.getByText("Maayan")).toBeVisible();
   await expect(topEntry.getByText("moved")).toBeVisible();
 
-  // Clicking the item link lands on its detail route.
-  await topEntry.getByRole("link", { name: "Spare house keys" }).click();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeVisible();
+  // The item link points at its detail route — verified via href, not by
+  // navigating in: item-detail now reads real data (see that task's PR)
+  // and this fixture id ("spare-house-keys") was never something its real
+  // reads could resolve. Activity itself is still fixture-only until its
+  // own separate wiring task lands.
+  await expect(topEntry.getByRole("link", { name: "Spare house keys" })).toHaveAttribute(
+    "href",
+    "/items/spare-house-keys",
+  );
 
-  await page.goBack();
-  await page.waitForLoadState("networkidle");
-
-  // Clicking a breadcrumb segment in an entry lands on the matching /browse/[id].
-  await page.getByRole("listitem").first().getByRole("link", { name: "Garage" }).click();
-  await page.waitForLoadState("networkidle");
-  await expect(page).toHaveURL(/\/browse\/garage$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Garage" })).toBeVisible();
+  // Clicking a breadcrumb segment in an entry links out to the matching
+  // /browse/[id] — Browse itself now reads real household data (see that
+  // task's PR), and Activity is still fixture-only, so this fixture id
+  // ("garage") was never something Browse's real reads could resolve.
+  // Matching home.spec.ts's own precedent for this exact coupling: only the
+  // href is asserted here, not Browse's own rendered content.
+  await expect(page.getByRole("listitem").first().getByRole("link", { name: "Garage" })).toHaveAttribute(
+    "href",
+    "/browse/garage",
+  );
 
   expect(consoleErrors).toEqual([]);
 });

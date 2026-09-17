@@ -1,21 +1,53 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LocationList } from "@/components/location-list";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LOCATIONS } from "@/lib/fixtures/locations";
-import { getRootLocations } from "@/lib/fixtures/location-contents";
+import type { Location } from "@/lib/fixtures/types";
+import { createClient } from "@/server/db/server";
 
 // Browse, core flow #3: the room-level entry point. Top-level locations
-// (parentId === null) only — drilling into a room's own contents happens on
-// /browse/[id]. The zero-roots branch is unreachable with the current
-// fixtures (there are always 4 rooms) but kept for the DoD's "empty state
-// handled explicitly" — same posture as StuffList's own empty branch.
+// (parent_id is null) only — drilling into a room's own contents happens on
+// /browse/[id]. Real Supabase read now (see the PR description): a direct,
+// targeted PostgREST read, not a full household location list, mirroring
+// items/new/page.tsx's household-resolution pattern.
 //
-// The "+ Add location" control (Add-location flow, /locations/new) is new
-// here — no entry point into it existed anywhere in the app before this
-// task, mirroring the same check the Stash flow task's own AC required for
-// its own "+ Add item" control on Home (see that page.tsx's comment).
-export default function Page() {
-  const roots = getRootLocations(LOCATIONS);
+// The "+ Add location" control (Add-location flow, /locations/new) links
+// out — wiring beyond that link is a separate task's scope (AC #5).
+export default async function Page() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("household_members")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    throw new Error(membershipError.message);
+  }
+  if (!membership) {
+    throw new Error("browse: signed-in user has no household");
+  }
+
+  const { data: rootRows, error: rootError } = await supabase
+    .from("locations")
+    .select("id, parent_id, name")
+    .eq("household_id", membership.household_id)
+    .is("parent_id", null);
+
+  if (rootError) {
+    throw new Error(rootError.message);
+  }
+
+  const roots: Location[] = rootRows.map((row) => ({ id: row.id, parentId: row.parent_id, name: row.name }));
 
   return (
     <main className="flex flex-col gap-3 p-4">
