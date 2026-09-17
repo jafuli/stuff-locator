@@ -6,11 +6,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 // Next's error.tsx convention, scoped to this segment so it doesn't
 // inherit the parent item-detail route's "Couldn't load this item" copy.
-// Real today — but ITEMS/LOCATIONS are synchronous fixture reads, so
-// nothing currently throws here in practice. Ready for when a real
-// (fallible) Supabase read replaces the fixture import. Uses `retry` —
-// see items/[id]/error.tsx's comment for why that's preferred over
-// `reset` here.
+// page.tsx's item/locations reads are real Supabase calls now and throw
+// into this boundary on failure. Uses `retry` — see items/[id]/error.tsx's
+// comment for why that's preferred over `reset` here.
 export default function Error({
   error,
   retry,
