@@ -4,10 +4,9 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
-// Next's error.tsx convention, scoped to this segment. Real today — but
-// LOCATIONS/ITEMS are synchronous fixture reads, so nothing currently
-// throws here in practice. Ready for when a real (fallible) Supabase read
-// replaces the fixture import.
+// Next's error.tsx convention, scoped to this segment. page.tsx's location/
+// child-location/subtree-item reads are real Supabase calls now and throw
+// into this boundary on failure.
 //
 // Uses `retry` (stable as of Next 16.3 — see items/[id]/error.tsx's comment)
 // — the same convention every error boundary in the repo now uses.

@@ -9,12 +9,15 @@ import { FormField } from "@/components/ui/form-field";
 import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { validateLocationName, validateParentSelection } from "@/lib/location-validation";
+import { createClient } from "@/server/db/client";
 
 export interface AddLocationFormProps {
   /** Full-path options to feed the parent-location LocationAutocomplete. */
   locationOptions: readonly LocationOption[];
   /** Raw location tree, needed to resolve a selected parent id into breadcrumb segments for the success state. */
   locations: readonly Location[];
+  /** The signed-in caller's household — every insert is scoped to this. */
+  householdId: string;
 }
 
 interface FieldErrors {
@@ -30,21 +33,25 @@ interface CapturedLocation {
 const PARENT_ERROR_ID = "add-location-parent-error";
 
 /**
- * Fixture-only add-location form. Mirrors stash-form.tsx's shape: there is
- * deliberately no backend call anywhere in this component — "submit" just
- * moves local state into a success view. The new location is never written
- * back into LOCATIONS (src/lib/fixtures/locations.ts), so it will not
- * appear on Browse, Home, or the Stash/edit-item location-autocomplete
- * after this — that's a deliberate scope boundary for this task (see the
- * PR description), not a bug.
+ * Add-location form, backed by a real Supabase write: submit INSERTs into
+ * `locations` directly from the browser client (RLS-gated, no route
+ * handler — mirrors stash-form.tsx's shape, a plain single-table write with
+ * no cross-table invariant a client insert can violate on its own thanks to
+ * locations_parent_household_consistency, so it doesn't need the RPC
+ * treatment CLAUDE.md reserves for writes that carry invariants). A parent
+ * outside the caller's household can't even be selected — the autocomplete
+ * only ever offers this household's own locations — and is backstopped at
+ * the data layer by that same trigger if bypassed.
  */
-export function AddLocationForm({ locationOptions, locations }: AddLocationFormProps) {
+export function AddLocationForm({ locationOptions, locations, householdId }: AddLocationFormProps) {
   const [name, setName] = useState("");
   const [parentSelection, setParentSelection] = useState<AutocompleteSelection | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [captured, setCaptured] = useState<CapturedLocation | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const errors: FieldErrors = {
@@ -61,16 +68,32 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
     // Unlike Stash's required location field, `parentSelection` being
     // `null` (or, after the check above, anything other than "existing")
     // here is a valid, top-level result — no ancestor segments to prepend.
-    const parentSegments =
-      parentSelection?.type === "existing" ? getBreadcrumbSegments(parentSelection.option.id, locations) : [];
+    const parentId = parentSelection?.type === "existing" ? parentSelection.option.id : null;
+    const parentSegments = parentId ? getBreadcrumbSegments(parentId, locations) : [];
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("locations")
+      .insert({ name: trimmedName, parent_id: parentId, household_id: householdId })
+      .select()
+      .single();
+
+    setIsSubmitting(false);
+
+    if (error) {
+      // Surfaced verbatim (matches stash-form.tsx's precedent for
+      // Supabase-originated messages) — field values are left exactly as
+      // typed so the user can just hit submit again, not re-enter anything.
+      setSubmitError(error.message);
+      return;
+    }
 
     setCaptured({
-      name: trimmedName,
-      // A fabricated id: this location doesn't exist in fixture data (see
-      // the PR description above), so there's no real id to link to — the
-      // non-linked LocationBreadcrumb render mode used below never reads
-      // it, only each segment's name.
-      segments: [...parentSegments, { id: "new-location-preview", name: trimmedName }],
+      name: data.name,
+      segments: [...parentSegments, { id: data.id, name: data.name }],
     });
   }
 
@@ -90,6 +113,7 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
     setParentSelection(null);
     setFieldErrors({});
     setCaptured(null);
+    setSubmitError(null);
   }
 
   if (captured) {
@@ -101,7 +125,8 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
         </div>
         <LocationBreadcrumb segments={captured.segments} />
         <p className="text-[10.5px] text-mid">
-          This is a fixture-only preview — new locations don&apos;t show up on Browse, Home, or Stash yet.
+          Saved. It won&apos;t show up on Browse, Home, or Stash yet — those still read fixture data until their own
+          real-data-wiring tasks land.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={handleAddAnother}>
@@ -119,7 +144,7 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
       <FormField
         id="add-location-name"
         label="Name"
@@ -127,6 +152,7 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
         value={name}
         onChange={setName}
         error={fieldErrors.name}
+        disabled={isSubmitting}
       />
 
       <div>
@@ -135,6 +161,7 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
           options={locationOptions}
           onSelect={handleParentSelect}
           describedBy={fieldErrors.parent ? PARENT_ERROR_ID : undefined}
+          disabled={isSubmitting}
         />
         {parentSelection?.type === "existing" ? (
           <p className="mt-1 text-[11px] text-mid">Selected: {parentSelection.option.path}</p>
@@ -146,8 +173,14 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
         ) : null}
       </div>
 
-      <Button type="submit" variant="primary">
-        Add location
+      {submitError ? (
+        <p role="alert" className="text-[11.5px] text-mid">
+          {submitError}
+        </p>
+      ) : null}
+
+      <Button type="submit" variant="primary" isLoading={isSubmitting}>
+        {isSubmitting ? "Adding…" : "Add location"}
       </Button>
     </form>
   );
