@@ -52,7 +52,7 @@
     "serwist": "^9.5.12",
     "supabase": "^2.115.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^7",
     "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.11"
   }
