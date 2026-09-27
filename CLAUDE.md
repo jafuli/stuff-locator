@@ -4,9 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-This repository is empty of code (README only). The product is fully designed but **nothing has been built yet** — no framework, no dependencies, no build/lint/test tooling exists. Do not assume any of that is in place; check before referencing a command that isn't here yet, and update this file once real tooling lands.
+The app is real and running locally. Next.js 16 (App Router) + React 19 + TypeScript strict, Tailwind v4, Supabase (Auth + Postgres) with RLS on every table, and a serwist service worker for the PWA side. Tooling is in place and enforced in CI: `npm run lint` / `typecheck` / `test` (Vitest + Testing Library) / `build` / `test:e2e` (Playwright, chromium-only, plus axe) — see the script table in `README.md`.
 
-Design work happened in Notion, not in this repo. The decisions below are transplanted from there because they constrain implementation and aren't derivable from code that doesn't exist yet. **Do not redo the design** — if something in it looks wrong, raise it, don't silently rebuild it. Source of truth: the "Stuff Locator" and "Portfolio Hub" pages in Notion.
+Built and merged: auth (sign-up/in/out, password reset), household bootstrap, Stash, Home, Browse including the recursive subtree read, item detail/edit/delete, and the invite/redeem partner flow — all reading and writing real household data through RLS-scoped PostgREST calls, with `move_item`, `delete_container`, `location_subtree_items` and `redeem_invite` as `plpgsql` functions in `supabase/migrations/`. Decisions taken here are recorded in `docs/adr/`.
+
+Two things are deliberately not what the design describes yet, and shouldn't be reported as done: **Find is a case-insensitive substring filter**, not the `transformers.js` embedding search (`transformers.js` isn't a dependency yet; `src/lib/fixtures/search.ts` is a stand-in behind the final `(items, query) => items` signature), and the **Activity feed still renders fixtures** rather than real provenance rows. Check what's actually merged before describing the state of a flow — several routes changed hands recently.
+
+Design work happened in Notion, not in this repo. The decisions below are transplanted from there because they constrain implementation and aren't derivable from the code alone. **Do not redo the design** — if something in it looks wrong, raise it, don't silently rebuild it. Source of truth: the "Stuff Locator" and "Portfolio Hub" pages in Notion.
 
 ## What this app is
 
