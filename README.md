@@ -43,9 +43,9 @@ Two things differ from the product design and are called out rather than glossed
 ## Architecture worth knowing about
 
 - **Locations self-reference.** A location has an optional `parent_id`, so `garage → closet → toolbox → red box → keys` is representable. "Everything in the garage" is a recursive CTE over the subtree; cycle prevention on move happens server-side, under lock. The UI stays shallow by default — depth is available, never demanded.
-- **Atomic operations are Postgres functions, not TypeScript.** `supabase-js` goes through PostgREST, which wraps each request in its own transaction, so two SDK calls can never be atomic together. The operations that carry an invariant are `plpgsql` functions invoked via `.rpc()`: `create_household`, `move_item`, `location_subtree_items` and `redeem_invite` are wired up today; `move_container` and `delete_container` are written and migrated but have no caller yet, because the container-management UI they serve isn't built. A single item's delete is a plain `DELETE` — it carries no cross-table invariant, so it doesn't need one.
+- **Atomic operations are Postgres functions, not TypeScript.** `supabase-js` goes through PostgREST, which wraps each request in its own transaction, so two SDK calls can never be atomic together. The operations carrying a cross-table invariant are `plpgsql` functions invoked via `.rpc()`: `create_household`, `move_item` and `redeem_invite` are wired up today; `move_container` and `delete_container` are written and migrated but have no caller yet, because the container-management UI they serve isn't built. `location_subtree_items` — the "everything in here" recursive read — is `language sql`, not `plpgsql`, and carries no invariant. A single item's delete is a plain `DELETE`, for the same reason.
 - **RLS is the enforcement boundary, and the app never holds a service-role key.** Server-side clients are built from the caller's session cookie and forward their JWT, so the same policies apply on the server as in the browser. The one operation that has to act outside the caller's own permissions — `redeem_invite`, where the caller isn't a member of the household yet — is `SECURITY DEFINER` in Postgres rather than a privileged client in Node. `src/lib/env.ts` doesn't even accept a service-role key; only the test harness uses one, to seed rows.
-- **Reads go direct, invariant-carrying writes go through route handlers.** No ORM; Drizzle was considered and rejected.
+- **Reads go direct; the write path is deliberately uneven, and worth asking about.** Plain reads hit PostgREST directly behind RLS. Of the writes, only household creation currently sits behind a route handler (`POST /api/household/bootstrap`) — it's the one that needed server-side identity it couldn't take from the client. `move_item` and `redeem_invite` are called via `.rpc()` straight from the browser, because the invariant they protect lives in the function itself: RLS gates the former and `SECURITY DEFINER` scopes the latter, so routing them through Node would add a hop without adding a guarantee. No ORM; Drizzle was considered and rejected.
 
 Decisions are recorded as ADRs in [`docs/adr/`](./docs/adr). Fuller product and architecture context lives in [`CLAUDE.md`](./CLAUDE.md).
 
@@ -103,7 +103,7 @@ npm run dev
 ```
 src/app/**              Routes. Server Components read through src/server/db;
                         Client Components use the browser client instead
-src/app/api/**          HTTP boundary — route handlers for invariant-carrying writes
+src/app/api/**          HTTP boundary — one route handler so far (household bootstrap)
 src/server/services/**  Validation, authorisation, orchestration
 src/server/db/**        Supabase client factories (browser + server, JWT-forwarding)
 src/lib/**              Env validation, shared types, pure helpers
