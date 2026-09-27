@@ -18,10 +18,20 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 # Controls whether new tables, views, sequences and functions created in the `public` schema by
 # `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
-# without explicit GRANTs. When unset, new entities are NOT auto-exposed, matching the new cloud
-# default. Set to `true` to keep the legacy behaviour of auto-exposing new entities; this is
-# deprecated and the field is removed on 2026-10-30 once the always-revoked behaviour is permanent.
-# auto_expose_new_tables = true
+# without explicit GRANTs.
+#
+# LEFT UNSET, NEW ENTITIES *ARE* AUTO-EXPOSED — the comment that used to sit here claimed the
+# opposite, and the whole grant story in supabase/migrations/ was written believing it. The
+# Postgres image runs `alter default privileges in schema public grant all on tables to postgres,
+# anon, authenticated, service_role`, so every table started life with full DML for anon and
+# authenticated and the migrations' narrow `grant select, insert` lines only ever re-granted
+# privileges that were already there. See docs/adr/0005-data-api-privileges.md.
+#
+# `false` makes the CLI revoke those default privileges, so a GRANT is the only way a Data API
+# role reaches anything — matching a cloud project with "Default privileges for new entities"
+# turned off. It applies to newly created entities only; existing ones are fixed by
+# supabase/migrations/20260927140000_revoke_implicit_data_api_grants.sql.
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
