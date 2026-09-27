@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ItemDetail } from "@/components/item-detail";
+import { displayNameFor } from "@/lib/display-name";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
+import { fetchDisplayNames } from "@/server/services/profiles";
 
 // A malformed id (not a valid uuid at all — e.g. an old fixture slug, or a
 // typo) fails at the Postgres driver level before RLS/row-matching even
@@ -74,20 +76,25 @@ export default async function Page(props: PageProps<"/items/[id]">) {
     name: row.name,
   }));
 
-  // Mapped into the same Item shape src/lib/fixtures/types.ts already
-  // defines, same as Home/Stash — ItemDetail doesn't care whether it came
-  // from a fixture or a real row. addedBy/lastMovedBy are raw user ids
-  // here: there's no profile/display-name resolution anywhere in this app
-  // yet (Activity is still fixture-only for the same reason) — out of
-  // scope for this task, flagged in the PR rather than guessed at.
+  // addedBy/lastMovedBy are resolved to display names here rather than in
+  // ItemDetail, which keeps that component presentational: it renders
+  // whatever string it's handed, exactly as it does for the fixtures. The
+  // Item shape stays the one src/lib/fixtures/types.ts defines, so the
+  // fixture and real-data paths still agree — the fixtures always held
+  // names in these fields, and now so does this.
+  const displayNames = await fetchDisplayNames(supabase, [itemRow.added_by, itemRow.last_moved_by]);
+
   const item: Item = {
     id: itemRow.id,
     locationId: itemRow.location_id,
     name: itemRow.name,
     detail: itemRow.detail ?? undefined,
-    addedBy: itemRow.added_by,
+    addedBy: displayNameFor(itemRow.added_by, displayNames),
     addedAt: new Date(itemRow.added_at),
-    lastMovedBy: itemRow.last_moved_by ?? undefined,
+    // Left undefined (rather than "Someone") when the item has never been
+    // moved — ItemDetail omits the whole field in that case, which is
+    // right: "never moved" isn't "moved by someone unknown".
+    lastMovedBy: itemRow.last_moved_by ? displayNameFor(itemRow.last_moved_by, displayNames) : undefined,
     lastMovedAt: itemRow.last_moved_at ? new Date(itemRow.last_moved_at) : undefined,
   };
   const segments = getBreadcrumbSegments(item.locationId, locations);
