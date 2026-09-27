@@ -1,5 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
+
+const TEST_PASSWORD = "correct-horse-battery-1";
+
+// /activity is behind the session gate now (see
+// docs/adr/0005-route-protection.md). It was genuinely reachable without
+// an account before — it's fixture-backed, so nothing on it needed a
+// session, which is exactly how it ended up as the one route the old
+// per-page auth checks missed. The feed itself is still fixture-only, so
+// a brand-new account sees the same entries this spec always asserted.
+async function signUpFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-activity-${randomUUID()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+}
 
 test("the activity feed shows real entries, not the old placeholder, and links out correctly", async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -11,6 +29,8 @@ test("the activity feed shows real entries, not the old placeholder, and links o
   page.on("pageerror", (err) => {
     consoleErrors.push(err.message);
   });
+
+  await signUpFreshAccount(page);
 
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
@@ -51,6 +71,7 @@ test("the activity feed shows real entries, not the old placeholder, and links o
 });
 
 test("an activity feed entry's item link is keyboard-reachable", async ({ page }) => {
+  await signUpFreshAccount(page);
   await page.goto("/activity");
   expect(await tabUntilFocused(page, "Spare house keys", 20)).toBe(true);
 });

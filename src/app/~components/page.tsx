@@ -8,12 +8,30 @@ import { AutocompleteDemo } from "./autocomplete-demo";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments, getFullLocationPaths } from "@/lib/fixtures/location-path";
+import { notFound } from "next/navigation";
 import { NAV_TABS } from "@/lib/nav-tabs";
 
 const locationOptions = getFullLocationPaths(LOCATIONS);
 const segmentsFor = (locationId: string) => getBreadcrumbSegments(locationId, LOCATIONS);
 
 export default function ComponentsDemoPage() {
+  // Dev-only. This catalog exists for whoever is building the primitives,
+  // and it has no audience on a deployed build: it's unlinked, so nobody
+  // finds it without being handed the URL, and what it renders is fixture
+  // data, not anything a visitor would want. It's also gated behind a
+  // session by the proxy (src/lib/route-access.ts) like every other
+  // non-auth route — this is the second, narrower gate, cutting it out of
+  // deployed builds entirely.
+  //
+  // NODE_ENV, not VERCEL_ENV: nothing is deployed yet, so keying off a
+  // Vercel-only variable would be a rule that can't be tested. The
+  // trade-off is that `npm run build && npm run start` 404s here too,
+  // including Playwright's own webServer — deliberate, and no spec visits
+  // this route.
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
   return (
     <main className="mx-auto flex max-w-screen-sm flex-col gap-10 p-6">
       <div>

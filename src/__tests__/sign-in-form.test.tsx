@@ -207,3 +207,31 @@ test("with an invite code, the 'don't have an account' footer link is suppressed
   render(<SignInForm invite={{ code: "abc123", onRedeemed: vi.fn() }} />);
   expect(screen.queryByRole("link", { name: "Sign up" })).toBeNull();
 });
+
+test("a return-to path sends the user where they were headed, not to /", async () => {
+  signInWithPassword.mockResolvedValue({
+    data: { user: { id: "1" }, session: { access_token: "t" } },
+    error: null,
+  });
+  const user = userEvent.setup();
+  render(<SignInForm next="/items/abc" />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "correct-password");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+  await waitFor(() => {
+    expect(push).toHaveBeenCalledWith("/items/abc");
+  });
+  expect(push).not.toHaveBeenCalledWith("/");
+});
+
+test("the sign-up link carries the return-to path along, so switching forms doesn't lose it", () => {
+  render(<SignInForm next="/items/abc" />);
+  expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/sign-up?next=%2Fitems%2Fabc");
+});
+
+test("with no return-to path, the sign-up link stays clean", () => {
+  render(<SignInForm />);
+  expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/sign-up");
+});
