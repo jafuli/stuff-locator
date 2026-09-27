@@ -9,6 +9,7 @@ import { HouseholdBootstrapNotice } from "@/components/household-bootstrap-notic
 import { BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS, triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
 import { validateEmail, validateSignUpPassword } from "@/lib/auth-validation";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
+import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
 
 interface FieldErrors {
@@ -32,6 +33,14 @@ export interface SignUpFormProps {
     code: string;
     onRedeemed: (result: RedeemInviteResult) => void;
   };
+  /**
+   * Where to land after a successful sign-up. Carried over from /sign-in
+   * via withNextParam, so a visitor bounced off a protected route who
+   * then chooses "create an account" still ends up where they meant to
+   * go. Already validated by src/app/sign-up/page.tsx (safeRedirectPath);
+   * defaults to "/".
+   */
+  next?: string;
 }
 
 /**
@@ -58,7 +67,7 @@ export interface SignUpFormProps {
  * gets bootstrapped the first time they actually sign in post-confirmation
  * (see SignInForm), which calls this unconditionally on every success.
  */
-export function SignUpForm({ invite }: SignUpFormProps) {
+export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,11 +86,11 @@ export function SignUpForm({ invite }: SignUpFormProps) {
     };
   }, []);
 
-  function navigateHome() {
+  function navigateAfterSignUp() {
     if (autoContinueTimeout.current !== null) {
       clearTimeout(autoContinueTimeout.current);
     }
-    router.push("/");
+    router.push(next);
     router.refresh();
   }
 
@@ -139,10 +148,10 @@ export function SignUpForm({ invite }: SignUpFormProps) {
       if (!bootstrapped) {
         console.error("[household-bootstrap] failed to ensure a household after sign-up");
         setShowBootstrapNotice(true);
-        autoContinueTimeout.current = setTimeout(navigateHome, BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS);
+        autoContinueTimeout.current = setTimeout(navigateAfterSignUp, BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS);
         return;
       }
-      navigateHome();
+      navigateAfterSignUp();
       return;
     }
 
@@ -159,7 +168,7 @@ export function SignUpForm({ invite }: SignUpFormProps) {
         <p className="text-[13px] font-semibold text-ink">Check your email to confirm your account</p>
         <p className="text-[12px] text-mid">
           We sent a confirmation link to {email}. Follow it to finish setting up your account, then{" "}
-          <Link href="/sign-in" className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-in", next)} className="font-semibold text-ink underline underline-offset-2">
             sign in
           </Link>
           .
@@ -195,7 +204,7 @@ export function SignUpForm({ invite }: SignUpFormProps) {
           {submitError}
         </p>
       ) : null}
-      {showBootstrapNotice ? <HouseholdBootstrapNotice onContinue={navigateHome} /> : null}
+      {showBootstrapNotice ? <HouseholdBootstrapNotice onContinue={navigateAfterSignUp} /> : null}
       <Button type="submit" variant="primary" isLoading={isSubmitting}>
         {isSubmitting ? "Creating account…" : "Create account"}
       </Button>
@@ -206,7 +215,7 @@ export function SignUpForm({ invite }: SignUpFormProps) {
       {!invite ? (
         <p className="text-center text-[11.5px] text-mid">
           Already have an account?{" "}
-          <Link href="/sign-in" className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-in", next)} className="font-semibold text-ink underline underline-offset-2">
             Sign in
           </Link>
         </p>
