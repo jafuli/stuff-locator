@@ -37,11 +37,12 @@ jobs:
       - run: npm run build
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      # Real local Supabase stack, needed only from here on: the new
-      # sign-up/sign-in/sign-out specs exercise actual Supabase Auth, not a
-      # fake. `supabase` is already a devDependency, so `npx supabase`
-      # needs no separate install; `supabase start` applies
-      # supabase/migrations/ automatically. `supabase status -o env` prints
+      # Real local Supabase stack, needed only from here on, by two things:
+      # the RLS/RPC integration suite below, and the sign-up/sign-in/sign-out
+      # specs, which exercise actual Supabase Auth rather than a fake.
+      # `supabase` is already a devDependency, so `npx supabase` needs no
+      # separate install; `supabase start` applies supabase/migrations/
+      # automatically. `supabase status -o env` prints
       # API_URL/ANON_KEY/SERVICE_ROLE_KEY (see supabase/tests/
       # rls-household-isolation.test.ts's own doc comment) — remapped here
       # to the NEXT_PUBLIC_* names src/lib/env.ts expects, and appended to
@@ -68,6 +69,16 @@ jobs:
             echo "SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
           } >> "$GITHUB_ENV"
+      # The suite under supabase/tests/ — RLS isolation and the plpgsql
+      # functions — talks to a real Postgres, so it is excluded from plain
+      # `npm run test` (vitest.integration.config.mts) and, until now, ran
+      # nowhere in CI. That gap is how an invites RLS test stayed red on main
+      # unnoticed; see docs/adr/0005-data-api-privileges.md. It reads the
+      # unprefixed SUPABASE_* vars the step above exported, and runs before
+      # the browser specs because a grant or policy regression is cheaper to
+      # read off a failed assertion than off a failed page interaction.
+      - name: RLS and Postgres function tests
+        run: npm run test:rls
       - name: UI smoke test
         run: npm run test:e2e
       - name: Stop Supabase
