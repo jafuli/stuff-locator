@@ -1,5 +1,10 @@
 import { PUBLIC_PATHS } from "@/lib/route-access";
 
+function pathnameOf(value: string): string {
+  const [pathname = ""] = value.split(/[?#]/);
+  return pathname;
+}
+
 /** Where a sign-in lands when there's no usable return-to path. */
 export const DEFAULT_REDIRECT_PATH = "/";
 
@@ -37,9 +42,15 @@ export function safeRedirectPath(value: string | null | undefined): string {
     return DEFAULT_REDIRECT_PATH;
   }
 
+  // Route handlers aren't pages. Landing a GET navigation on a POST-only
+  // handler is a dead end, not a return.
+  if (pathnameOf(value).startsWith("/api/")) {
+    return DEFAULT_REDIRECT_PATH;
+  }
+
   // Returning someone to the page that sent them here is a loop, not a
   // return — /sign-in?next=/sign-in would bounce forever.
-  const [pathname = ""] = value.split(/[?#]/);
+  const pathname = pathnameOf(value);
   const normalised = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   if ((PUBLIC_PATHS as readonly string[]).includes(normalised)) {
     return DEFAULT_REDIRECT_PATH;

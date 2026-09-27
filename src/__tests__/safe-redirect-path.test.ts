@@ -40,6 +40,12 @@ test("refuses to send someone back to an auth route, which would loop", () => {
   expect(safeRedirectPath("/sign-up")).toBe(DEFAULT_REDIRECT_PATH);
 });
 
+test("refuses to send someone to a route handler, which isn't a page", () => {
+  // GET-navigating to a POST-only handler is a dead end rather than a
+  // return. Not a security hole, just not a destination.
+  expect(safeRedirectPath("/api/household/bootstrap")).toBe(DEFAULT_REDIRECT_PATH);
+});
+
 test("withNextParam carries the destination and omits it when it's the default", () => {
   expect(withNextParam("/sign-up", "/items/abc")).toBe("/sign-up?next=%2Fitems%2Fabc");
   expect(withNextParam("/sign-up", DEFAULT_REDIRECT_PATH)).toBe("/sign-up");

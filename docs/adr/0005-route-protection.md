@@ -95,4 +95,34 @@ new route added to the allowlist, not a rework of this.
   Keeping those routes reachable with a session is the current behaviour
   and nothing asked for the reverse redirect; it'd be a small follow-up.
 - `e2e/activity.spec.ts` had to start signing in, because the route it
-  tests was genuinely unprotected before this.
+  tests was genuinely unprotected before this. Two entries in
+  `e2e/accessibility.spec.ts` needed the same treatment, and that one is
+  worth noting as a trap: an axe scan of a route that now redirects
+  doesn't fail, it silently scans the sign-in page and passes.
+
+## Known limitations
+
+**The per-page fallback redirects drop the return-to.** The seven pages
+that still call `redirect("/sign-in")` after their own `getUser()` do so
+without a `?next=`. That path only runs when the cookie's claims verify
+but `getUser()` then fails — a revoked session, a deleted user, a sign-out
+from the partner's device mid-navigation. Reconstructing the current path
+inside a Server Component means plumbing it through a header from the
+proxy, which is more machinery than a rare race deserves; the proxy is
+what handles every ordinary case. Worth revisiting if it ever shows up in
+practice.
+
+**`getClaims()` failing closed is a deliberate choice, and now a logged
+one.** An unverifiable cookie counts as signed out. With asymmetric
+signing keys verification is local after the JWKS is cached, so this is
+rare; under the legacy shared-secret mode it's a network call per request
+and an auth-server blip would bounce a signed-in user to `/sign-in` with
+no explanation. It now logs server-side so the two cases are
+distinguishable in the logs.
+
+**The service worker qualifies "protected" for offline visitors.**
+`src/app/sw.ts` uses serwist's `defaultCache`, which is NetworkFirst for
+documents, so an offline visitor can be served a previously-cached
+authenticated page after signing out. Pre-existing PWA behaviour, not
+introduced here, but it means "protected" describes the network path, not
+the device's disk.

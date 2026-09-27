@@ -41,7 +41,15 @@ export async function updateSession(request: NextRequest): Promise<{
 
   // Do not add logic between createServerClient and getClaims() — both are
   // required together to keep the session cookie fresh on every request.
-  const { data } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+
+  if (error) {
+    // Fail closed: an unverifiable cookie is treated as signed out, which
+    // is the safe direction. But log it — a genuinely signed-in user
+    // getting bounced to /sign-in because the auth server blipped is
+    // indistinguishable from a real sign-out otherwise.
+    console.error("[auth] could not verify session claims", error.message);
+  }
 
   return { response, claims: data?.claims ?? null };
 }
