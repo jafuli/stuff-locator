@@ -85,3 +85,41 @@ test("an unknown item id renders the not-found state, not a raw crash", async ({
 
   expect(consoleErrors).toEqual([]);
 });
+
+// Regression: item detail used to render items.added_by straight through,
+// so a real user saw "Added by 7b1d8b20-b71e-4cfe-b429-176c7cb25f38".
+// Display names come from the profiles table now — see
+// supabase/migrations/20260927120000_profiles_and_display_names.sql.
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+test("item detail names the person who added the item, never their raw user id", async ({ page }) => {
+  // Deliberately dash-free unique suffix: the usual `${randomUUID()}` in a
+  // test email or item name is itself uuid-shaped, which would make the
+  // "no uuid on the page" assertion below pass or fail for the wrong
+  // reason.
+  const suffix = randomUUID().replace(/-/g, "");
+  const localPart = `e2e-added-by-${suffix}`;
+  const email = `${localPart}@example.com`;
+
+  await page.goto("/sign-up");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("/");
+
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  const itemName = `Spare keys ${suffix}`;
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: itemName, locationId });
+
+  await page.goto(`/items/${itemId}`);
+  await expect(page.getByRole("heading", { level: 1, name: itemName })).toBeVisible();
+
+  // The profiles trigger seeds display_name from the email's local-part.
+  await expect(page.getByText("Added by").locator("xpath=following-sibling::*[1]")).toHaveText(localPart);
+
+  // The actual regression guard: no user id anywhere in the rendered
+  // page. The item's own id is in the URL, deliberately, but must not
+  // leak into the body.
+  const body = await page.locator("main").innerText();
+  expect(body).not.toMatch(UUID_PATTERN);
+});
