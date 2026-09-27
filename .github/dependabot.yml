@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  # --- npm dependencies (package.json / package-lock.json at repo root) ---
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Jerusalem"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Minor/patch bumps are usually safe and noisy one-at-a-time, so they
+      # land in a single weekly PR together.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    # Major version bumps are NOT included in the group above, so each one
+    # still gets its own separate PR — those are the ones most likely to
+    # need a manual fix (breaking API changes), so they shouldn't get
+    # bundled in with routine minor/patch noise.
+    reviewers:
+      - "jafuli"
+    assignees:
+      - "jafuli"
+
+  # --- GitHub Actions versions used in .github/workflows/*.yml ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Jerusalem"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
