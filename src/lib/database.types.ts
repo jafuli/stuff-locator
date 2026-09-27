@@ -68,16 +68,19 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          onboarding_completed_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          onboarding_completed_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          onboarding_completed_at?: string | null
         }
         Relationships: []
       }
@@ -223,6 +226,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          onboarding_completed_at: string | null
         }
         SetofOptions: {
           from: "*"

@@ -125,6 +125,119 @@ test("a valid fill-and-submit inserts via Supabase and shows the success panel w
   );
 });
 
+test("onStashed fires once, right after a real insert succeeds", async () => {
+  single.mockResolvedValueOnce({
+    data: {
+      id: "44444444-4444-4444-4444-444444444444",
+      name: "Bike pump",
+      location_id: "garage-closet",
+      detail: null,
+      household_id: HOUSEHOLD_ID,
+      added_by: USER_ID,
+    },
+    error: null,
+  });
+  const onStashed = vi.fn();
+
+  const user = userEvent.setup();
+  render(
+    <StashForm
+      locationOptions={OPTIONS}
+      locations={LOCATIONS}
+      householdId={HOUSEHOLD_ID}
+      userId={USER_ID}
+      onStashed={onStashed}
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await user.type(screen.getByRole("combobox"), "Closet");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  await screen.findByRole("status");
+  expect(onStashed).toHaveBeenCalledTimes(1);
+});
+
+test("with allowNewLocation, picking '+ New place' creates the location first, then the item in it", async () => {
+  single
+    .mockResolvedValueOnce({
+      data: { id: "55555555-5555-5555-5555-555555555555", name: "Attic", parent_id: null },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: {
+        id: "66666666-6666-6666-6666-666666666666",
+        name: "Camping tent",
+        location_id: "55555555-5555-5555-5555-555555555555",
+        detail: null,
+        household_id: HOUSEHOLD_ID,
+        added_by: USER_ID,
+      },
+      error: null,
+    });
+
+  const user = userEvent.setup();
+  render(
+    <StashForm
+      locationOptions={OPTIONS}
+      locations={LOCATIONS}
+      householdId={HOUSEHOLD_ID}
+      userId={USER_ID}
+      allowNewLocation
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Name"), "Camping tent");
+  await user.type(screen.getByRole("combobox"), "Attic");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  const status = await screen.findByRole("status");
+  expect(status.textContent).toContain("Camping tent");
+  expect(status.textContent).toContain("Attic");
+  expect(single).toHaveBeenCalledTimes(2);
+});
+
+test("without allowNewLocation, '+ New place' is still rejected (default behavior unchanged)", async () => {
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.type(screen.getByLabelText("Name"), "Camping tent");
+  await user.type(screen.getByRole("combobox"), "Attic");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  expect(
+    screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
+  ).toBeDefined();
+  expect(single).not.toHaveBeenCalled();
+});
+
+test("onStashed does not fire when the insert is rejected", async () => {
+  single.mockResolvedValueOnce({ data: null, error: { message: "new row violates row-level security policy" } });
+  const onStashed = vi.fn();
+
+  const user = userEvent.setup();
+  render(
+    <StashForm
+      locationOptions={OPTIONS}
+      locations={LOCATIONS}
+      householdId={HOUSEHOLD_ID}
+      userId={USER_ID}
+      onStashed={onStashed}
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await user.type(screen.getByRole("combobox"), "Closet");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  await screen.findByRole("alert");
+  expect(onStashed).not.toHaveBeenCalled();
+});
+
 test("a rejected insert shows a specific error and leaves the form populated for retry", async () => {
   single.mockResolvedValueOnce({ data: null, error: { message: "new row violates row-level security policy" } });
 

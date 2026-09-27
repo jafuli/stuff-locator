@@ -20,6 +20,26 @@ export interface StashFormProps {
   householdId: string;
   /** The signed-in caller's id — written as `added_by` on the inserted row. */
   userId: string;
+  /**
+   * Fires once, right after a real insert succeeds — in addition to, not
+   * instead of, this form's own success panel below. Optional: only
+   * GuidedOnboarding uses it, to know when to reveal its own "Continue"
+   * control; every other caller leaves this unset and is unaffected.
+   */
+  onStashed?: () => void;
+  /**
+   * When true, picking the autocomplete's "+ New place called…" row is
+   * accepted instead of rejected: a brand-new top-level location (no
+   * parent — matches Add-location's own default, and keeps this out of
+   * the "arbitrary depth" capture flow CLAUDE.md reserves for Browse) is
+   * created first, then the item is inserted into it. Off by default,
+   * preserving this form's existing behavior everywhere else: Stash's own
+   * task deliberately scoped inline location creation out ("adding a new
+   * one isn't supported here yet"). GuidedOnboarding turns this on because
+   * a genuinely brand-new household has zero existing locations to pick
+   * from at all — without this, its item steps could never succeed.
+   */
+  allowNewLocation?: boolean;
 }
 
 interface FieldErrors {
@@ -46,7 +66,14 @@ const LOCATION_ERROR_ID = "stash-location-error";
  * itself (`items_access`'s `is_household_member(household_id)` check) —
  * this component adds no redundant check of its own, per this task's AC.
  */
-export function StashForm({ locationOptions, locations, householdId, userId }: StashFormProps) {
+export function StashForm({
+  locationOptions,
+  locations,
+  householdId,
+  userId,
+  onStashed,
+  allowNewLocation = false,
+}: StashFormProps) {
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
   const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(null);
@@ -58,28 +85,54 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const locationError = allowNewLocation
+      ? locationSelection === null
+        ? "Choose a location for this item."
+        : undefined
+      : validateLocationSelection(locationSelection);
     const errors: FieldErrors = {
       name: validateItemName(name),
-      location: validateLocationSelection(locationSelection),
+      location: locationError,
     };
     setFieldErrors(errors);
 
-    // The `locationSelection.type !== "existing"` check (rather than trusting
-    // `errors.location` alone) is what lets TypeScript narrow the
-    // discriminated union below without a non-null assertion — it's the same
-    // condition validateLocationSelection just checked, made visible here.
-    if (errors.name || errors.location || locationSelection?.type !== "existing") {
+    if (errors.name || errors.location || locationSelection === null) {
       return;
     }
 
     const trimmedName = name.trim();
     const trimmedDetail = detail.trim();
-    const locationId = locationSelection.option.id;
 
     setSubmitError(null);
     setIsSubmitting(true);
 
     const supabase = createClient();
+    let locationId: string;
+    let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
+
+    if (locationSelection.type === "existing") {
+      locationId = locationSelection.option.id;
+    } else {
+      // Only reachable when allowNewLocation — validated above. A
+      // top-level location, same default as Add-location's own optional
+      // parent (see this prop's own doc comment for why depth doesn't
+      // belong in this capture flow).
+      const { data: newLocation, error: newLocationError } = await supabase
+        .from("locations")
+        .insert({ name: locationSelection.name, parent_id: null, household_id: householdId })
+        .select()
+        .single();
+      if (newLocationError) {
+        setIsSubmitting(false);
+        setSubmitError(newLocationError.message);
+        return;
+      }
+      locationId = newLocation.id;
+      // No ancestors to resolve for a brand-new top-level location — no
+      // need to consult `locations` (which doesn't know about it yet).
+      newLocationSegments = [{ id: newLocation.id, name: newLocation.name }];
+    }
+
     const { data, error } = await supabase
       .from("items")
       .insert({
@@ -105,9 +158,10 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
     setCaptured({
       id: data.id,
       name: data.name,
-      segments: getBreadcrumbSegments(locationId, locations),
+      segments: newLocationSegments ?? getBreadcrumbSegments(locationId, locations),
       detail: data.detail ?? undefined,
     });
+    onStashed?.();
   }
 
   function handleLocationSelect(selection: AutocompleteSelection) {
@@ -140,8 +194,8 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
         <LocationBreadcrumb segments={captured.segments} />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
         <p className="text-[10.5px] text-mid">
-          Saved. It won&apos;t show up on Home, Browse, or Find yet — those still read fixture data until their own
-          real-data-wiring tasks land.
+          Saved. It shows up on Home right away — Browse still reads fixture data until its own real-data-wiring
+          task lands.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
