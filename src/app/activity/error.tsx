@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
 // Next's error.tsx convention, scoped to this segment so it doesn't inherit
-// the root's home-page-specific "Couldn't load your stuff" copy. Real
-// today — but ITEMS/LOCATIONS are synchronous fixture reads, so nothing
-// currently throws here in practice. Ready for when a real (fallible)
-// Supabase read replaces the fixture import.
+// the root's home-page-specific "Couldn't load your stuff" copy. Trips when
+// the feed's Supabase reads fail (see fetchActivityEntries).
 //
 // Uses `retry` (see items/[id]/error.tsx's comment for why) — the same
 // convention as the other segment-scoped error boundaries.
