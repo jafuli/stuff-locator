@@ -136,11 +136,14 @@ describe("redeem_invite leaves the caller's empty household", () => {
     const joiner = await createTestUser("joiner-bootstrapped");
     userIds.push(joiner.id);
     const client = await signInAs(joiner);
+    // The household is deleted by the redemption below; if that regresses,
+    // the leftover is caught by the assertion, not leaked into later runs
+    // because the user cascade removes the membership.
     const { data: created, error: createError } = await client.rpc("create_household", {
       p_name: "Joiner's home",
     });
     expect(createError).toBeNull();
-    if (typeof created === "string") householdIds.push(created);
+    if (created) householdIds.push(created.id);
 
     const { error } = await client.rpc("redeem_invite", { p_code: await newInvite() });
     expect(error).toBeNull();
