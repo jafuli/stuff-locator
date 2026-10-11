@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import { countHouseholdsForUser, seedInviteForNewHousehold } from "./supabase-test-client";
+import { countHouseholdsForUser, householdIdsForUser, seedInviteForNewHousehold } from "./supabase-test-client";
 
 // Redeem-invite landing (/join/[code]) — the other half of Invite-partner
 // UI's `${origin}/join/${code}` link. Every test seeds a real inviter
@@ -68,7 +68,7 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
 });
 
 test("an already-signed-in visitor redeems automatically, with no sign-up/sign-in form shown", async ({ page }) => {
-  const { code } = await seedInviteForNewHousehold("Itamar's home");
+  const { code, householdId } = await seedInviteForNewHousehold("Itamar's home");
   const email = await signUpFreshAccount(page);
 
   await page.goto(`/join/${code}`);
@@ -79,11 +79,10 @@ test("an already-signed-in visitor redeems automatically, with no sign-up/sign-i
   await expect(status).toBeVisible();
   await expect(status.getByText("Itamar's home")).toBeVisible();
 
-  // This user's own bootstrap-created household plus the one they just
-  // joined — a real, expected two-household state (bootstrap ran at their
-  // earlier sign-up, well before this visit; nothing here should collapse
-  // or duplicate it).
-  expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(2);
+  // Bootstrap gave this user an empty household at sign-up; redeem_invite
+  // removes it on join (docs/adr/0008), so they end up in exactly one
+  // household — the invited one.
+  expect(await householdIdsForUser(email, TEST_PASSWORD)).toEqual([householdId]);
 });
 
 test("an invalid code shows a clear, specific error state, with no partial household created", async ({ page }) => {
@@ -113,7 +112,7 @@ test("toggling to sign-in and joining via an existing account also redeems corre
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL("/sign-in");
 
-  const { code } = await seedInviteForNewHousehold("Shared home");
+  const { code, householdId } = await seedInviteForNewHousehold("Shared home");
 
   await page.goto(`/join/${code}`);
   await page.waitForLoadState("networkidle");
@@ -126,5 +125,6 @@ test("toggling to sign-in and joining via an existing account also redeems corre
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
   await expect(status.getByText("Shared home")).toBeVisible();
-  expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(2);
+  // Their empty bootstrap household is removed on join (ADR 0008).
+  expect(await householdIdsForUser(email, TEST_PASSWORD)).toEqual([householdId]);
 });
