@@ -74,5 +74,10 @@ test("an activity feed entry's item link is keyboard-reachable", async ({ page }
   await seedItem(email, TEST_PASSWORD, { name: itemName, locationId });
 
   await page.goto("/activity");
+  // tabUntilFocused presses Tab with no polling, so make sure the real feed
+  // has rendered (and the page has settled) before the first press —
+  // otherwise a slow CI run can burn Tab presses on an unsettled page.
+  await expect(page.getByRole("link", { name: itemName })).toBeVisible();
+  await page.waitForLoadState("networkidle");
   expect(await tabUntilFocused(page, itemName, 20)).toBe(true);
 });
