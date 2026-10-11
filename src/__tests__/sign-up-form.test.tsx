@@ -202,3 +202,23 @@ test("with an invite code, the 'already have an account' footer link is suppress
   render(<SignUpForm invite={{ code: "abc123", onRedeemed: vi.fn() }} />);
   expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
 });
+
+test("a return-to path carried over from /sign-in survives account creation", async () => {
+  signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
+  const user = userEvent.setup();
+  render(<SignUpForm next="/browse" />);
+
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-long-enough-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  await waitFor(() => {
+    expect(push).toHaveBeenCalledWith("/browse");
+  });
+  expect(push).not.toHaveBeenCalledWith("/");
+});
+
+test("the sign-in link carries the return-to path back the other way", () => {
+  render(<SignUpForm next="/browse" />);
+  expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/sign-in?next=%2Fbrowse");
+});

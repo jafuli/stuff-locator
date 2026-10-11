@@ -9,6 +9,7 @@ import { HouseholdBootstrapNotice } from "@/components/household-bootstrap-notic
 import { BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS, triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
 import { validateEmail, validateSignInPassword } from "@/lib/auth-validation";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
+import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
 
 interface FieldErrors {
@@ -27,6 +28,13 @@ export interface SignInFormProps {
     code: string;
     onRedeemed: (result: RedeemInviteResult) => void;
   };
+  /**
+   * Where to land after a successful sign-in — the return-to path the
+   * proxy attached when it bounced a signed-out visitor here. Already
+   * validated by src/app/sign-in/page.tsx (safeRedirectPath), which is
+   * the only place this arrives from untrusted input; defaults to "/".
+   */
+  next?: string;
 }
 
 /**
@@ -46,7 +54,7 @@ export interface SignInFormProps {
  * session — so this is also where a user who signed up under
  * enable_confirmations=true gets bootstrapped for the first time.
  */
-export function SignInForm({ invite }: SignInFormProps) {
+export function SignInForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,11 +72,11 @@ export function SignInForm({ invite }: SignInFormProps) {
     };
   }, []);
 
-  function navigateHome() {
+  function navigateAfterSignIn() {
     if (autoContinueTimeout.current !== null) {
       clearTimeout(autoContinueTimeout.current);
     }
-    router.push("/");
+    router.push(next);
     router.refresh();
   }
 
@@ -119,10 +127,10 @@ export function SignInForm({ invite }: SignInFormProps) {
     if (!bootstrapped) {
       console.error("[household-bootstrap] failed to ensure a household after sign-in");
       setShowBootstrapNotice(true);
-      autoContinueTimeout.current = setTimeout(navigateHome, BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS);
+      autoContinueTimeout.current = setTimeout(navigateAfterSignIn, BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS);
       return;
     }
-    navigateHome();
+    navigateAfterSignIn();
   }
 
   return (
@@ -158,7 +166,7 @@ export function SignInForm({ invite }: SignInFormProps) {
           {submitError}
         </p>
       ) : null}
-      {showBootstrapNotice ? <HouseholdBootstrapNotice onContinue={navigateHome} /> : null}
+      {showBootstrapNotice ? <HouseholdBootstrapNotice onContinue={navigateAfterSignIn} /> : null}
       <Button type="submit" variant="primary" isLoading={isSubmitting}>
         {isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
@@ -167,7 +175,7 @@ export function SignInForm({ invite }: SignInFormProps) {
       {!invite ? (
         <p className="text-center text-[11.5px] text-mid">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-up", next)} className="font-semibold text-ink underline underline-offset-2">
             Sign up
           </Link>
         </p>
