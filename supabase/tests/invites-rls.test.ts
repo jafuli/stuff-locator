@@ -205,11 +205,19 @@ describe("invites RLS", () => {
       "expected an earlier test to have created household A's invite",
     );
 
-    // `authenticated` was never GRANTed UPDATE/DELETE on this table (not
-    // merely un-policied), so Postgres refuses the statement outright with
+    // `authenticated` holds no UPDATE/DELETE privilege on this table (not
+    // merely no policy), so Postgres refuses the statement outright with
     // permission-denied — the same shape of rejection the anon-key caller
     // gets in create-household-rpc.test.ts, here applied to a member acting
     // on their own household's own row.
+    //
+    // What makes that true is 20260927140000_revoke_implicit_data_api_grants
+    // .sql, not this table's own `grant select, insert` line: a GRANT only
+    // adds, and Supabase's default privileges had already handed
+    // authenticated full DML on every table in `public`. Until that revoke
+    // landed, this update reached RLS, matched no UPDATE policy, was filtered
+    // to zero rows and came back as a success — which is exactly the failure
+    // mode the assertions below distinguish from a real denial.
     const { error: updateError } = await clientA
       .from("invites")
       .update({ redeemed_at: new Date().toISOString() })
