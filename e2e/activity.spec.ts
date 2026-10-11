@@ -5,7 +5,7 @@ import { tabUntilFocused } from "./utils";
 const TEST_PASSWORD = "correct-horse-battery-1";
 
 // /activity is behind the session gate now (see
-// docs/adr/0005-route-protection.md). It was genuinely reachable without
+// docs/adr/0006-route-protection.md). It was genuinely reachable without
 // an account before — it's fixture-backed, so nothing on it needed a
 // session, which is exactly how it ended up as the one route the old
 // per-page auth checks missed. The feed itself is still fixture-only, so

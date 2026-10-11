@@ -1,4 +1,4 @@
-# 5. Route protection
+# 6. Route protection
 
 **Status:** Accepted
 

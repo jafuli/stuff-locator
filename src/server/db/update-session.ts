@@ -12,7 +12,7 @@ import { env } from "@/lib/env";
  * Returns the verified JWT claims alongside the response so the proxy can
  * decide whether to gate the route without a second Supabase round-trip
  * (this runs on every request, including prefetches — see
- * docs/adr/0005-route-protection.md). `claims` is null for a signed-out
+ * docs/adr/0006-route-protection.md). `claims` is null for a signed-out
  * visitor, and also for a cookie whose signature or `exp` doesn't check
  * out, which is the behaviour we want: unverifiable means signed out.
  */

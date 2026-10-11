@@ -11,7 +11,7 @@ import { updateSession } from "@/server/db/update-session";
 // everything else needs a session. It is deliberately an *optimistic*
 // check on the cookie's verified claims, not the app's authorisation
 // story: the real-data pages each still call auth.getUser() themselves.
-// See docs/adr/0005-route-protection.md for why both exist.
+// See docs/adr/0006-route-protection.md for why both exist.
 export async function proxy(request: NextRequest) {
   const { response, claims } = await updateSession(request);
 

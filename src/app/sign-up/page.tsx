@@ -3,7 +3,7 @@ import { safeRedirectPath } from "@/lib/safe-redirect-path";
 
 // Standalone auth page, and one of the four paths src/lib/route-access.ts
 // keeps reachable without a session (the app is otherwise deny-by-default
-// — see docs/adr/0005-route-protection.md). A successful sign-up
+// — see docs/adr/0006-route-protection.md). A successful sign-up
 // bootstraps a household via /api/household/bootstrap before navigating
 // on. Renders inside the app's one shared shell
 // (src/app/layout.tsx), but without the bottom nav — SiteNav hides itself

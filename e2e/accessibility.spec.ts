@@ -65,7 +65,7 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   // express.
   { path: "/browse", name: "browse (root)", setup: signUpOnly },
   // Both of these need a session now that the app is deny-by-default
-  // (docs/adr/0005-route-protection.md). Without `setup` they'd redirect
+  // (docs/adr/0006-route-protection.md). Without `setup` they'd redirect
   // to /sign-in and axe would happily scan *that* page and pass — a
   // vacuous test, not a failing one. /~offline needs no setup: the proxy
   // matcher excludes it.
