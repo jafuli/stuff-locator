@@ -202,13 +202,22 @@ export async function seedInviteForNewHousehold(householdName: string): Promise<
  * Mirrors the signInAs pattern already established in supabase/tests/.
  */
 export async function countHouseholdsForUser(email: string, password: string): Promise<number> {
+  return (await householdIdsForUser(email, password)).length;
+}
+
+/**
+ * Same sign-in-from-Node read as countHouseholdsForUser, but returns the
+ * household ids themselves — for asserting WHICH household a user ended up
+ * in, not just how many.
+ */
+export async function householdIdsForUser(email: string, password: string): Promise<string[]> {
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const anonKey = requireEnv("SUPABASE_ANON_KEY");
 
   const anonClient = createClient<Database>(supabaseUrl, anonKey);
   const { data, error } = await anonClient.auth.signInWithPassword({ email, password });
   if (error) {
-    throw new Error(`failed to sign in as ${email} for a household-count check: ${error.message}`);
+    throw new Error(`failed to sign in as ${email} for a household check: ${error.message}`);
   }
 
   const userClient = createClient<Database>(supabaseUrl, anonKey, {
@@ -221,5 +230,5 @@ export async function countHouseholdsForUser(email: string, password: string): P
   if (membershipError) {
     throw new Error(`failed to read household_members for ${email}: ${membershipError.message}`);
   }
-  return memberships.length;
+  return memberships.map((row) => row.household_id);
 }
