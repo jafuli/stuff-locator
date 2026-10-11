@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
 import type { StuffListEntry } from "@/components/stuff-list";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
-import { getBreadcrumbSegments, getFullLocationPaths } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
 
@@ -118,16 +118,19 @@ export default async function Page() {
     <main className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-[16px] font-semibold text-ink">Our stuff</h1>
-        <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
-          + Add item
-        </Link>
+        {/* Hidden while onboarding runs: it's a second, unguided way into
+            the same flow, and a tap on it silently abandons the sequence. */}
+        {showOnboarding ? null : (
+          <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
+            + Add item
+          </Link>
+        )}
       </div>
 
       {showOnboarding ? (
         <GuidedOnboarding
           householdId={membership.household_id}
           userId={user.id}
-          locationOptions={getFullLocationPaths(locations)}
           locations={locations}
         />
       ) : (

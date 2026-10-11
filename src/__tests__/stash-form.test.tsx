@@ -157,6 +157,11 @@ test("onStashed fires once, right after a real insert succeeds", async () => {
 
   await screen.findByRole("status");
   expect(onStashed).toHaveBeenCalledTimes(1);
+  // Picked an existing location, so there is no new one to report.
+  expect(onStashed).toHaveBeenCalledWith({
+    itemId: "44444444-4444-4444-4444-444444444444",
+    createdLocation: undefined,
+  });
 });
 
 test("with allowNewLocation, picking '+ New place' creates the location first, then the item in it", async () => {
@@ -197,6 +202,85 @@ test("with allowNewLocation, picking '+ New place' creates the location first, t
   expect(status.textContent).toContain("Camping tent");
   expect(status.textContent).toContain("Attic");
   expect(single).toHaveBeenCalledTimes(2);
+});
+
+test("onStashed reports the location it just created, so a host can share it with later forms", async () => {
+  single
+    .mockResolvedValueOnce({
+      data: { id: "55555555-5555-5555-5555-555555555555", name: "Attic", parent_id: null },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: {
+        id: "66666666-6666-6666-6666-666666666666",
+        name: "Camping tent",
+        location_id: "55555555-5555-5555-5555-555555555555",
+        detail: null,
+        household_id: HOUSEHOLD_ID,
+        added_by: USER_ID,
+      },
+      error: null,
+    });
+  const onStashed = vi.fn();
+
+  const user = userEvent.setup();
+  render(
+    <StashForm
+      locationOptions={OPTIONS}
+      locations={LOCATIONS}
+      householdId={HOUSEHOLD_ID}
+      userId={USER_ID}
+      allowNewLocation
+      onStashed={onStashed}
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Name"), "Camping tent");
+  await user.type(screen.getByRole("combobox"), "Attic");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  await screen.findByRole("status");
+  expect(onStashed).toHaveBeenCalledWith({
+    itemId: "66666666-6666-6666-6666-666666666666",
+    createdLocation: { id: "55555555-5555-5555-5555-555555555555", parentId: null, name: "Attic" },
+  });
+});
+
+test("embedded: the success panel confirms the item but offers no navigation of its own", async () => {
+  single.mockResolvedValueOnce({
+    data: {
+      id: "44444444-4444-4444-4444-444444444444",
+      name: "Bike pump",
+      location_id: "garage-closet",
+      detail: null,
+      household_id: HOUSEHOLD_ID,
+      added_by: USER_ID,
+    },
+    error: null,
+  });
+
+  const user = userEvent.setup();
+  render(
+    <StashForm
+      locationOptions={OPTIONS}
+      locations={LOCATIONS}
+      householdId={HOUSEHOLD_ID}
+      userId={USER_ID}
+      embedded
+    />,
+  );
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await user.type(screen.getByRole("combobox"), "Closet");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  const status = await screen.findByRole("status");
+  expect(status.textContent).toContain("Bike pump");
+  expect(screen.queryByRole("link", { name: "View item" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Back to home" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add another" })).toBeNull();
 });
 
 test("without allowNewLocation, '+ New place' is still rejected (default behavior unchanged)", async () => {

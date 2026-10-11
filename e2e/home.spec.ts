@@ -105,7 +105,12 @@ test("home has a visible, keyboard-reachable entry point into the Stash flow", a
     consoleErrors.push(err.message);
   });
 
-  await signUpFreshAccount(page);
+  // Seeded with one item: a household with none shows guided onboarding,
+  // which hides this header link on purpose (guided-onboarding.spec.ts
+  // asserts that).
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  await seedItem(email, TEST_PASSWORD, { name: `Spare key ${randomUUID()}`, locationId });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 

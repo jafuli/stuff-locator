@@ -25,8 +25,21 @@ export interface StashFormProps {
    * instead of, this form's own success panel below. Optional: only
    * GuidedOnboarding uses it, to know when to reveal its own "Continue"
    * control; every other caller leaves this unset and is unaffected.
+   *
+   * Reports the location this stash created, if it created one, so a caller
+   * that keeps its own copy of the location list (GuidedOnboarding) can add
+   * it — the `locations`/`locationOptions` props are a snapshot and don't
+   * know about it.
    */
-  onStashed?: () => void;
+  onStashed?: (result: StashResult) => void;
+  /**
+   * When true, the success panel is a plain confirmation with no
+   * navigation of its own (no "View item" / "Add another" / "Back to
+   * home"). For hosts like GuidedOnboarding that supply the next action
+   * themselves — otherwise the user sees two competing sets of buttons and
+   * can wander out of the guided flow by accident.
+   */
+  embedded?: boolean;
   /**
    * When true, picking the autocomplete's "+ New place called…" row is
    * accepted instead of rejected: a brand-new top-level location (no
@@ -40,6 +53,12 @@ export interface StashFormProps {
    * from at all — without this, its item steps could never succeed.
    */
   allowNewLocation?: boolean;
+}
+
+export interface StashResult {
+  itemId: string;
+  /** Set only when this stash created a brand-new (top-level) location. */
+  createdLocation?: Location;
 }
 
 interface FieldErrors {
@@ -72,6 +91,7 @@ export function StashForm({
   householdId,
   userId,
   onStashed,
+  embedded = false,
   allowNewLocation = false,
 }: StashFormProps) {
   const [name, setName] = useState("");
@@ -109,6 +129,7 @@ export function StashForm({
     const supabase = createClient();
     let locationId: string;
     let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
+    let createdLocation: Location | undefined;
 
     if (locationSelection.type === "existing") {
       locationId = locationSelection.option.id;
@@ -131,6 +152,7 @@ export function StashForm({
       // No ancestors to resolve for a brand-new top-level location — no
       // need to consult `locations` (which doesn't know about it yet).
       newLocationSegments = [{ id: newLocation.id, name: newLocation.name }];
+      createdLocation = { id: newLocation.id, parentId: null, name: newLocation.name };
     }
 
     const { data, error } = await supabase
@@ -161,7 +183,7 @@ export function StashForm({
       segments: newLocationSegments ?? getBreadcrumbSegments(locationId, locations),
       detail: data.detail ?? undefined,
     });
-    onStashed?.();
+    onStashed?.({ itemId: data.id, createdLocation });
   }
 
   function handleLocationSelect(selection: AutocompleteSelection) {
@@ -184,6 +206,17 @@ export function StashForm({
     setCaptured(null);
   }
 
+  if (captured && embedded) {
+    return (
+      <div role="status" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
+        <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
+        <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
+        <LocationBreadcrumb segments={captured.segments} />
+        {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
+      </div>
+    );
+  }
+
   if (captured) {
     return (
       <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
@@ -194,8 +227,7 @@ export function StashForm({
         <LocationBreadcrumb segments={captured.segments} />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
         <p className="text-[10.5px] text-mid">
-          Saved. It shows up on Home right away — Browse still reads fixture data until its own real-data-wiring
-          task lands.
+          Saved. It shows up on Home and in Browse right away.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link

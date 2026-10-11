@@ -175,9 +175,9 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  // "Skip guided setup" is one of the very first tab stops (right after
-  // the always-present "+ Add item" header link), reachable without going
-  // through the whole embedded Stash form first.
+  // "Skip guided setup" is the very first tab stop — the header's
+  // "+ Add item" link is hidden while onboarding runs — reachable without
+  // going through the whole embedded Stash form first.
   expect(await tabUntilFocused(page, "Skip guided setup", 5)).toBe(true);
 
   await page.getByLabel("Name").focus();
@@ -202,10 +202,50 @@ test("the guided sequence, including the location autocomplete, is operable keyb
 
   // A generous bound, not a precise count — after submit, focus resets to
   // the top of the document (the submit button that had it is now
-  // unmounted), so this walks through the header link, "Skip guided
-  // setup", and StashForm's own success panel (View item / Add another /
-  // Back to home) before reaching this component's own Continue button.
+  // unmounted), so this passes "Skip guided setup" before reaching the
+  // Continue button (the embedded success panel has no controls of its own).
   expect(await tabUntilFocused(page, "Continue", 25)).toBe(true);
   await page.keyboard.press("Enter");
   await expect(page.getByText("Step 2 of 4")).toBeVisible();
+  // Focus lands on the new step's heading instead of being lost to <body>.
+  await expect(page.getByRole("heading", { name: "Stash something bulky" })).toBeFocused();
+});
+
+test("the onboarding screen has one way forward: no header '+ Add item', no View item / Add another / Back to home", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByRole("link", { name: "+ Add item" })).toHaveCount(0);
+
+  await stashViaOnboardingStep(page, "Passport", "Filing box");
+
+  await expect(page.getByRole("status").getByText("Passport")).toBeVisible();
+  await expect(page.getByRole("link", { name: "View item" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add another" })).toHaveCount(0);
+});
+
+test("a place created in step 1 is offered as an existing place in step 2", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  await stashViaOnboardingStep(page, "Passport", "Filing box");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Step 2 of 4")).toBeVisible();
+
+  await page.getByRole("combobox").fill("Filing");
+  await expect(page.getByRole("option", { name: "Filing box" })).toBeVisible();
+});
+
+test("'Skip guided setup' is a comfortable touch target (at least 44px tall)", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  const box = await page.getByRole("button", { name: "Skip guided setup" }).boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
