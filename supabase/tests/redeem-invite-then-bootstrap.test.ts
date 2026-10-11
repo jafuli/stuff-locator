@@ -147,20 +147,26 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
     expect(memberships?.[0]?.household_id).toBe(inviterHouseholdId);
   });
 
-  test("contrast case: bootstrapping BEFORE redeeming (the bug this fix avoids) would leave the user in two households", async () => {
+  test("bootstrapping BEFORE redeeming no longer leaves two households — redeem_invite removes the empty one (ADR 0008)", async () => {
     const joiner = await createTestUser("joiner-bootstrap-first");
     createdUserIds.push(joiner.userId);
     const code = await createInvite();
     const joinerClient = await signInAs(joiner.email, joiner.password);
 
-    // Deliberately the WRONG order, to prove the two-household outcome
-    // this task's AC explicitly warns against is real if the ordering
-    // isn't respected — not exercised anywhere in the actual app code
-    // (SignUpForm/SignInForm always redeem first), but this is what makes
-    // "redeem before bootstrap" a genuine fix rather than a defensive
-    // no-op.
+    // The "wrong" order — the app's SignUpForm/SignInForm redeem first, but a
+    // user who already has an account (and so already bootstrapped) joins
+    // exactly like this. Before ADR 0008 it ended in two households and Home
+    // showed the older, empty one.
     const bootstrapResult = await ensureHousehold(joinerClient, joiner.userId, joiner.email);
     expect(bootstrapResult).toEqual({ ok: true, created: true });
+
+    const { data: before } = await joinerClient
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", joiner.userId);
+    expect(before).toHaveLength(1);
+    const bootstrapHouseholdId = before?.[0]?.household_id;
+    expect(bootstrapHouseholdId).not.toBe(inviterHouseholdId);
 
     const { error: redeemError } = await joinerClient.rpc("redeem_invite", { p_code: code });
     expect(redeemError).toBeNull();
@@ -169,15 +175,14 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
       .from("household_members")
       .select("household_id")
       .eq("user_id", joiner.userId);
-    expect(memberships).toHaveLength(2);
-    const householdIds = (memberships ?? []).map((row) => row.household_id);
-    expect(householdIds).toContain(inviterHouseholdId);
+    expect(memberships).toHaveLength(1);
+    expect(memberships?.[0]?.household_id).toBe(inviterHouseholdId);
 
-    // Clean up the extra bootstrap-created household this deliberately-
-    // wrong-order case produced, so it doesn't leak between test runs.
-    const extraHouseholdId = householdIds.find((id) => id !== inviterHouseholdId);
-    if (extraHouseholdId) {
-      createdHouseholdIds.push(extraHouseholdId);
-    }
+    // The empty bootstrap household is gone, not just orphaned.
+    const { data: leftover } = await serviceClient
+      .from("households")
+      .select("id")
+      .eq("id", bootstrapHouseholdId ?? "");
+    expect(leftover).toHaveLength(0);
   });
 });
