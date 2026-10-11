@@ -69,7 +69,7 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   // to /sign-in and axe would happily scan *that* page and pass — a
   // vacuous test, not a failing one. /~offline needs no setup: the proxy
   // matcher excludes it.
-  { path: "/activity", name: "activity", setup: signUpOnly },
+  { path: "/activity", name: "activity (populated)", setup: signUpAndSeedHomeItem },
   { path: "/this-route-does-not-exist", name: "root not-found", setup: signUpOnly },
   { path: "/~offline", name: "offline fallback" },
 ];
