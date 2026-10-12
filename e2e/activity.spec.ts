@@ -1,25 +1,38 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { seedItem, seedLocationChainAllIds } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
-// /activity is behind the session gate now (see
-// docs/adr/0006-route-protection.md). It was genuinely reachable without
-// an account before — it's fixture-backed, so nothing on it needed a
-// session, which is exactly how it ended up as the one route the old
-// per-page auth checks missed. The feed itself is still fixture-only, so
-// a brand-new account sees the same entries this spec always asserted.
-async function signUpFreshAccount(page: Page): Promise<void> {
-  const email = `e2e-activity-${randomUUID()}@example.com`;
+// /activity reads the signed-in household's real items (it was the last
+// fixture-backed route). The actor shown is the profile display name, which
+// for an email sign-up is the local part of the address.
+async function signUpFreshAccount(page: Page): Promise<{ email: string; displayName: string }> {
+  const displayName = `e2e-activity-${randomUUID()}`;
+  const email = `${displayName}@example.com`;
   await page.goto("/sign-up");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("/");
+  return { email, displayName };
 }
 
-test("the activity feed shows real entries, not the old placeholder, and links out correctly", async ({ page }) => {
+test("a household with nothing stashed shows the empty state, not fixture entries", async ({ page }) => {
+  await signUpFreshAccount(page);
+
+  await page.goto("/activity");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
+  await expect(page.getByText("Nothing has happened yet")).toBeVisible();
+  await expect(page.getByRole("listitem")).toHaveCount(0);
+});
+
+test("a stashed item appears as '<name> added <item>' with its real breadcrumb, and links out correctly", async ({
+  page,
+}) => {
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") {
@@ -30,48 +43,41 @@ test("the activity feed shows real entries, not the old placeholder, and links o
     consoleErrors.push(err.message);
   });
 
-  await signUpFreshAccount(page);
+  const { email, displayName } = await signUpFreshAccount(page);
+  const [garageId, closetId] = await seedLocationChainAllIds(email, TEST_PASSWORD, ["Garage", "Closet"]);
+  const itemName = `Spare house keys ${randomUUID()}`;
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: itemName, locationId: closetId });
 
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
-  await expect(page.getByText(/coming soon/i)).toHaveCount(0);
+  await expect(page.getByText("Nothing has happened yet")).toHaveCount(0);
 
-  // Spare house keys is the one fixture item with a genuine move — its
-  // "moved" entry is the newest event, so it renders first (top <li>).
-  // Several other items also live under Garage, so breadcrumb links are
-  // scoped to this specific entry rather than matched by name alone.
-  const topEntry = page.getByRole("listitem").first();
-  await expect(topEntry.getByText("Maayan")).toBeVisible();
-  await expect(topEntry.getByText("moved")).toBeVisible();
+  const entry = page.getByRole("listitem").first();
+  // The person's display name, never a raw user id.
+  await expect(entry.getByText(displayName, { exact: true })).toBeVisible();
+  await expect(entry.getByText("added", { exact: true })).toBeVisible();
+  await expect(entry.getByRole("link", { name: itemName })).toHaveAttribute("href", `/items/${itemId}`);
 
-  // The item link points at its detail route — verified via href, not by
-  // navigating in: item-detail now reads real data (see that task's PR)
-  // and this fixture id ("spare-house-keys") was never something its real
-  // reads could resolve. Activity itself is still fixture-only until its
-  // own separate wiring task lands.
-  await expect(topEntry.getByRole("link", { name: "Spare house keys" })).toHaveAttribute(
-    "href",
-    "/items/spare-house-keys",
-  );
-
-  // Clicking a breadcrumb segment in an entry links out to the matching
-  // /browse/[id] — Browse itself now reads real household data (see that
-  // task's PR), and Activity is still fixture-only, so this fixture id
-  // ("garage") was never something Browse's real reads could resolve.
-  // Matching home.spec.ts's own precedent for this exact coupling: only the
-  // href is asserted here, not Browse's own rendered content.
-  await expect(page.getByRole("listitem").first().getByRole("link", { name: "Garage" })).toHaveAttribute(
-    "href",
-    "/browse/garage",
-  );
+  // Breadcrumb segments link to the matching /browse/[id] — real ids now.
+  await expect(entry.getByRole("link", { name: "Garage" })).toHaveAttribute("href", `/browse/${garageId}`);
+  await expect(entry.getByRole("link", { name: "Closet" })).toHaveAttribute("href", `/browse/${closetId}`);
 
   expect(consoleErrors).toEqual([]);
 });
 
 test("an activity feed entry's item link is keyboard-reachable", async ({ page }) => {
-  await signUpFreshAccount(page);
+  const { email } = await signUpFreshAccount(page);
+  const locationId = (await seedLocationChainAllIds(email, TEST_PASSWORD, ["Garage"]))[0];
+  const itemName = `Tent ${randomUUID()}`;
+  await seedItem(email, TEST_PASSWORD, { name: itemName, locationId });
+
   await page.goto("/activity");
-  expect(await tabUntilFocused(page, "Spare house keys", 20)).toBe(true);
+  // tabUntilFocused presses Tab with no polling, so make sure the real feed
+  // has rendered (and the page has settled) before the first press —
+  // otherwise a slow CI run can burn Tab presses on an unsettled page.
+  await expect(page.getByRole("link", { name: itemName })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(await tabUntilFocused(page, itemName, 20)).toBe(true);
 });
