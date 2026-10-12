@@ -262,13 +262,7 @@ test("embedded: the success panel confirms the item but offers no navigation of 
 
   const user = userEvent.setup();
   render(
-    <StashForm
-      locationOptions={OPTIONS}
-      locations={LOCATIONS}
-      householdId={HOUSEHOLD_ID}
-      userId={USER_ID}
-      embedded
-    />,
+    <StashForm locationOptions={OPTIONS} locations={LOCATIONS} householdId={HOUSEHOLD_ID} userId={USER_ID} embedded />,
   );
 
   await user.type(screen.getByLabelText("Name"), "Bike pump");

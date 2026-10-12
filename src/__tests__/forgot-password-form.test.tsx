@@ -3,9 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const { resetPasswordForEmail } = vi.hoisted(() => ({
-  resetPasswordForEmail: vi.fn<
-    (email: string, options: { redirectTo: string }) => Promise<{ data: object | null; error: { message: string } | null }>
-  >(),
+  resetPasswordForEmail:
+    vi.fn<
+      (
+        email: string,
+        options: { redirectTo: string },
+      ) => Promise<{ data: object | null; error: { message: string } | null }>
+    >(),
 }));
 vi.mock("@/server/db/client", () => ({ createClient: () => ({ auth: { resetPasswordForEmail } }) }));
 

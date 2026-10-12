@@ -158,7 +158,12 @@ test("the button shows a loading state and disables fields while the insert is i
   expect(screen.getByRole<HTMLInputElement>("combobox").disabled).toBe(true);
 
   resolveInsert({
-    data: { id: "77777777-7777-7777-7777-777777777777", name: "Red box", parent_id: "garage-closet", household_id: HOUSEHOLD_ID },
+    data: {
+      id: "77777777-7777-7777-7777-777777777777",
+      name: "Red box",
+      parent_id: "garage-closet",
+      household_id: HOUSEHOLD_ID,
+    },
     error: null,
   });
 

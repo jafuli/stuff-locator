@@ -112,10 +112,7 @@ interface MoveContainerArgs {
 }
 
 function moveContainer(client: SupabaseClient<Database>, args: MoveContainerArgs) {
-  return client.rpc(
-    "move_container",
-    args as Database["public"]["Functions"]["move_container"]["Args"],
-  );
+  return client.rpc("move_container", args as Database["public"]["Functions"]["move_container"]["Args"]);
 }
 
 async function signInAs(email: string, password: string): Promise<SupabaseClient<Database>> {
@@ -194,11 +191,7 @@ describe("move_container RPC", () => {
     expect(error).not.toBeNull();
     expect(error?.message).toMatch(/move_container:.*own descendant/i);
 
-    const { data: reread } = await serviceClient
-      .from("locations")
-      .select("parent_id")
-      .eq("id", grandparent)
-      .single();
+    const { data: reread } = await serviceClient.from("locations").select("parent_id").eq("id", grandparent).single();
     expect(reread?.parent_id).toBeNull();
   });
 

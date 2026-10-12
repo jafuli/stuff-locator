@@ -147,10 +147,7 @@ test("a user can rename themselves but not their partner", async () => {
 
   const myClient = await signInAs(me.email, me.password);
 
-  const { error: ownError } = await myClient
-    .from("profiles")
-    .update({ display_name: "Jane" })
-    .eq("user_id", me.userId);
+  const { error: ownError } = await myClient.from("profiles").update({ display_name: "Jane" }).eq("user_id", me.userId);
   expect(ownError).toBeNull();
 
   await myClient.from("profiles").update({ display_name: "Hacked" }).eq("user_id", partner.userId);
@@ -177,9 +174,7 @@ test("a profile cannot be forged for someone else", async () => {
   const myClient = await signInAs(me.email, me.password);
 
   // No INSERT policy exists at all — rows come only from the trigger.
-  const { error } = await myClient
-    .from("profiles")
-    .insert({ user_id: randomUUID(), display_name: "Impostor" });
+  const { error } = await myClient.from("profiles").insert({ user_id: randomUUID(), display_name: "Impostor" });
 
   expect(error).not.toBeNull();
 });

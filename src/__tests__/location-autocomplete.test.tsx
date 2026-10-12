@@ -1,11 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  LocationAutocomplete,
-  filterLocationOptions,
-  splitMatchSegments,
-} from "@/components/location-autocomplete";
+import { LocationAutocomplete, filterLocationOptions, splitMatchSegments } from "@/components/location-autocomplete";
 import type { LocationOption } from "@/lib/fixtures/location-path";
 
 const OPTIONS: LocationOption[] = [

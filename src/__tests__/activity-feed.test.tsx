@@ -17,7 +17,13 @@ test("renders the empty state when there are no entries", () => {
 test("renders an entry with actor, verb, item link, and location breadcrumb links", () => {
   const entries: ActivityFeedEntry[] = [
     {
-      event: { id: "spare-house-keys:moved", verb: "moved", actor: "Maayan", item, at: new Date("2026-01-01T00:00:00Z") },
+      event: {
+        id: "spare-house-keys:moved",
+        verb: "moved",
+        actor: "Maayan",
+        item,
+        at: new Date("2026-01-01T00:00:00Z"),
+      },
       segments: [
         { id: "garage", name: "Garage" },
         { id: "garage-closet", name: "Closet" },

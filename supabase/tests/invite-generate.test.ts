@@ -131,7 +131,11 @@ describe("Invite-partner UI's generate-invite write path", () => {
     expect(data?.redeemed_at).toBeNull();
 
     // Real, queryable row — not just an echoed insert payload.
-    const { data: reread } = await serviceClient.from("invites").select("id").eq("id", data?.id ?? "").single();
+    const { data: reread } = await serviceClient
+      .from("invites")
+      .select("id")
+      .eq("id", data?.id ?? "")
+      .single();
     expect(reread?.id).toBe(data?.id);
   });
 

@@ -63,20 +63,16 @@ const PERMISSION_DENIED = "42501";
 describe("anon holds no privileges on the Data API tables", () => {
   // Reading is where the two denial shapes diverge most usefully: an
   // un-privileged SELECT errors, an un-policied one returns [].
-  test.each([
-    "households",
-    "household_members",
-    "locations",
-    "items",
-    "invites",
-    "profiles",
-  ] as const)("anon cannot select from %s", async (table) => {
-    const { data, error } = await anonClient.from(table).select("*").limit(1);
+  test.each(["households", "household_members", "locations", "items", "invites", "profiles"] as const)(
+    "anon cannot select from %s",
+    async (table) => {
+      const { data, error } = await anonClient.from(table).select("*").limit(1);
 
-    expect(data).toBeNull();
-    expect(error?.code).toBe(PERMISSION_DENIED);
-    expect(error?.message).toContain(`permission denied for table ${table}`);
-  });
+      expect(data).toBeNull();
+      expect(error?.code).toBe(PERMISSION_DENIED);
+      expect(error?.message).toContain(`permission denied for table ${table}`);
+    },
+  );
 
   // UPDATE and DELETE on `items` stand in for all six tables: this is the
   // pair that silently succeeds when the privilege is present but no policy
@@ -85,10 +81,7 @@ describe("anon holds no privileges on the Data API tables", () => {
   // statement before it ever looks for rows, so a denial cannot be confused
   // with "nothing matched".
   test("anon cannot update a row, even a nonexistent one", async () => {
-    const { error } = await anonClient
-      .from("items")
-      .update({ name: "anon was here" })
-      .eq("id", randomUUID());
+    const { error } = await anonClient.from("items").update({ name: "anon was here" }).eq("id", randomUUID());
 
     expect(error?.code).toBe(PERMISSION_DENIED);
     expect(error?.message).toContain("permission denied for table items");

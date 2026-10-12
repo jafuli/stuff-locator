@@ -28,12 +28,7 @@ test("renders the empty state when there are no entries", () => {
 });
 
 test("renders a caller-supplied emptyStateAction in the zero-entries empty state", () => {
-  render(
-    <StuffList
-      entries={[]}
-      emptyStateAction={<Link href="/items/new">Stash your first item</Link>}
-    />,
-  );
+  render(<StuffList entries={[]} emptyStateAction={<Link href="/items/new">Stash your first item</Link>} />);
   expect(screen.getByRole("link", { name: "Stash your first item" }).getAttribute("href")).toBe("/items/new");
 });
 

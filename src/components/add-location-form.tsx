@@ -6,7 +6,11 @@ import { LocationAutocomplete, type AutocompleteSelection } from "@/components/l
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
+import {
+  getBreadcrumbSegments,
+  type LocationBreadcrumbSegment,
+  type LocationOption,
+} from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { validateLocationName, validateParentSelection } from "@/lib/location-validation";
 import { createClient } from "@/server/db/client";

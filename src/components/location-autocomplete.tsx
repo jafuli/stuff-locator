@@ -5,9 +5,7 @@ import { useCombobox } from "downshift";
 import { cn } from "@/lib/cn";
 import type { LocationOption } from "@/lib/fixtures/location-path";
 
-export type AutocompleteSelection =
-  | { type: "existing"; option: LocationOption }
-  | { type: "new"; name: string };
+export type AutocompleteSelection = { type: "existing"; option: LocationOption } | { type: "new"; name: string };
 
 interface ComboItemOption {
   kind: "option";
@@ -133,40 +131,45 @@ export function LocationAutocomplete({
   const createItem: ComboItem = { kind: "create", query: trimmedQuery };
   const items: ComboItem[] = isLoading
     ? []
-    : [...matches.map((option): ComboItem => ({ kind: "option", option })), ...(trimmedQuery === "" ? [] : [createItem])];
+    : [
+        ...matches.map((option): ComboItem => ({ kind: "option", option })),
+        ...(trimmedQuery === "" ? [] : [createItem]),
+      ];
 
-  const { isOpen, getLabelProps, getMenuProps, getInputProps, highlightedIndex, getItemProps } = useCombobox<ComboItem>({
-    items,
-    inputValue,
-    itemToString,
-    onInputValueChange: ({ inputValue: nextValue }) => {
-      if (justSelectedRef.current) {
-        justSelectedRef.current = false;
+  const { isOpen, getLabelProps, getMenuProps, getInputProps, highlightedIndex, getItemProps } = useCombobox<ComboItem>(
+    {
+      items,
+      inputValue,
+      itemToString,
+      onInputValueChange: ({ inputValue: nextValue }) => {
+        if (justSelectedRef.current) {
+          justSelectedRef.current = false;
+          setInputValue("");
+          onInputChange?.("");
+          return;
+        }
+        setInputValue(nextValue);
+        onInputChange?.(nextValue);
+      },
+      // Controlled to null: this is a picker, not a tag input — a selection
+      // fires onSelect and clears back to an empty field rather than
+      // leaving a "chosen" chip behind.
+      selectedItem: null,
+      onSelectedItemChange: ({ selectedItem }) => {
+        if (!selectedItem) {
+          return;
+        }
+        justSelectedRef.current = true;
+        if (selectedItem.kind === "create") {
+          onSelect({ type: "new", name: selectedItem.query });
+        } else {
+          onSelect({ type: "existing", option: selectedItem.option });
+        }
         setInputValue("");
         onInputChange?.("");
-        return;
-      }
-      setInputValue(nextValue);
-      onInputChange?.(nextValue);
+      },
     },
-    // Controlled to null: this is a picker, not a tag input — a selection
-    // fires onSelect and clears back to an empty field rather than
-    // leaving a "chosen" chip behind.
-    selectedItem: null,
-    onSelectedItemChange: ({ selectedItem }) => {
-      if (!selectedItem) {
-        return;
-      }
-      justSelectedRef.current = true;
-      if (selectedItem.kind === "create") {
-        onSelect({ type: "new", name: selectedItem.query });
-      } else {
-        onSelect({ type: "existing", option: selectedItem.option });
-      }
-      setInputValue("");
-      onInputChange?.("");
-    },
-  });
+  );
 
   const menuOpen = isOpen && !isLoading && items.length > 0;
 

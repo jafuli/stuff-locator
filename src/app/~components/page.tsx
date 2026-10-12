@@ -37,8 +37,8 @@ export default function ComponentsDemoPage() {
       <div>
         <h1 className="text-2xl font-semibold text-ink">Component catalog</h1>
         <p className="mt-1 text-sm text-mid">
-          An unlinked, always-reachable demo of the six shared UI primitives, matched against the wireframes.
-          Ships to prod like <code>/~offline</code> does — reachable by URL, not linked from any nav.
+          An unlinked, always-reachable demo of the six shared UI primitives, matched against the wireframes. Ships to
+          prod like <code>/~offline</code> does — reachable by URL, not linked from any nav.
         </p>
       </div>
 
@@ -172,8 +172,8 @@ export default function ComponentsDemoPage() {
           Bottom nav
         </h2>
         <p className="text-[11px] text-mid">
-          The wireframes draw 3 tabs (Stuff / Activity / Home) and flag the count as an open question. The shipped
-          nav (src/lib/nav-tabs.ts, wired into the real app shell) uses 2 — shown below with &quot;Home&quot; dropped.
+          The wireframes draw 3 tabs (Stuff / Activity / Home) and flag the count as an open question. The shipped nav
+          (src/lib/nav-tabs.ts, wired into the real app shell) uses 2 — shown below with &quot;Home&quot; dropped.
         </p>
         <div className="max-w-xs overflow-hidden rounded-[8px] border border-line">
           <BottomNav tabs={NAV_TABS} activePath="/" />

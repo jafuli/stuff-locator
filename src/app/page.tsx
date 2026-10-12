@@ -128,11 +128,7 @@ export default async function Page() {
       </div>
 
       {showOnboarding ? (
-        <GuidedOnboarding
-          householdId={membership.household_id}
-          userId={user.id}
-          locations={locations}
-        />
+        <GuidedOnboarding householdId={membership.household_id} userId={user.id} locations={locations} />
       ) : (
         /*
           SearchableStuffList owns the search input's state and filters

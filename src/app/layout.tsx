@@ -32,10 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       {/*
         Fixed-height flex column so BottomNav (rendered via SiteNav below)
         pins to the bottom of the viewport instead of getting pushed below

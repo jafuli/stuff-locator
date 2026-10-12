@@ -9,13 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // page.tsx's auth.getUser() read is a real Supabase call and throws into
 // this boundary on failure — distinct from an invalid/expired invite CODE,
 // which is JoinInviteFlow's own explicit error state, not this one.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);

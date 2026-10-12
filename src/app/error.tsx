@@ -19,13 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // tree supplies a heading (root layout.tsx renders only SiteNav, a <nav>) —
 // so titleAs="h1" gives this route a real heading instead of shipping with
 // none.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     // Matches Next's own documented pattern for error.tsx. Only runs when a
     // real error boundary trips, not during normal rendering — doesn't

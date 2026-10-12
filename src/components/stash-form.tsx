@@ -6,7 +6,11 @@ import { LocationAutocomplete, type AutocompleteSelection } from "@/components/l
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
+import {
+  getBreadcrumbSegments,
+  type LocationBreadcrumbSegment,
+  type LocationOption,
+} from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
@@ -226,9 +230,7 @@ export function StashForm({
         </div>
         <LocationBreadcrumb segments={captured.segments} />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
-        <p className="text-[10.5px] text-mid">
-          Saved. It shows up on Home and in Browse right away.
-        </p>
+        <p className="text-[10.5px] text-mid">Saved. It shows up on Home and in Browse right away.</p>
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/items/${captured.id}`}

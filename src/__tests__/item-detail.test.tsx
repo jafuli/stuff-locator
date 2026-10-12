@@ -15,12 +15,32 @@ const fullItem: Item = {
 };
 
 test("renders the item name as the page heading", () => {
-  render(<ItemDetail item={fullItem} segments={[{ id: "garage", name: "Garage" }, { id: "garage-closet", name: "Closet" }, { id: "garage-closet-toolbox", name: "Toolbox" }, { id: "garage-closet-toolbox-red-box", name: "Red box" }]} />);
+  render(
+    <ItemDetail
+      item={fullItem}
+      segments={[
+        { id: "garage", name: "Garage" },
+        { id: "garage-closet", name: "Closet" },
+        { id: "garage-closet-toolbox", name: "Toolbox" },
+        { id: "garage-closet-toolbox-red-box", name: "Red box" },
+      ]}
+    />,
+  );
   expect(screen.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeDefined();
 });
 
 test("renders the full location breadcrumb", () => {
-  render(<ItemDetail item={fullItem} segments={[{ id: "garage", name: "Garage" }, { id: "garage-closet", name: "Closet" }, { id: "garage-closet-toolbox", name: "Toolbox" }, { id: "garage-closet-toolbox-red-box", name: "Red box" }]} />);
+  render(
+    <ItemDetail
+      item={fullItem}
+      segments={[
+        { id: "garage", name: "Garage" },
+        { id: "garage-closet", name: "Closet" },
+        { id: "garage-closet-toolbox", name: "Toolbox" },
+        { id: "garage-closet-toolbox-red-box", name: "Red box" },
+      ]}
+    />,
+  );
   expect(screen.getByText("Garage › Closet › Toolbox › Red box")).toBeDefined();
 });
 
@@ -47,7 +67,15 @@ test("omits fields that are absent, without any filler", () => {
     // no lastMovedBy — matches the real "passport" fixture entry
     lastMovedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
   };
-  render(<ItemDetail item={sparse} segments={[{ id: "bedroom", name: "Bedroom" }, { id: "bedroom-filing-box", name: "Filing box" }]} />);
+  render(
+    <ItemDetail
+      item={sparse}
+      segments={[
+        { id: "bedroom", name: "Bedroom" },
+        { id: "bedroom-filing-box", name: "Filing box" },
+      ]}
+    />,
+  );
   expect(screen.queryByText("Last moved by")).toBeNull();
 });
 

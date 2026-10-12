@@ -44,8 +44,7 @@
 
   /* Named --font-wire* (not reusing --font-sans/--font-mono) so these never
      collide with the Geist-backed tokens already wired in layout.tsx. */
-  --font-wire: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  --font-wire: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-wire-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 

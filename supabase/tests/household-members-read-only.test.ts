@@ -62,11 +62,7 @@ async function signInAs(user: TestUser): Promise<SupabaseClient<Database>> {
 }
 
 async function seedHousehold(name: string, members: TestUser[]): Promise<string> {
-  const { data: household, error } = await serviceClient
-    .from("households")
-    .insert({ name })
-    .select()
-    .single();
+  const { data: household, error } = await serviceClient.from("households").insert({ name }).select().single();
   if (error) throw new Error(`failed to seed household "${name}": ${error.message}`);
 
   const { error: memberError } = await serviceClient.from("household_members").insert(
@@ -102,10 +98,7 @@ describe("household_members is read-only for authenticated", () => {
   }, 30_000);
 
   afterAll(async () => {
-    await serviceClient
-      .from("households")
-      .delete()
-      .in("id", [sharedHouseholdId, otherHouseholdId]);
+    await serviceClient.from("households").delete().in("id", [sharedHouseholdId, otherHouseholdId]);
     for (const user of [alice, bob, carol, outsider]) {
       await serviceClient.auth.admin.deleteUser(user.id);
     }

@@ -89,9 +89,7 @@ export default async function Page() {
   return (
     <main className="flex flex-col gap-3 p-4">
       <h1 className="text-[16px] font-semibold text-ink">Invite your partner</h1>
-      <p className="text-[11.5px] text-mid">
-        Share this code or link — anyone with it can join your household.
-      </p>
+      <p className="text-[11.5px] text-mid">Share this code or link — anyone with it can join your household.</p>
       <InvitePanel code={code} />
     </main>
   );

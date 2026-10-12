@@ -130,9 +130,7 @@ test("submitting with an empty name shows a specific inline error and never navi
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
-test("no location resolved (typed but never selected) is rejected with its own specific message", async ({
-  page,
-}) => {
+test("no location resolved (typed but never selected) is rejected with its own specific message", async ({ page }) => {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
   const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });

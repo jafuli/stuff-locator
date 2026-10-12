@@ -27,7 +27,12 @@ export interface SearchableStuffListProps {
 export function SearchableStuffList({ entries, emptyStateAction }: SearchableStuffListProps) {
   const [query, setQuery] = useState("");
 
-  const matchedIds = new Set(filterItems(entries.map((entry) => entry.item), query).map((item) => item.id));
+  const matchedIds = new Set(
+    filterItems(
+      entries.map((entry) => entry.item),
+      query,
+    ).map((item) => item.id),
+  );
   const visibleEntries = entries.filter((entry) => matchedIds.has(entry.item.id));
   const isSearching = query.trim() !== "";
   const resultCount = visibleEntries.length;

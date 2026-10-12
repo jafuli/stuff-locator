@@ -8,7 +8,10 @@ import { InvitePanel } from "@/components/invite-panel";
 // AFTER and overwrites whatever's already there, so the mock has to be
 // applied AFTER setup(), not before, or this component's real calls hit
 // user-event's stub instead of this test's assertions.
-function setupUserWithMockedClipboard(): { user: ReturnType<typeof userEvent.setup>; writeText: ReturnType<typeof vi.fn> } {
+function setupUserWithMockedClipboard(): {
+  user: ReturnType<typeof userEvent.setup>;
+  writeText: ReturnType<typeof vi.fn>;
+} {
   const user = userEvent.setup();
   const writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });

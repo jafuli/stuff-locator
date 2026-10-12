@@ -180,10 +180,7 @@ describe("create_household RPC", () => {
     // documented gap, not a masked one.)
     expect(error?.code).toBe("42501");
 
-    const { data: rows, error: checkError } = await serviceClient
-      .from("households")
-      .select("id")
-      .eq("name", anonName);
+    const { data: rows, error: checkError } = await serviceClient.from("households").select("id").eq("name", anonName);
     expect(checkError).toBeNull();
     expect(rows).toHaveLength(0);
   });

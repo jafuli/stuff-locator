@@ -198,11 +198,7 @@ describe("move_item RPC", () => {
     // separate "caller can't see the target at all" case below. The
     // rejection here must come from the RPC's own explicit household_id
     // comparison.
-    const itemInAForDualCheck = await addItem(
-      householdA.householdId,
-      householdA.locationAId,
-      ownerA.userId,
-    );
+    const itemInAForDualCheck = await addItem(householdA.householdId, householdA.locationAId, ownerA.userId);
 
     const { data, error } = await clientDualMember.rpc("move_item", {
       p_item_id: itemInAForDualCheck,

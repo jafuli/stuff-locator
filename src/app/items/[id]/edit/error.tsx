@@ -9,13 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // page.tsx's item/locations reads are real Supabase calls now and throw
 // into this boundary on failure. Uses `retry` — see items/[id]/error.tsx's
 // comment for why that's preferred over `reset` here.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     // Matches Next's own documented pattern. Only runs when a real error
     // boundary trips, not during normal rendering — doesn't violate the

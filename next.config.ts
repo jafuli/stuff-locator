@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 import { withSerwist } from "@serwist/turbopack";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+const nextConfig: NextConfig = {/* config options here */};
 
 // @serwist/next's webpack-plugin approach doesn't run under Turbopack, which
 // Next.js 16 uses by default for both `next dev` and `next build`. This is

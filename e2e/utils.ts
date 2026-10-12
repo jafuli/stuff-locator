@@ -39,8 +39,8 @@ export async function tabUntilFocused(page: Page, name: string, max = 25): Promi
 export async function tabUntilHrefFocused(page: Page, href: string, max = 25): Promise<boolean> {
   for (let i = 0; i < max; i++) {
     await page.keyboard.press("Tab");
-    const focusedHref = await page.evaluate(
-      () => document.activeElement instanceof HTMLAnchorElement ? document.activeElement.getAttribute("href") : null,
+    const focusedHref = await page.evaluate(() =>
+      document.activeElement instanceof HTMLAnchorElement ? document.activeElement.getAttribute("href") : null,
     );
     if (focusedHref === href) {
       return true;

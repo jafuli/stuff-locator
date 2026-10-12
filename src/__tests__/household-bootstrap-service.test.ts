@@ -32,12 +32,9 @@ describe("deriveHouseholdName", () => {
     expect(deriveHouseholdName("  jane  @example.com")).toBe("jane");
   });
 
-  test.each([null, undefined, "", "   ", "@example.com"])(
-    "falls back to the default name for %j",
-    (email) => {
-      expect(deriveHouseholdName(email)).toBe(DEFAULT_HOUSEHOLD_NAME);
-    },
-  );
+  test.each([null, undefined, "", "   ", "@example.com"])("falls back to the default name for %j", (email) => {
+    expect(deriveHouseholdName(email)).toBe(DEFAULT_HOUSEHOLD_NAME);
+  });
 });
 
 describe("ensureHousehold", () => {
