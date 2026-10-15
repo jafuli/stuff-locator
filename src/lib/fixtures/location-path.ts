@@ -35,28 +35,3 @@ export function getBreadcrumbSegments(locationId: string, locations: readonly Lo
 
   return segments;
 }
-
-/**
- * Plain-name version of getBreadcrumbSegments, e.g. ["Garage", "Closet",
- * "Toolbox", "Red box"] — kept for getFullLocationPaths below, which only
- * ever needs the flattened string form.
- */
-export function getBreadcrumbNames(locationId: string, locations: readonly Location[]): string[] {
-  return getBreadcrumbSegments(locationId, locations).map((segment) => segment.name);
-}
-
-export interface LocationOption {
-  id: string;
-  path: string;
-}
-
-/**
- * Flattens every location into its full "Garage › Closet › Toolbox › Red
- * box" path string.
- */
-export function getFullLocationPaths(locations: readonly Location[]): LocationOption[] {
-  return locations.map((location) => ({
-    id: location.id,
-    path: getBreadcrumbNames(location.id, locations).join(" › "),
-  }));
-}
