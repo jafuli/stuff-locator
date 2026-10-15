@@ -20,10 +20,20 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   return email;
 }
 
-async function stashViaOnboardingStep(page: Page, name: string, locationName: string): Promise<void> {
+async function stashViaOnboardingStep(
+  page: Page,
+  name: string,
+  locationName: string,
+  // How many options down to pick. 1 = the first option; when a place of
+  // that name already exists the existing place is listed first and the
+  // "+ New place called …" row second, so 2 deliberately picks "+ New".
+  optionIndex = 1,
+): Promise<void> {
   await page.getByLabel("Name").fill(name);
   await page.getByRole("combobox").fill(locationName);
-  await page.keyboard.press("ArrowDown");
+  for (let i = 0; i < optionIndex; i += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
   await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Add item" }).click();
   // A generous explicit timeout: this is a real network round trip (two,
@@ -248,4 +258,21 @@ test("'Skip guided setup' is a comfortable touch target (at least 44px tall)", a
 
   const box = await page.getByRole("button", { name: "Skip guided setup" }).boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
+test("the same place typed in two steps ends up as exactly one place on Browse", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  // Step 1: Office does not exist yet, so "+ New place" is the first row.
+  await stashViaOnboardingStep(page, "Passport", "Office");
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // Step 2: the same name again, deliberately taking "+ New place" rather
+  // than the existing Office — the reproduced bug created a second Office here.
+  await stashViaOnboardingStep(page, "Camping tent", "Office", 2);
+
+  await page.goto("/browse");
+  await expect(page.getByRole("link", { name: "Office", exact: true })).toHaveCount(1);
 });

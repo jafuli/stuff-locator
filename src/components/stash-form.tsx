@@ -20,20 +20,18 @@ export interface StashFormProps {
   locationOptions: readonly LocationOption[];
   /** Raw location tree, needed to resolve a selected id into breadcrumb segments for the success state. */
   locations: readonly Location[];
-  /** The signed-in caller's household — every insert is scoped to this. */
-  householdId: string;
-  /** The signed-in caller's id — written as `added_by` on the inserted row. */
-  userId: string;
   /**
    * Fires once, right after a real insert succeeds — in addition to, not
    * instead of, this form's own success panel below. Optional: only
    * GuidedOnboarding uses it, to know when to reveal its own "Continue"
    * control; every other caller leaves this unset and is unaffected.
    *
-   * Reports the location this stash created, if it created one, so a caller
-   * that keeps its own copy of the location list (GuidedOnboarding) can add
-   * it — the `locations`/`locationOptions` props are a snapshot and don't
-   * know about it.
+   * Reports the place a typed "+ New place" name resolved to, so a caller that
+   * keeps its own copy of the location list (GuidedOnboarding) can add it —
+   * the `locations`/`locationOptions` props are a snapshot and don't know
+   * about it. It may be a place this stash just created or an existing
+   * top-level place with the same name (names are unique per parent, ignoring
+   * case), so callers must de-duplicate by id.
    */
   onStashed?: (result: StashResult) => void;
   /**
@@ -46,10 +44,9 @@ export interface StashFormProps {
   embedded?: boolean;
   /**
    * When true, picking the autocomplete's "+ New place called…" row is
-   * accepted instead of rejected: a brand-new top-level location (no
-   * parent — matches Add-location's own default, and keeps this out of
-   * the "arbitrary depth" capture flow CLAUDE.md reserves for Browse) is
-   * created first, then the item is inserted into it. Off by default,
+   * accepted instead of rejected: the typed name is sent to `stash_item` as
+   * a one-level top-level path, which finds a place of that name (any case)
+   * or creates it, in the same transaction as the item. Off by default,
    * preserving this form's existing behavior everywhere else: Stash's own
    * task deliberately scoped inline location creation out ("adding a new
    * one isn't supported here yet"). GuidedOnboarding turns this on because
@@ -61,7 +58,7 @@ export interface StashFormProps {
 
 export interface StashResult {
   itemId: string;
-  /** Set only when this stash created a brand-new (top-level) location. */
+  /** Set only when a typed new place was submitted: the top-level place it resolved to. */
   createdLocation?: Location;
 }
 
@@ -80,20 +77,17 @@ interface CapturedStash {
 const LOCATION_ERROR_ID = "stash-location-error";
 
 /**
- * Add-item form, backed by a real Supabase write: submit INSERTs into
- * `items` directly from the browser client (RLS-gated, no route handler —
- * this is a plain single-table write with no cross-table invariant, unlike
- * move_item/move_container/delete_container/redeem_invite, so it doesn't
- * need the RPC treatment CLAUDE.md reserves for writes that carry
- * invariants). A location outside the caller's household is rejected by RLS
- * itself (`items_access`'s `is_household_member(household_id)` check) —
- * this component adds no redundant check of its own, per this task's AC.
+ * Add-item form, backed by a real Supabase write: submit calls the
+ * `stash_item` RPC, which creates any missing place and the item in ONE
+ * transaction. Two separate calls (insert the place, then the item) are what
+ * produced duplicate places: a retry after a failed item insert created the
+ * place again. A location outside the caller's household is rejected by the
+ * function's own membership check — this component adds no redundant check
+ * of its own.
  */
 export function StashForm({
   locationOptions,
   locations,
-  householdId,
-  userId,
   onStashed,
   embedded = false,
   allowNewLocation = false,
@@ -131,49 +125,21 @@ export function StashForm({
     setIsSubmitting(true);
 
     const supabase = createClient();
-    let locationId: string;
-    let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
-    let createdLocation: Location | undefined;
 
-    if (locationSelection.type === "existing") {
-      locationId = locationSelection.option.id;
-    } else {
-      // Only reachable when allowNewLocation — validated above. A
-      // top-level location, same default as Add-location's own optional
-      // parent (see this prop's own doc comment for why depth doesn't
-      // belong in this capture flow).
-      const { data: newLocation, error: newLocationError } = await supabase
-        .from("locations")
-        .insert({ name: locationSelection.name, parent_id: null, household_id: householdId })
-        .select()
-        .single();
-      if (newLocationError) {
-        setIsSubmitting(false);
-        setSubmitError(newLocationError.message);
-        return;
-      }
-      locationId = newLocation.id;
-      // No ancestors to resolve for a brand-new top-level location — no
-      // need to consult `locations` (which doesn't know about it yet).
-      newLocationSegments = [{ id: newLocation.id, name: newLocation.name }];
-      createdLocation = { id: newLocation.id, parentId: null, name: newLocation.name };
-    }
-
-    const { data, error } = await supabase
-      .from("items")
-      .insert({
-        name: trimmedName,
-        location_id: locationId,
-        detail: trimmedDetail === "" ? null : trimmedDetail,
-        household_id: householdId,
-        added_by: userId,
-      })
-      .select()
-      .single();
-
-    setIsSubmitting(false);
+    // An existing place is passed by id. A typed new place is passed as a
+    // one-level path and resolved by the function: it reuses a top-level
+    // place of that name (any case) or creates it, in the same transaction
+    // as the item. Optional arguments are left out rather than sent as null.
+    const { data, error } = await supabase.rpc("stash_item", {
+      p_name: trimmedName,
+      ...(trimmedDetail === "" ? {} : { p_detail: trimmedDetail }),
+      ...(locationSelection.type === "existing"
+        ? { p_location_id: locationSelection.option.id }
+        : { p_new_path: [locationSelection.name] }),
+    });
 
     if (error) {
+      setIsSubmitting(false);
       // Surfaced verbatim (matches sign-in-form.tsx's precedent for
       // Supabase-originated messages) — field values are left exactly as
       // typed so the user can just hit submit again, not re-enter anything.
@@ -181,10 +147,30 @@ export function StashForm({
       return;
     }
 
+    let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
+    let createdLocation: Location | undefined;
+
+    if (locationSelection.type === "new") {
+      // The `locations` snapshot doesn't know this place yet, so read the
+      // resolved row back for its canonical name (an existing place keeps
+      // its own casing). Falls back to the typed name if the read fails —
+      // the item is already saved, so this must not turn into an error.
+      const { data: resolved } = await supabase
+        .from("locations")
+        .select("id, name")
+        .eq("id", data.location_id)
+        .maybeSingle();
+      const resolvedName = resolved?.name ?? locationSelection.name;
+      newLocationSegments = [{ id: data.location_id, name: resolvedName }];
+      createdLocation = { id: data.location_id, parentId: null, name: resolvedName };
+    }
+
+    setIsSubmitting(false);
+
     setCaptured({
       id: data.id,
       name: data.name,
-      segments: newLocationSegments ?? getBreadcrumbSegments(locationId, locations),
+      segments: newLocationSegments ?? getBreadcrumbSegments(data.location_id, locations),
       detail: data.detail ?? undefined,
     });
     onStashed?.({ itemId: data.id, createdLocation });

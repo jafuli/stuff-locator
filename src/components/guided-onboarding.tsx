@@ -10,7 +10,6 @@ import { createClient } from "@/server/db/client";
 
 export interface GuidedOnboardingProps {
   householdId: string;
-  userId: string;
   /**
    * The household's locations when Home rendered. Locations created by
    * earlier steps are tracked locally (see knownLocations) so later steps'
@@ -87,7 +86,7 @@ const SKIP_LINK_CLASSES =
  * Add-location's own default and CLAUDE.md's "shallow by default" capture
  * guidance.
  */
-export function GuidedOnboarding({ householdId, userId, locations }: GuidedOnboardingProps) {
+export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [stashedThisStep, setStashedThisStep] = useState(false);
@@ -170,7 +169,12 @@ export function GuidedOnboarding({ householdId, userId, locations }: GuidedOnboa
     setStashedThisStep(true);
     if (result.createdLocation) {
       const created = result.createdLocation;
-      setCreatedLocations((previous) => [...previous, created]);
+      // De-duplicated by id: a name typed again in a later step resolves to
+      // the place the earlier step already created (names are unique per
+      // parent), and appending it twice would list that place twice.
+      setCreatedLocations((previous) =>
+        previous.some((location) => location.id === created.id) ? previous : [...previous, created],
+      );
     }
   }
 
@@ -228,8 +232,6 @@ export function GuidedOnboarding({ householdId, userId, locations }: GuidedOnboa
             // Forces a fresh instance per step (rather than one instance
             // whose props silently change underneath it).
             key={step}
-            householdId={householdId}
-            userId={userId}
             locationOptions={locationOptions}
             locations={knownLocations}
             allowNewLocation
