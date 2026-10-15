@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddPlaceHere } from "@/components/add-place-here";
+import { BrowseHeader } from "@/components/browse-header";
 import { LocationList } from "@/components/location-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Location } from "@/lib/fixtures/types";
@@ -38,27 +38,31 @@ export default async function Page() {
     throw new Error("browse: signed-in user has no household");
   }
 
-  const { data: rootRows, error: rootError } = await supabase
-    .from("locations")
-    .select("id, parent_id, name")
-    .eq("household_id", membership.household_id)
-    .is("parent_id", null);
+  const [rootResult, countResult] = await Promise.all([
+    supabase
+      .from("locations")
+      .select("id, parent_id, name")
+      .eq("household_id", membership.household_id)
+      .is("parent_id", null),
+    // Head-only count: the "All (n)" chip needs the household's total item
+    // count (not the places), not the rows.
+    supabase.from("items").select("id", { count: "exact", head: true }).eq("household_id", membership.household_id),
+  ]);
 
-  if (rootError) {
-    throw new Error(rootError.message);
+  if (rootResult.error) {
+    throw new Error(rootResult.error.message);
   }
+  if (countResult.error) {
+    throw new Error(countResult.error.message);
+  }
+  const rootRows = rootResult.data;
+  const totalItems = countResult.count ?? 0;
 
   const roots: Location[] = rootRows.map((row) => ({ id: row.id, parentId: row.parent_id, name: row.name }));
 
   return (
     <main className="flex flex-col gap-3 p-4">
-      <Link
-        href="/"
-        className="w-fit text-[11.5px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
-        ‹ Back to Stuff
-      </Link>
-      <h1 className="text-[16px] font-semibold text-ink">Browse</h1>
+      <BrowseHeader total={totalItems} />
 
       {roots.length === 0 ? (
         <EmptyState title="No places yet" description="Add a place here, or create one when you stash an item." />
