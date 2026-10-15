@@ -20,8 +20,6 @@ export interface AddLocationFormProps {
   locationOptions: readonly LocationOption[];
   /** Raw location tree, needed to resolve a selected parent id into breadcrumb segments for the success state. */
   locations: readonly Location[];
-  /** The signed-in caller's household — every insert is scoped to this. */
-  householdId: string;
 }
 
 interface FieldErrors {
@@ -37,17 +35,15 @@ interface CapturedLocation {
 const PARENT_ERROR_ID = "add-location-parent-error";
 
 /**
- * Add-location form, backed by a real Supabase write: submit INSERTs into
- * `locations` directly from the browser client (RLS-gated, no route
- * handler — mirrors stash-form.tsx's shape, a plain single-table write with
- * no cross-table invariant a client insert can violate on its own thanks to
- * locations_parent_household_consistency, so it doesn't need the RPC
- * treatment CLAUDE.md reserves for writes that carry invariants). A parent
- * outside the caller's household can't even be selected — the autocomplete
- * only ever offers this household's own locations — and is backstopped at
- * the data layer by that same trigger if bypassed.
+ * Add-location form, backed by a real Supabase write: submit calls the
+ * `create_location` RPC. Direct writes on `locations` are revoked (ADR 0011:
+ * every write goes through a function so the activity log can't be
+ * bypassed). A parent outside the caller's household can't even be selected
+ * — the autocomplete only ever offers this household's own locations — and
+ * the function re-checks membership if bypassed. This form is removed in
+ * Locations 6/7, when Browse gains "+ Add a place here".
  */
-export function AddLocationForm({ locationOptions, locations, householdId }: AddLocationFormProps) {
+export function AddLocationForm({ locationOptions, locations }: AddLocationFormProps) {
   const [name, setName] = useState("");
   const [parentSelection, setParentSelection] = useState<AutocompleteSelection | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -79,11 +75,10 @@ export function AddLocationForm({ locationOptions, locations, householdId }: Add
     setIsSubmitting(true);
 
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("locations")
-      .insert({ name: trimmedName, parent_id: parentId, household_id: householdId })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc("create_location", {
+      p_name: trimmedName,
+      ...(parentId === null ? {} : { p_parent_id: parentId }),
+    });
 
     setIsSubmitting(false);
 

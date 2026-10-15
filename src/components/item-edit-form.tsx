@@ -47,29 +47,18 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  * stash-form.tsx's shape, but starts pre-filled from the item passed in
  * rather than blank.
  *
- * The edit-vs-move split (this task's AC #2): a plain field UPDATE (name,
- * detail) handles everything EXCEPT a location change — location is the one
- * field carrying the cross-household invariant (an item's location_id must
- * belong to the same household), which is exactly what move_item's own
- * migration exists to enforce atomically and reject with a specific error.
- * When the location changed, move_item runs FIRST (before any name/detail
- * update) — it's the one call that can legitimately fail (a destination
- * outside the household), so failing before touching anything else keeps
- * the failure surface small. If name/detail also changed, a second, plain
- * UPDATE follows. These two writes are not atomic with each other (per
- * CLAUDE.md: two SDK/RPC calls can never share a transaction) — a move
- * that succeeds followed by a field update that then fails would leave the
- * item moved but not renamed. Flagged in the PR rather than silently
- * assumed away; closing that gap would need a new combined RPC, which is
- * out of this task's scope.
+ * One save is ONE call to `update_item`: name, detail and place are written
+ * in a single transaction, and the function records an activity event only
+ * for what actually changed (ADR 0011). Before Locations 3/7 this was
+ * `move_item` followed by a plain UPDATE, which could leave an item moved but
+ * not renamed; direct writes on `items` are now revoked, so that path is gone.
  *
- * Delete performs a real DELETE of the item row directly (RLS-protected,
- * no RPC) — a single item's delete carries no cross-table invariant, unlike
- * delete_container (which must reject a non-empty location). Uses a plain
- * two-step inline confirmation (Delete → Cancel/confirm), not a <dialog>/
- * modal — this app has no existing modal pattern to match, and every other
- * "are you sure"-shaped moment here (Stash's and Add-location's success
- * states) is already an inline panel replacing the form, not an overlay.
+ * Delete calls `delete_item` (it records the "deleted" event and what the
+ * item's place was). Uses a plain two-step inline confirmation (Delete →
+ * Cancel/confirm), not a <dialog>/modal — this app has no existing modal
+ * pattern to match, and every other "are you sure"-shaped moment here
+ * (Stash's and Add-location's success states) is already an inline panel
+ * replacing the form, not an overlay.
  */
 export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormProps) {
   const initialLocation = locationOptions.find((option) => option.id === item.locationId) ?? null;
@@ -144,52 +133,31 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
 
     const trimmedName = name.trim();
     const trimmedDetail = detail.trim();
-    const newLocationId = locationSelection.option.id;
-    const locationChanged = newLocationId !== item.locationId;
-    const fieldsChanged = trimmedName !== item.name || trimmedDetail !== (item.detail ?? "");
 
     setSubmitError(null);
     setIsSubmitting(true);
     const supabase = createClient();
 
-    let resultLocationId = item.locationId;
-    let resultName = item.name;
-    let resultDetail = item.detail;
-
-    if (locationChanged) {
-      const { data, error } = await supabase.rpc("move_item", {
-        p_item_id: item.id,
-        p_new_location_id: newLocationId,
-      });
-      if (error) {
-        setIsSubmitting(false);
-        setSubmitError(error.message);
-        return;
-      }
-      resultLocationId = data.location_id;
-    }
-
-    if (fieldsChanged) {
-      const { data, error } = await supabase
-        .from("items")
-        .update({ name: trimmedName, detail: trimmedDetail === "" ? null : trimmedDetail })
-        .eq("id", item.id)
-        .select()
-        .single();
-      if (error) {
-        setIsSubmitting(false);
-        setSubmitError(error.message);
-        return;
-      }
-      resultName = data.name;
-      resultDetail = data.detail ?? undefined;
-    }
+    // Optional arguments are left out rather than sent as null: an omitted
+    // detail clears it, and an unchanged place is a no-op in the function.
+    const { data, error } = await supabase.rpc("update_item", {
+      p_item_id: item.id,
+      p_name: trimmedName,
+      ...(trimmedDetail === "" ? {} : { p_detail: trimmedDetail }),
+      p_location_id: locationSelection.option.id,
+    });
 
     setIsSubmitting(false);
+
+    if (error) {
+      setSubmitError(error.message);
+      return;
+    }
+
     setCaptured({
-      name: resultName,
-      segments: getBreadcrumbSegments(resultLocationId, locations),
-      detail: resultDetail,
+      name: data.name,
+      segments: getBreadcrumbSegments(data.location_id, locations),
+      detail: data.detail ?? undefined,
     });
     setMode("edited");
   }
@@ -198,7 +166,7 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
     setDeleteError(null);
     setIsDeleting(true);
     const supabase = createClient();
-    const { error } = await supabase.from("items").delete().eq("id", item.id);
+    const { error } = await supabase.rpc("delete_item", { p_item_id: item.id });
     setIsDeleting(false);
 
     if (error) {

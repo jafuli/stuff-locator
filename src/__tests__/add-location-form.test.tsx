@@ -14,26 +14,20 @@ const HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 
 // The real write now goes through the browser Supabase client
 // (src/server/db/client.ts) — mocked here so these stay fast, offline unit
-// tests (the real insert/RLS/trigger behavior is covered by
-// supabase/tests/locations-insert.test.ts against a live local stack
+// tests (the real function behavior is covered by
+// supabase/tests/activity-events.test.ts against a live local stack
 // instead).
-const single = vi.fn();
+const rpc = vi.fn();
 vi.mock("@/server/db/client", () => ({
-  createClient: () => ({
-    from: () => ({
-      insert: () => ({
-        select: () => ({ single }),
-      }),
-    }),
-  }),
+  createClient: () => ({ rpc }),
 }));
 
 beforeEach(() => {
-  single.mockReset();
+  rpc.mockReset();
 });
 
 function renderForm() {
-  return render(<AddLocationForm locationOptions={OPTIONS} locations={LOCATIONS} householdId={HOUSEHOLD_ID} />);
+  return render(<AddLocationForm locationOptions={OPTIONS} locations={LOCATIONS} />);
 }
 
 test("submitting with an empty name shows a specific inline error", async () => {
@@ -47,11 +41,11 @@ test("submitting with an empty name shows a specific inline error", async () => 
   expect(screen.getByLabelText("Name").getAttribute("aria-describedby")).toBe(nameError.id);
   // Never silently "succeeds" into the confirmation state.
   expect(screen.queryByRole("status")).toBeNull();
-  expect(single).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
 });
 
-test("submitting with a name and no parent selected inserts a null parent_id and succeeds", async () => {
-  single.mockResolvedValueOnce({
+test("submitting with a name and no parent selected calls create_location without a parent and succeeds", async () => {
+  rpc.mockResolvedValueOnce({
     data: { id: "55555555-5555-5555-5555-555555555555", name: "Attic", parent_id: null, household_id: HOUSEHOLD_ID },
     error: null,
   });
@@ -66,6 +60,7 @@ test("submitting with a name and no parent selected inserts a null parent_id and
   expect(status.textContent).toContain("Attic");
   // No parent chosen: the breadcrumb is just the new name, no ancestor path.
   expect(status.textContent.includes("›")).toBe(false);
+  expect(rpc).toHaveBeenCalledWith("create_location", { p_name: "Attic" });
 });
 
 test("picking the '+ New place' row for the parent rejects it instead of silently accepting it", async () => {
@@ -81,11 +76,11 @@ test("picking the '+ New place' row for the parent rejects it instead of silentl
     screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
   ).toBeDefined();
   expect(screen.queryByRole("status")).toBeNull();
-  expect(single).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
 });
 
 test("a valid fill-and-submit with an existing parent inserts via Supabase and shows the real breadcrumb path", async () => {
-  single.mockResolvedValueOnce({
+  rpc.mockResolvedValueOnce({
     data: {
       id: "66666666-6666-6666-6666-666666666666",
       name: "Red box",
@@ -106,11 +101,12 @@ test("a valid fill-and-submit with an existing parent inserts via Supabase and s
   const status = await screen.findByRole("status");
   expect(status.textContent).toContain("Red box");
   expect(status.textContent).toContain("Garage › Closet › Red box");
+  expect(rpc).toHaveBeenCalledWith("create_location", { p_name: "Red box", p_parent_id: "garage-closet" });
   expect(screen.getByRole("link", { name: "Back to Browse" }).getAttribute("href")).toBe("/browse");
 });
 
 test("a rejected insert shows a specific error and leaves the form populated for retry", async () => {
-  single.mockResolvedValueOnce({
+  rpc.mockResolvedValueOnce({
     data: null,
     error: { message: "locations: parent_id must belong to the same household as the location (household_id)" },
   });
@@ -137,7 +133,7 @@ test("a rejected insert shows a specific error and leaves the form populated for
 
 test("the button shows a loading state and disables fields while the insert is in flight", async () => {
   let resolveInsert: (value: { data: unknown; error: null }) => void = () => undefined;
-  single.mockImplementationOnce(
+  rpc.mockImplementationOnce(
     () =>
       new Promise((resolve) => {
         resolveInsert = resolve;

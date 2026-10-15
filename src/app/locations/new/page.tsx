@@ -55,7 +55,7 @@ export default async function Page() {
   return (
     <main className="flex flex-col gap-3 p-4">
       <h1 className="text-[16px] font-semibold text-ink">Add a location</h1>
-      <AddLocationForm locationOptions={locationOptions} locations={locations} householdId={membership.household_id} />
+      <AddLocationForm locationOptions={locationOptions} locations={locations} />
     </main>
   );
 }
