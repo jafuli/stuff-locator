@@ -67,7 +67,7 @@ test("filling a name and picking an existing parent succeeds with a real persist
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox", exact: true })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox" })).toBeVisible();
 
   await page.getByRole("button", { name: "Add location" }).click();
 
@@ -112,7 +112,7 @@ test("submitting with an empty name shows a specific inline error and never navi
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
-test("a parent that's typed but never resolved to an existing place is rejected with its own specific message", async ({
+test("a parent that's typed but never picked from the list is rejected with its own specific message", async ({
   page,
 }) => {
   await signUpFreshAccount(page);
@@ -120,16 +120,11 @@ test("a parent that's typed but never resolved to an existing place is rejected 
 
   await page.getByLabel("Name").fill("Spare batteries");
   await page.getByRole("combobox").fill("Basement");
-  // Only the "+ New place called…" row exists for a query with no match —
-  // this selects it, exactly like a user who typed a place that isn't in
-  // the list yet and picked the only row on offer.
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
+  // The parent picker is pick-only: no "+ New" row, nothing to select.
+  await expect(page.getByRole("option")).toHaveCount(0);
   await page.getByRole("button", { name: "Add location" }).click();
 
-  await expect(
-    page.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeVisible();
+  await expect(page.getByText("Pick a place from the list, or clear the field.")).toBeVisible();
   await expect(page).toHaveURL(/\/locations\/new$/);
   await expect(page.getByRole("status")).toHaveCount(0);
 });
@@ -163,7 +158,7 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox", exact: true })).toBeVisible();
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox" })).toBeVisible();
 
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Add location" })).toBeFocused();

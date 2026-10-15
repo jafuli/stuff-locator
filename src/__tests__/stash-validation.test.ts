@@ -1,6 +1,5 @@
 import { expect, test } from "vitest";
-import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
-import type { AutocompleteSelection } from "@/components/location-autocomplete";
+import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 
 test("validateItemName rejects an empty value", () => {
   expect(validateItemName("")).toBe("Enter a name for this item.");
@@ -11,21 +10,17 @@ test("validateItemName accepts a non-empty value", () => {
   expect(validateItemName("Passport")).toBeUndefined();
 });
 
-test("validateLocationSelection rejects no selection at all", () => {
-  expect(validateLocationSelection(null)).toBe("Choose a location for this item.");
+test("validateLocationPath rejects no chips at all", () => {
+  expect(validateLocationPath([], "")).toBe("Choose a location for this item.");
 });
 
-test("validateLocationSelection rejects a typed-but-unresolved 'new' selection", () => {
-  const selection: AutocompleteSelection = { type: "new", name: "Attic" };
-  expect(validateLocationSelection(selection)).toBe(
-    "Pick an existing location from the list — adding a new one isn't supported here yet.",
+test("validateLocationPath rejects typed-but-unresolved text, even when chips exist", () => {
+  expect(validateLocationPath([{ kind: "existing", id: "garage", name: "Garage" }], "Clo")).toBe(
+    "Choose a location for this item.",
   );
 });
 
-test("validateLocationSelection accepts an existing location", () => {
-  const selection: AutocompleteSelection = {
-    type: "existing",
-    option: { id: "garage", path: "Garage" },
-  };
-  expect(validateLocationSelection(selection)).toBeUndefined();
+test("validateLocationPath accepts an existing path, a new path, and whitespace-only leftovers", () => {
+  expect(validateLocationPath([{ kind: "existing", id: "garage", name: "Garage" }], "  ")).toBeUndefined();
+  expect(validateLocationPath([{ kind: "new", name: "Attic" }], "")).toBeUndefined();
 });

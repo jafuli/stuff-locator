@@ -2,14 +2,12 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AddLocationForm } from "@/components/add-location-form";
-import { getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 
 const LOCATIONS: Location[] = [
   { id: "garage", parentId: null, name: "Garage" },
   { id: "garage-closet", parentId: "garage", name: "Closet" },
 ];
-const OPTIONS = getFullLocationPaths(LOCATIONS);
 const HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 
 // The real write now goes through the browser Supabase client
@@ -27,7 +25,7 @@ beforeEach(() => {
 });
 
 function renderForm() {
-  return render(<AddLocationForm locationOptions={OPTIONS} locations={LOCATIONS} />);
+  return render(<AddLocationForm locations={LOCATIONS} />);
 }
 
 test("submitting with an empty name shows a specific inline error", async () => {
@@ -63,18 +61,18 @@ test("submitting with a name and no parent selected calls create_location withou
   expect(rpc).toHaveBeenCalledWith("create_location", { p_name: "Attic" });
 });
 
-test("picking the '+ New place' row for the parent rejects it instead of silently accepting it", async () => {
+test("the parent picker is pick-only: typing a name that doesn't exist offers no '+ New' row", async () => {
   const user = userEvent.setup();
   renderForm();
 
   await user.type(screen.getByLabelText("Name"), "Attic");
   await user.type(screen.getByRole("combobox"), "Basement");
-  await user.keyboard("{ArrowDown}{Enter}");
-  await user.click(screen.getByRole("button", { name: "Add location" }));
 
-  expect(
-    screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeDefined();
+  expect(screen.queryByRole("option")).toBeNull();
+
+  // And text left in the field is not silently dropped on submit.
+  await user.click(screen.getByRole("button", { name: "Add location" }));
+  expect(screen.getByText("Pick a place from the list, or clear the field.")).toBeDefined();
   expect(screen.queryByRole("status")).toBeNull();
   expect(rpc).not.toHaveBeenCalled();
 });
@@ -128,7 +126,7 @@ test("a rejected insert shows a specific error and leaves the form populated for
 
   // Entered values survive the failed submit — the user can just retry.
   expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Red box");
-  expect(screen.getByText("Selected: Garage › Closet")).toBeDefined();
+  expect(screen.getByRole("group", { name: "Location: Garage › Closet" })).toBeDefined();
 });
 
 test("the button shows a loading state and disables fields while the insert is in flight", async () => {

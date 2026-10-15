@@ -6,7 +6,7 @@ import { tabUntilFocused } from "./utils";
 // household with zero items that hasn't finished (or skipped) the sequence
 // yet. Every test signs up a fresh real account (bootstrap gives it a real,
 // genuinely empty household — zero items AND zero locations, which is
-// exactly the case allowNewLocation exists for; see guided-onboarding.tsx's
+// exactly the case where every level of the path is new; see guided-onboarding.tsx's
 // own doc comment).
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -20,26 +20,19 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   return email;
 }
 
-async function stashViaOnboardingStep(
-  page: Page,
-  name: string,
-  locationName: string,
-  // How many options down to pick. 1 = the first option; when a place of
-  // that name already exists the existing place is listed first and the
-  // "+ New place called …" row second, so 2 deliberately picks "+ New".
-  optionIndex = 1,
-): Promise<void> {
+async function stashViaOnboardingStep(page: Page, name: string, locationName: string): Promise<void> {
   await page.getByLabel("Name").fill(name);
   await page.getByRole("combobox").fill(locationName);
-  for (let i = 0; i < optionIndex; i += 1) {
-    await page.keyboard.press("ArrowDown");
-  }
+  // The first row: the existing place when one by that name is already here,
+  // otherwise the "+ New place" row — never both. Wait for the list to
+  // reflect the typed text before arrowing: the field updates first.
+  await expect(page.getByRole("option").first()).toBeVisible();
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Add item" }).click();
-  // A generous explicit timeout: this is a real network round trip (two,
-  // when allowNewLocation creates the location first) — under concurrent
-  // e2e load against the local Supabase stack, the default 5s assertion
-  // timeout was observed to flake here.
+  // A generous explicit timeout: this is a real network round trip — under
+  // concurrent e2e load against the local Supabase stack, the default 5s
+  // assertion timeout was observed to flake here.
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 10_000 });
 }
 
@@ -124,7 +117,7 @@ test("complete-through-invite path: real items added during onboarding show up o
   await page.waitForLoadState("networkidle");
 
   // Step 1: a genuinely brand-new household has zero existing locations —
-  // this exercises allowNewLocation, not just the happy path of picking
+  // this builds a brand-new path, not just the happy path of picking
   // one that was seeded ahead of time.
   await stashViaOnboardingStep(page, "Passport", "Filing box");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -197,7 +190,7 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await page.keyboard.press("Tab");
   await expect(page.getByRole("combobox")).toBeFocused();
   await page.keyboard.type("Filing box", { delay: 20 });
-  await expect(page.getByRole("option", { name: '+ New place called "Filing box"…' })).toBeVisible();
+  await expect(page.getByRole("option", { name: "New place 'Filing box' at the top level" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
 
@@ -207,7 +200,7 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   // tabUntilFocused presses Tab synchronously with no polling — waiting
   // for the real insert to resolve and the Continue button to actually
   // exist first avoids racing that async write (a real network round
-  // trip, two when allowNewLocation creates the location first).
+  // trip).
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 10_000 });
 
   // A generous bound, not a precise count — after submit, focus resets to
@@ -247,8 +240,9 @@ test("a place created in step 1 is offered as an existing place in step 2", asyn
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Step 2 of 4")).toBeVisible();
 
-  await page.getByRole("combobox").fill("Filing");
-  await expect(page.getByRole("option", { name: "Filing box" })).toBeVisible();
+  await page.getByRole("combobox").fill("Filing box");
+  await expect(page.getByRole("option", { name: "Filing box, already here" })).toBeVisible();
+  await expect(page.getByRole("option", { name: /^New place/ })).toHaveCount(0);
 });
 
 test("'Skip guided setup' is a comfortable touch target (at least 44px tall)", async ({ page }) => {
@@ -265,14 +259,44 @@ test("the same place typed in two steps ends up as exactly one place on Browse",
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  // Step 1: Office does not exist yet, so "+ New place" is the first row.
+  // Step 1: Office does not exist yet, so "+ New place" is the only row.
   await stashViaOnboardingStep(page, "Passport", "Office");
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Step 2: the same name again, deliberately taking "+ New place" rather
-  // than the existing Office — the reproduced bug created a second Office here.
-  await stashViaOnboardingStep(page, "Camping tent", "Office", 2);
+  // Step 2: the same name again. The reproduced bug offered "+ New place"
+  // here and created a second Office; now the existing one is listed
+  // "already here" and there is no create row to take.
+  await page.getByLabel("Name").fill("Camping tent");
+  await page.getByRole("combobox").fill("Office");
+  await expect(page.getByRole("option", { name: "Office, already here" })).toBeVisible();
+  await expect(page.getByRole("option", { name: /^New place/ })).toHaveCount(0);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Add item" }).click();
+  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 10_000 });
 
   await page.goto("/browse");
   await expect(page.getByRole("link", { name: "Office", exact: true })).toHaveCount(1);
+});
+
+test("a nested place can be built in one go during onboarding, and the placeholder hints at nesting", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByPlaceholder("e.g. Office, then Cabinet…")).toBeVisible();
+
+  await page.getByLabel("Name").fill("Passport");
+  for (const level of ["Office", "Cabinet", "Top drawer"]) {
+    await page.getByRole("combobox").fill(level);
+    await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+  }
+  await expect(page.getByText("3 new places")).toBeVisible();
+  await page.getByRole("button", { name: "Add item" }).click();
+
+  await expect(page.getByRole("status").getByText("Office › Cabinet › Top drawer")).toBeVisible({ timeout: 10_000 });
 });

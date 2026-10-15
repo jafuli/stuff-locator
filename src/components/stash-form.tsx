@@ -2,36 +2,25 @@
 
 import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
-import { LocationAutocomplete, type AutocompleteSelection } from "@/components/location-autocomplete";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import {
-  getBreadcrumbSegments,
-  type LocationBreadcrumbSegment,
-  type LocationOption,
-} from "@/lib/fixtures/location-path";
+import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
-import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
+import { resolvePath, type PathChip } from "@/lib/location-path-picker";
+import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 
 export interface StashFormProps {
-  /** Full-path options to feed LocationAutocomplete. */
-  locationOptions: readonly LocationOption[];
-  /** Raw location tree, needed to resolve a selected id into breadcrumb segments for the success state. */
+  /** Every place in the household — the picker searches and descends through these. */
   locations: readonly Location[];
   /**
-   * Fires once, right after a real insert succeeds — in addition to, not
+   * Fires once, right after a real stash succeeds — in addition to, not
    * instead of, this form's own success panel below. Optional: only
    * GuidedOnboarding uses it, to know when to reveal its own "Continue"
-   * control; every other caller leaves this unset and is unaffected.
-   *
-   * Reports the place a typed "+ New place" name resolved to, so a caller that
-   * keeps its own copy of the location list (GuidedOnboarding) can add it —
-   * the `locations`/`locationOptions` props are a snapshot and don't know
-   * about it. It may be a place this stash just created or an existing
-   * top-level place with the same name (names are unique per parent, ignoring
-   * case), so callers must de-duplicate by id.
+   * control and to refresh its list of places (the `locations` prop is a
+   * snapshot and doesn't know about places this stash just created).
    */
   onStashed?: (result: StashResult) => void;
   /**
@@ -42,24 +31,14 @@ export interface StashFormProps {
    * can wander out of the guided flow by accident.
    */
   embedded?: boolean;
-  /**
-   * When true, picking the autocomplete's "+ New place called…" row is
-   * accepted instead of rejected: the typed name is sent to `stash_item` as
-   * a one-level top-level path, which finds a place of that name (any case)
-   * or creates it, in the same transaction as the item. Off by default,
-   * preserving this form's existing behavior everywhere else: Stash's own
-   * task deliberately scoped inline location creation out ("adding a new
-   * one isn't supported here yet"). GuidedOnboarding turns this on because
-   * a genuinely brand-new household has zero existing locations to pick
-   * from at all — without this, its item steps could never succeed.
-   */
-  allowNewLocation?: boolean;
+  /** Placeholder for the empty place field, e.g. "Office, then Cabinet…". */
+  locationPlaceholder?: string;
 }
 
 export interface StashResult {
   itemId: string;
-  /** Set only when a typed new place was submitted: the top-level place it resolved to. */
-  createdLocation?: Location;
+  /** The place the item landed in (possibly just created). */
+  locationId: string;
 }
 
 interface FieldErrors {
@@ -78,23 +57,21 @@ const LOCATION_ERROR_ID = "stash-location-error";
 
 /**
  * Add-item form, backed by a real Supabase write: submit calls the
- * `stash_item` RPC, which creates any missing place and the item in ONE
- * transaction. Two separate calls (insert the place, then the item) are what
+ * `stash_item` RPC, which creates any missing places and the item in ONE
+ * transaction. Two separate calls (insert the places, then the item) are what
  * produced duplicate places: a retry after a failed item insert created the
- * place again. A location outside the caller's household is rejected by the
+ * places again. A place outside the caller's household is rejected by the
  * function's own membership check — this component adds no redundant check
  * of its own.
+ *
+ * The place is built in LocationPathPicker as a chip path (ADR 0010); dashed
+ * chips are written only here, with the item.
  */
-export function StashForm({
-  locationOptions,
-  locations,
-  onStashed,
-  embedded = false,
-  allowNewLocation = false,
-}: StashFormProps) {
+export function StashForm({ locations, onStashed, embedded = false, locationPlaceholder }: StashFormProps) {
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
-  const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(null);
+  const [chips, setChips] = useState<PathChip[]>([]);
+  const [pendingText, setPendingText] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [captured, setCaptured] = useState<CapturedStash | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,22 +80,17 @@ export function StashForm({
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const locationError = allowNewLocation
-      ? locationSelection === null
-        ? "Choose a location for this item."
-        : undefined
-      : validateLocationSelection(locationSelection);
     const errors: FieldErrors = {
       name: validateItemName(name),
-      location: locationError,
+      location: validateLocationPath(chips, pendingText),
     };
     setFieldErrors(errors);
 
-    if (errors.name || errors.location || locationSelection === null) {
+    const path = resolvePath(chips);
+    if (errors.name || errors.location || path === null) {
       return;
     }
 
-    const trimmedName = name.trim();
     const trimmedDetail = detail.trim();
 
     setSubmitError(null);
@@ -126,20 +98,17 @@ export function StashForm({
 
     const supabase = createClient();
 
-    // An existing place is passed by id. A typed new place is passed as a
-    // one-level path and resolved by the function: it reuses a top-level
-    // place of that name (any case) or creates it, in the same transaction
-    // as the item. Optional arguments are left out rather than sent as null.
+    // Optional arguments are left out rather than sent as null.
     const { data, error } = await supabase.rpc("stash_item", {
-      p_name: trimmedName,
+      p_name: name.trim(),
       ...(trimmedDetail === "" ? {} : { p_detail: trimmedDetail }),
-      ...(locationSelection.type === "existing"
-        ? { p_location_id: locationSelection.option.id }
-        : { p_new_path: [locationSelection.name] }),
+      ...(path.locationId === null ? {} : { p_location_id: path.locationId }),
+      ...(path.newPath.length === 0 ? {} : { p_new_path: path.newPath }),
     });
 
+    setIsSubmitting(false);
+
     if (error) {
-      setIsSubmitting(false);
       // Surfaced verbatim (matches sign-in-form.tsx's precedent for
       // Supabase-originated messages) — field values are left exactly as
       // typed so the user can just hit submit again, not re-enter anything.
@@ -147,43 +116,28 @@ export function StashForm({
       return;
     }
 
-    let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
-    let createdLocation: Location | undefined;
-
-    if (locationSelection.type === "new") {
-      // The `locations` snapshot doesn't know this place yet, so read the
-      // resolved row back for its canonical name (an existing place keeps
-      // its own casing). Falls back to the typed name if the read fails —
-      // the item is already saved, so this must not turn into an error.
-      const { data: resolved } = await supabase
-        .from("locations")
-        .select("id, name")
-        .eq("id", data.location_id)
-        .maybeSingle();
-      const resolvedName = resolved?.name ?? locationSelection.name;
-      newLocationSegments = [{ id: data.location_id, name: resolvedName }];
-      createdLocation = { id: data.location_id, parentId: null, name: resolvedName };
-    }
-
-    setIsSubmitting(false);
+    // The chips are the path the person built, so they name every level —
+    // including places this save just created, which `locations` can't know.
+    // Only the last level's id is known (it is the item's location).
+    const segments = chips.map((chip, index) => ({
+      id: index === chips.length - 1 ? data.location_id : chip.kind === "existing" ? chip.id : `new-${String(index)}`,
+      name: chip.name,
+    }));
 
     setCaptured({
       id: data.id,
       name: data.name,
-      segments: newLocationSegments ?? getBreadcrumbSegments(data.location_id, locations),
+      segments,
       detail: data.detail ?? undefined,
     });
-    onStashed?.({ itemId: data.id, createdLocation });
+    onStashed?.({ itemId: data.id, locationId: data.location_id });
   }
 
-  function handleLocationSelect(selection: AutocompleteSelection) {
-    setLocationSelection(selection);
-    // Clears a stale "Choose a location…" error the moment the user actually
-    // resolves one — without this, picking a real location left the old
-    // error (and the aria-invalid/aria-describedby pointing at it) visible
-    // right next to the new "Selected: …" confirmation line until the next
-    // submit, which is a real self-contradiction, not just staleness.
-    if (selection.type === "existing") {
+  function handleChipsChange(next: PathChip[]) {
+    setChips(next);
+    // A real choice clears a stale "Choose a location…" error right away —
+    // otherwise it sits next to the new "Goes in …" hint, contradicting it.
+    if (next.length > 0) {
       setFieldErrors((previous) => ({ ...previous, location: undefined }));
     }
   }
@@ -191,7 +145,8 @@ export function StashForm({
   function handleAddAnother() {
     setName("");
     setDetail("");
-    setLocationSelection(null);
+    setChips([]);
+    setPendingText("");
     setFieldErrors({});
     setCaptured(null);
   }
@@ -251,16 +206,16 @@ export function StashForm({
       />
 
       <div>
-        <LocationAutocomplete
+        <LocationPathPicker
           label="Location"
-          options={locationOptions}
-          onSelect={handleLocationSelect}
+          locations={locations}
+          value={chips}
+          onChange={handleChipsChange}
+          onInputChange={setPendingText}
+          placeholder={locationPlaceholder}
           describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
           disabled={isSubmitting}
         />
-        {locationSelection?.type === "existing" ? (
-          <p className="mt-1 text-[11px] text-mid">Selected: {locationSelection.option.path}</p>
-        ) : null}
         {fieldErrors.location ? (
           <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-[10.5px] text-mid">
             {fieldErrors.location}

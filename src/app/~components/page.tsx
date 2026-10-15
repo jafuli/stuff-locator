@@ -4,14 +4,13 @@ import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { ItemCard } from "@/components/item-card";
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
 import { BottomNav } from "@/components/bottom-nav";
-import { AutocompleteDemo } from "./autocomplete-demo";
+import { PathPickerDemo } from "./path-picker-demo";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
-import { getBreadcrumbSegments, getFullLocationPaths } from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import { notFound } from "next/navigation";
 import { NAV_TABS } from "@/lib/nav-tabs";
 
-const locationOptions = getFullLocationPaths(LOCATIONS);
 const segmentsFor = (locationId: string) => getBreadcrumbSegments(locationId, LOCATIONS);
 
 export default function ComponentsDemoPage() {
@@ -139,31 +138,30 @@ export default function ComponentsDemoPage() {
         </div>
       </section>
 
-      <section aria-labelledby="autocomplete-heading" className="flex flex-col gap-5">
-        <h2 id="autocomplete-heading" className="text-base font-semibold text-ink">
-          Location autocomplete — states
+      <section aria-labelledby="path-picker-heading" className="flex flex-col gap-5">
+        <h2 id="path-picker-heading" className="text-base font-semibold text-ink">
+          Location path picker — states
         </h2>
 
         <div>
-          <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Success (type &quot;red&quot;)</p>
-          <AutocompleteDemo label="Where?" options={locationOptions} />
-        </div>
-
-        <div>
-          <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Loading</p>
-          <AutocompleteDemo label="Where?" options={locationOptions} isLoading />
+          <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">
+            Existing places (type &quot;red&quot;, pick one, then keep typing inside it)
+          </p>
+          <PathPickerDemo label="Location" locations={LOCATIONS} />
         </div>
 
         <div>
           <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">
-            Empty (no places yet — type to create one)
+            Empty household (everything you build is a dashed, new chip)
           </p>
-          <AutocompleteDemo label="Where?" options={[]} />
+          <PathPickerDemo label="Location" locations={[]} placeholder="e.g. Office, then Cabinet…" />
         </div>
 
         <div>
-          <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">Error</p>
-          <AutocompleteDemo label="Where?" options={[]} error="Couldn't load your places." />
+          <p className="mb-1 text-[9.5px] tracking-[.06em] text-mid uppercase">
+            Pick-only (no &quot;+ New&quot; row; Garage and everything inside it excluded)
+          </p>
+          <PathPickerDemo label="Move into…" locations={LOCATIONS} pickOnly excludeIds={["garage"]} />
         </div>
       </section>
 

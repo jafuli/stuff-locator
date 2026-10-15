@@ -2,28 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
-import { LocationAutocomplete, type AutocompleteSelection } from "@/components/location-autocomplete";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import {
-  getBreadcrumbSegments,
-  type LocationBreadcrumbSegment,
-  type LocationOption,
-} from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments, type LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
+import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-picker";
 // Reused directly rather than duplicated: the validation rules for editing
 // an item's name/location are identical to Stash's ("empty name" / "no
 // resolved location" are rejected the same way), and these functions
 // aren't Stash-specific despite the module's name.
-import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
+import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 
 export interface ItemEditFormProps {
   item: Item;
-  /** Full-path options to feed LocationAutocomplete. */
-  locationOptions: readonly LocationOption[];
-  /** Raw location tree, needed to resolve a selected id into breadcrumb segments for the success state. */
+  /** Every place in the household — the picker searches and descends through these. */
   locations: readonly Location[];
 }
 
@@ -60,21 +55,15 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  * (Stash's and Add-location's success states) is already an inline panel
  * replacing the form, not an overlay.
  */
-export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormProps) {
-  const initialLocation = locationOptions.find((option) => option.id === item.locationId) ?? null;
-
+export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   const [name, setName] = useState(item.name);
   const [detail, setDetail] = useState(item.detail ?? "");
-  const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(
-    initialLocation ? { type: "existing", option: initialLocation } : null,
-  );
-  // Mirrors LocationAutocomplete's own raw input text (see its onInputChange
-  // doc comment). Because this form — unlike Stash's blank one — starts
-  // with a real selection already in place, typing into the combobox
-  // without finishing a new selection would otherwise leave that stale
-  // selection standing with no error and no visible indication that it no
-  // longer matches what's on screen. Tracked here purely to catch that.
-  const [pendingLocationQuery, setPendingLocationQuery] = useState("");
+  // Starts as the item's current place, as solid chips. Tapping a chip goes
+  // back a level, so moving into a place that doesn't exist yet is "tap the
+  // level you want to branch from, then type the new name".
+  const [chips, setChips] = useState<PathChip[]>(() => chipsForPlace(item.locationId, locations));
+  // Raw text in the picker's field, to catch text that never became a chip.
+  const [pendingText, setPendingText] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [mode, setMode] = useState<Mode>("editing");
   const [captured, setCaptured] = useState<CapturedEdit | null>(null);
@@ -107,27 +96,14 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Dangling typed text that never became a real selection is treated
-    // the same as an unresolved location — including when it's shadowing a
-    // perfectly valid `locationSelection` left over from before the user
-    // started typing again (see pendingLocationQuery's own comment above).
-    const locationError =
-      validateLocationSelection(locationSelection) ??
-      (pendingLocationQuery.trim() !== ""
-        ? "Pick an existing location from the list — adding a new one isn't supported here yet."
-        : undefined);
-
     const errors: FieldErrors = {
       name: validateItemName(name),
-      location: locationError,
+      location: validateLocationPath(chips, pendingText),
     };
     setFieldErrors(errors);
 
-    // The `locationSelection.type !== "existing"` check (rather than
-    // trusting `errors.location` alone) is what lets TypeScript narrow the
-    // discriminated union below without a non-null assertion — same
-    // reasoning as stash-form.tsx's own handleSubmit.
-    if (errors.name || errors.location || locationSelection?.type !== "existing") {
+    const path = resolvePath(chips);
+    if (errors.name || errors.location || path === null) {
       return;
     }
 
@@ -144,7 +120,8 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
       p_item_id: item.id,
       p_name: trimmedName,
       ...(trimmedDetail === "" ? {} : { p_detail: trimmedDetail }),
-      p_location_id: locationSelection.option.id,
+      ...(path.locationId === null ? {} : { p_location_id: path.locationId }),
+      ...(path.newPath.length === 0 ? {} : { p_new_path: path.newPath }),
     });
 
     setIsSubmitting(false);
@@ -154,9 +131,23 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
       return;
     }
 
+    // A just-created place isn't in the `locations` snapshot, so name the
+    // levels from the chips the person built.
+    const knownSegments = getBreadcrumbSegments(data.location_id, locations);
     setCaptured({
       name: data.name,
-      segments: getBreadcrumbSegments(data.location_id, locations),
+      segments:
+        knownSegments.length > 0
+          ? knownSegments
+          : chips.map((chip, index) => ({
+              id:
+                index === chips.length - 1
+                  ? data.location_id
+                  : chip.kind === "existing"
+                    ? chip.id
+                    : `new-${String(index)}`,
+              name: chip.name,
+            })),
       detail: data.detail ?? undefined,
     });
     setMode("edited");
@@ -176,11 +167,9 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
     setMode("deleted");
   }
 
-  function handleLocationSelect(selection: AutocompleteSelection) {
-    setLocationSelection(selection);
-    // Clears a stale location error the moment a real selection is made —
-    // same reasoning as stash-form.tsx's handleLocationSelect.
-    if (selection.type === "existing") {
+  function handleChipsChange(next: PathChip[]) {
+    setChips(next);
+    if (next.length > 0) {
       setFieldErrors((previous) => ({ ...previous, location: undefined }));
     }
   }
@@ -270,17 +259,15 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
         />
 
         <div>
-          <LocationAutocomplete
+          <LocationPathPicker
             label="Location"
-            options={locationOptions}
-            onSelect={handleLocationSelect}
-            onInputChange={setPendingLocationQuery}
+            locations={locations}
+            value={chips}
+            onChange={handleChipsChange}
+            onInputChange={setPendingText}
             describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
             disabled={isSubmitting}
           />
-          {locationSelection?.type === "existing" && pendingLocationQuery.trim() === "" ? (
-            <p className="mt-1 text-[11px] text-mid">Selected: {locationSelection.option.path}</p>
-          ) : null}
           {fieldErrors.location ? (
             <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-[10.5px] text-mid">
               {fieldErrors.location}

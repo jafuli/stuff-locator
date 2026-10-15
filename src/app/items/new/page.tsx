@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { StashForm } from "@/components/stash-form";
-import { getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
 
@@ -52,12 +51,11 @@ export default async function Page() {
     parentId: row.parent_id,
     name: row.name,
   }));
-  const locationOptions = getFullLocationPaths(locations);
 
   return (
     <main className="flex flex-col gap-3 p-4">
       <h1 className="text-[16px] font-semibold text-ink">Add an item</h1>
-      <StashForm locationOptions={locationOptions} locations={locations} />
+      <StashForm locations={locations} />
     </main>
   );
 }
