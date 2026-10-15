@@ -7,11 +7,10 @@ const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() })
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
 // GuidedOnboarding writes to `households`; the item steps' embedded
-// StashForm writes to `items` — both go through this same mocked module,
-// same shortcut stash-form.test.tsx already established, extended here to
-// dispatch on the table name since this component touches two.
-const { insertSingle, updateEq, updateSelect } = vi.hoisted(() => ({
-  insertSingle: vi.fn(),
+// StashForm calls the `stash_item` RPC — both go through this same mocked
+// module, same shortcut stash-form.test.tsx already established.
+const { stashRpc, updateEq, updateSelect } = vi.hoisted(() => ({
+  stashRpc: vi.fn(),
   updateEq: vi.fn(),
   updateSelect: vi.fn(),
 }));
@@ -30,8 +29,12 @@ vi.mock("@/server/db/client", () => ({
           }),
         };
       }
-      return { insert: () => ({ select: () => ({ single: insertSingle }) }) };
+      // The embedded StashForm's read-back of a typed new place.
+      return {
+        select: () => ({ eq: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }) }),
+      };
     },
+    rpc: stashRpc,
   }),
 }));
 
@@ -42,7 +45,6 @@ const LOCATIONS: Location[] = [
   { id: "garage-closet", parentId: "garage", name: "Closet" },
 ];
 const HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
-const USER_ID = "22222222-2222-2222-2222-222222222222";
 
 beforeEach(() => {
   updateSelect.mockResolvedValue({ data: [{ id: HOUSEHOLD_ID }], error: null });
@@ -51,13 +53,13 @@ beforeEach(() => {
 afterEach(() => {
   push.mockReset();
   refresh.mockReset();
-  insertSingle.mockReset();
+  stashRpc.mockReset();
   updateEq.mockReset();
   updateSelect.mockReset();
 });
 
 function renderOnboarding() {
-  return render(<GuidedOnboarding householdId={HOUSEHOLD_ID} userId={USER_ID} locations={LOCATIONS} />);
+  return render(<GuidedOnboarding householdId={HOUSEHOLD_ID} locations={LOCATIONS} />);
 }
 
 test("shows the first item step by default, with the real Stash form embedded", () => {
@@ -77,13 +79,13 @@ test("skipping a step advances to the next one without writing anything", async 
 
   expect(screen.getByText("Step 2 of 4")).toBeDefined();
   expect(screen.getByRole("heading", { name: "Stash something bulky" })).toBeDefined();
-  expect(insertSingle).not.toHaveBeenCalled();
+  expect(stashRpc).not.toHaveBeenCalled();
   expect(updateEq).not.toHaveBeenCalled();
 });
 
 test("a real stash reveals Continue; clicking it advances without completing onboarding yet", async () => {
-  insertSingle.mockResolvedValueOnce({
-    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null },
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null, location_id: "garage-closet" },
     error: null,
   });
 
@@ -160,8 +162,8 @@ async function stash(user: ReturnType<typeof userEvent.setup>, name: string, loc
 }
 
 test("a stash shows a plain confirmation with only Continue — no competing View item / Add another / Back to home", async () => {
-  insertSingle.mockResolvedValueOnce({
-    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null },
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null, location_id: "garage-closet" },
     error: null,
   });
   const user = userEvent.setup();
@@ -177,12 +179,10 @@ test("a stash shows a plain confirmation with only Continue — no competing Vie
 });
 
 test("a place created in one step is offered as an existing place in the next step", async () => {
-  insertSingle
-    .mockResolvedValueOnce({ data: { id: "loc-attic", name: "Attic", parent_id: null }, error: null })
-    .mockResolvedValueOnce({
-      data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null },
-      error: null,
-    });
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null, location_id: "loc-attic" },
+    error: null,
+  });
   const user = userEvent.setup();
   renderOnboarding();
 
@@ -194,6 +194,38 @@ test("a place created in one step is offered as an existing place in the next st
   // "+ New place called…" row would appear, so the user would create a
   // second "Attic".
   expect(screen.getByRole("option", { name: "Attic" })).toBeDefined();
+});
+
+test("typing the same new place again resolves to the same place, which is listed once", async () => {
+  // Both steps resolve "Attic" to the same row: names are unique per parent.
+  stashRpc
+    .mockResolvedValueOnce({
+      data: { id: "item-1", name: "Passport", detail: null, location_id: "loc-attic" },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: { id: "item-2", name: "Camping tent", detail: null, location_id: "loc-attic" },
+      error: null,
+    });
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await stash(user, "Passport", "Attic");
+  await user.click(await screen.findByRole("button", { name: "Continue" }));
+
+  // Step 2: type Attic again and deliberately take the "+ New place" row
+  // (second option, after the existing Attic).
+  await user.type(screen.getByLabelText("Name"), "Camping tent");
+  await user.type(screen.getByRole("combobox"), "Attic");
+  await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  await user.click(await screen.findByRole("button", { name: "Continue" }));
+
+  expect(stashRpc).toHaveBeenLastCalledWith("stash_item", { p_name: "Camping tent", p_new_path: ["Attic"] });
+
+  // Step 3: exactly one "Attic" option, not two.
+  await user.type(screen.getByRole("combobox"), "Attic");
+  expect(screen.getAllByRole("option", { name: "Attic" })).toHaveLength(1);
 });
 
 test("advancing moves focus to the new step's heading; the first render does not steal focus", async () => {

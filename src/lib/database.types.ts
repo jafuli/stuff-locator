@@ -269,6 +269,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      ensure_location_path: {
+        Args: { p_household_id: string; p_names: string[]; p_parent_id: string }
+        Returns: string
+      }
       is_household_member: {
         Args: { target_household_id: string }
         Returns: boolean
@@ -310,7 +314,11 @@ export type Database = {
         }
       }
       move_item: {
-        Args: { p_item_id: string; p_new_location_id: string }
+        Args: {
+          p_item_id: string
+          p_new_location_id?: string
+          p_new_path?: string[]
+        }
         Returns: {
           added_at: string
           added_by: string
@@ -329,6 +337,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      normalize_place_name: { Args: { p_name: string }; Returns: string }
       profile_display_name_for: { Args: { p_email: string }; Returns: string }
       redeem_invite: {
         Args: { p_code: string }
@@ -352,6 +361,31 @@ export type Database = {
       shares_household_with: {
         Args: { target_user_id: string }
         Returns: boolean
+      }
+      stash_item: {
+        Args: {
+          p_detail?: string
+          p_location_id?: string
+          p_name: string
+          p_new_path?: string[]
+        }
+        Returns: {
+          added_at: string
+          added_by: string
+          detail: string | null
+          household_id: string
+          id: string
+          last_moved_at: string | null
+          last_moved_by: string | null
+          location_id: string
+          name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
