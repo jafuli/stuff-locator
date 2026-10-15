@@ -32,7 +32,6 @@ const PROTECTED_ROUTES: { path: string; next: string | null }[] = [
   { path: `/items/${UNRESOLVABLE_ID}`, next: `/items/${UNRESOLVABLE_ID}` },
   { path: `/items/${UNRESOLVABLE_ID}/edit`, next: `/items/${UNRESOLVABLE_ID}/edit` },
   { path: "/items/new", next: "/items/new" },
-  { path: "/locations/new", next: "/locations/new" },
   { path: "/activity", next: "/activity" },
 ];
 
@@ -71,7 +70,6 @@ test("signed in, every protected route reaches its real page", async ({ page }) 
     { path: `/items/${itemId}`, heading: /Spare keys/ },
     { path: `/items/${itemId}/edit`, heading: /Edit item/ },
     { path: "/items/new", heading: /Add an item/ },
-    { path: "/locations/new", heading: /Add a location/ },
     { path: "/activity", heading: /Activity/ },
   ];
 

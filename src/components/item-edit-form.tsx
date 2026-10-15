@@ -50,10 +50,9 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  *
  * Delete calls `delete_item` (it records the "deleted" event and what the
  * item's place was). Uses a plain two-step inline confirmation (Delete →
- * Cancel/confirm), not a <dialog>/modal — this app has no existing modal
- * pattern to match, and every other "are you sure"-shaped moment here
- * (Stash's and Add-location's success states) is already an inline panel
- * replacing the form, not an overlay.
+ * Cancel/confirm), an inline panel replacing the form rather than an overlay.
+ * Browse's place deletion uses the shared Dialog instead (components/ui/
+ * dialog.tsx); moving this one over is a reasonable follow-up, not done here.
  */
 export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   const [name, setName] = useState(item.name);

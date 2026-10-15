@@ -49,7 +49,7 @@ test("drilling down through nested locations from /browse reaches an item, and b
   // "Spare house keys" (nested underneath) via the subtree RPC, and its own
   // row's accessible name includes its full breadcrumb path — which
   // substring-matches "Closet"/"Toolbox"/"Red box" without exact: true,
-  // same ambiguity locations-new.spec.ts already documents for this exact
+  // same ambiguity as everywhere else in this file for this exact
   // shape of collision.
   await page.getByRole("link", { name: "Closet", exact: true }).click();
   await page.waitForLoadState("networkidle");
@@ -123,7 +123,7 @@ test("a location with nothing anywhere in its subtree shows the real empty state
 
   await expect(page.getByRole("heading", { level: 1, name: "Attic" })).toBeVisible();
   await expect(page.getByText("Nothing stored here yet")).toBeVisible();
-  await expect(page.getByText("No items or sub-locations here.")).toBeVisible();
+  await expect(page.getByText("No items or places in here.")).toBeVisible();
 });
 
 test("an unknown location id renders the not-found state, not a raw crash", async ({ page }) => {

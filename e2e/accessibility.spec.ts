@@ -74,9 +74,7 @@ async function signUpOnly(page: Page): Promise<void> {
 // route with real content. Item detail and Edit-item are both real now too
 // (see this task's PR description) — their own dynamic-id tests live below
 // the loop, same reason the "nested child" Browse case does: a real seeded
-// id can't be a static path in this table. Explicitly out of scope:
-// /locations/new, the one remaining fixture-only route as of this task — a
-// natural follow-up once its own wiring task lands. Also out of scope: any
+// id can't be a static path in this table. Explicitly out of scope: any
 // manual/subjective accessibility review beyond what axe catches — this is
 // an automated-tooling pass, not a substitute for a manual screen-reader
 // pass.

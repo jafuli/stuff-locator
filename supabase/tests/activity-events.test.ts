@@ -362,7 +362,8 @@ describe("activity_events and the writer functions", () => {
     const { error } = await clientOwner.rpc("move_container", { p_location_id: box, p_new_parent_id: underBed });
     expect(error).toBeNull();
 
-    const toTop = await clientOwner.rpc("move_container", { p_location_id: box, p_new_parent_id: null as never });
+    // Omitting the parent means "top level" (the parameter defaults to null).
+    const toTop = await clientOwner.rpc("move_container", { p_location_id: box });
     expect(toTop.error).toBeNull();
 
     const events = await eventsFor(box);
