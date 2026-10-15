@@ -1,8 +1,9 @@
 # 9. The Activity feed is derived from item provenance, not an audit log
 
-**Status:** Accepted. Partly superseded by ADR 0011, which adds an
-`activity_events` table for deletes, renames and edits. Item "added" and
-"moved" are still derived from provenance as described here.
+**Status:** Superseded by ADR 0011. The Activity feed reads only the
+`activity_events` table; item "added" and "moved" are events too, so the
+provenance-derived feed described here goes away once the data layer and the
+feed switch land. Kept for the reasoning that led there.
 
 ## Context
 

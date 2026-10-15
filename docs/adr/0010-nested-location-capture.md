@@ -52,8 +52,9 @@ call it.
 **Browse is navigate + tidy up.** A ⋯ menu on a place's own page offers
 Rename, Move into… (a pick-only picker) and Delete, and there is a name-only
 "+ Add a place here". Rename, move and delete go through `rename_location`,
-`move_container` and `delete_container`. **Delete is blocked until the place
-is empty**; a non-empty place shows what is inside and offers no destructive
+`move_container` and `delete_container`, and "+ Add a place here" through
+`create_location` (ADR 0011 locks direct writes on `locations`).
+**Delete is blocked until the place is empty**; a non-empty place shows what is inside and offers no destructive
 button. Empty places are allowed and stay until someone deletes them.
 `/locations/new` is removed.
 

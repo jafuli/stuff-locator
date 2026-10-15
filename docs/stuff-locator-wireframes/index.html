@@ -3,7 +3,7 @@
 {
   "name": "Stuff Locator Wireframes",
   "schemaVersion": 1,
-  "description": "Stuff Locator wireframes v2 — the locations refactor: one chip path picker for Stash, item edit and onboarding (nested places, no duplicates), and Browse reduced to navigate + tidy up (Add a place here, Rename, Move into…, Delete). Stuff screen gains All / By place chips as the way into Browse; Activity gains place rename/move/delete and item rename/detail-edit/delete events. Unchanged v1 screens kept for context. Low-fidelity greyscale, annotated.",
+  "description": "Stuff Locator wireframes v2 — the locations refactor: one chip path picker for Stash, item edit and onboarding (nested places, no duplicates), and Browse reduced to navigate + tidy up (Add a place here, Rename, Move into…, Delete). Stuff screen gains All / By place chips as the way into Browse; Activity becomes one event log: item added/moved (every move, with from → to) plus place rename/move/delete and item rename/detail-edit/delete. Unchanged v1 screens kept for context. Low-fidelity greyscale, annotated.",
   "mcpTools": [],
   "mcpServerNames": []
 }
@@ -42,7 +42,7 @@
   .tag.new{background:var(--ink);color:#fff}
   .tag.chg{border:1px solid var(--ink);color:var(--ink)}
   .tag.same{border:1px solid var(--line);color:var(--mid)}
-  .phone{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:600px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .phone{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:612px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
   .bar{height:22px;background:var(--wash);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--mid);letter-spacing:.04em;flex-shrink:0}
   .body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:12px}
   .ttl{font-size:16px;font-weight:680;margin:2px 0 10px;letter-spacing:-.01em}
@@ -149,7 +149,7 @@
 
 <header>
   <h1>Stuff Locator — wireframes v2</h1>
-  <p class="sub">Locations refactor · structure only, no visual design · Oct 14, 2026 (rev 3) · supersedes v1 (Aug 16), kept alongside as <code>index.v1.html</code></p>
+  <p class="sub">Locations refactor · structure only, no visual design · Oct 15, 2026 (rev 4) · supersedes v1 (Aug 16), kept alongside as <code>index.v1.html</code></p>
 </header>
 
 <div class="legend">
@@ -165,7 +165,7 @@
     <li><b>No more duplicate places:</b> an exact match (any case) under the same parent replaces the “+ New” row.</li>
     <li><b>Browse is navigate + tidy up:</b> a name-only “Add a place here”, and a ⋯ menu on a place's page with Rename, Move into… and Delete (blocked until empty). The separate Add-location form is gone.</li>
     <li><b>The way into Browse:</b> the Stuff screen gets two chips under search, <b>All (18)</b> and <b>By place</b>. By place opens Browse, which shows the same header so the chips read as one toggle.</li>
-    <li><b>Activity shows more:</b> place renames, moves and deletes, plus item renames, detail edits and deletes, alongside the existing “added” and “moved” item events.</li>
+    <li><b>Activity is one event log:</b> item added and moved (every move, with where it moved <i>from</i>), place renames, moves and deletes, and item renames, detail edits and deletes. One source, newest first.</li>
     <li>v1's screen 04 (“By place” grouped list) is replaced by the Browse drill-down the app actually built. Tab bar shows the settled two tabs (Stuff, Activity).</li>
   </ul>
 </div>
@@ -546,20 +546,22 @@
 
   <!-- 07 -->
   <div class="cell">
-    <div class="cap">07 · <span>Activity — places, edits and deletes</span><span class="tag chg">CHANGED</span></div>
+    <div class="cap">07 · <span>Activity — one event log</span><span class="tag chg">CHANGED</span></div>
     <div class="phone">
       <div class="wrap">
         <div class="bar">9:41</div>
         <div class="body">
           <div class="ttl">Activity</div>
           <div class="grouphd" style="margin-top:0">This week</div>
-          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> renamed a place<br><span class="ipath">Office › Cabinet → Filing cabinet</span></div><div class="evm">1 hour ago</div></div></div>
+          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> moved <b>spare house keys</b><br><span class="ipath">Hallway › Hook → Kitchen › Key bowl</span></div><div class="evm">20 min ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> renamed a place<br><span class="ipath">Office › Cabinet → Filing cabinet</span></div><div class="evm">1 hour ago</div></div></div>
           <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> renamed <b>passport</b> → <b>Passport (blue)</b></div><div class="evm">3 hours ago</div></div></div>
           <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> edited the detail of <b>camping tent</b><br><span class="idet">“poles are in the blue bag”</span></div><div class="evm">yesterday</div></div></div>
           <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> moved the place <b>Camping box</b><br><span class="ipath">Garage → Bedroom › Under bed</span></div><div class="evm">yesterday</div></div></div>
           <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> deleted the place <b>Bottom drawer</b><br><span class="ipath">was in Office › Cabinet</span></div><div class="evm">3 days ago</div></div></div>
           <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> deleted <b>old phone charger</b><br><span class="ipath">was in Office › Cabinet › Top drawer</span></div><div class="evm">4 days ago</div></div></div>
-          <div class="note"><b>New:</b> place renamed, moved, deleted; item renamed, detail edited, deleted. Names and paths are kept <i>as they were</i>, so old events stay readable.</div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> added <b>camping tent</b><br><span class="ipath">in Garage › Shelf</span></div><div class="evm">5 days ago</div></div></div>
+          <div class="note"><b>One log.</b> Added and moved items sit alongside place renamed, moved, deleted and item renamed, detail edited, deleted. Every move is kept with <i>from → to</i>; names and paths are stored <i>as they were</i>, so old events stay readable.</div>
         </div>
         <div class="tabs"><div class="tab">Stuff</div><div class="tab on">Activity</div></div>
       </div>
@@ -622,7 +624,7 @@
   <ul>
     <li><b>Browse keeps “+ Add a place here”</b> as the label, top level included.</li>
     <li><b>Delete stays blocked until a place is empty</b> for v1. Clearing a nested branch bottom-up is accepted friction; revisit only if it bites.</li>
-    <li><b>Still not in Activity:</b> an item's earlier moves (only its latest move shows, per ADR 0009), and places created while stashing (the item event covers them).</li>
+    <li><b>Still not in Activity:</b> places created while stashing (the item's added event covers them). Every item move <i>is</i> shown, with where it came from (ADR 0011).</li>
   </ul>
 </footer>
 

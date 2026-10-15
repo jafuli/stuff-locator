@@ -38,7 +38,7 @@ Working against real data, with row-level security scoping every read and write 
 Two things differ from the product design and are called out rather than glossed:
 
 - **Find is a case-insensitive substring filter today**, not the in-browser embedding search the design calls for. The `transformers.js` version is a future swap behind the same `(items, query) => items` signature, not a rewrite of the caller.
-- **The Activity feed still renders fixtures** rather than real provenance rows.
+- **The Activity feed is real but shallow:** it is derived from items' own provenance columns, so it shows each item's creation and *latest* move only. The Locations refactor replaces it with an append-only event log ([ADR 0011](./docs/adr/0011-activity-events.md)).
 
 ## Architecture worth knowing about
 
