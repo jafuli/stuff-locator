@@ -382,7 +382,7 @@ export type Database = {
         }
       }
       move_container: {
-        Args: { p_location_id: string; p_new_parent_id: string }
+        Args: { p_location_id: string; p_new_parent_id?: string }
         Returns: {
           created_at: string
           household_id: string

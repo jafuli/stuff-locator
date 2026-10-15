@@ -17,10 +17,7 @@ const ADD_ITEM_LINK_CLASSES =
 //
 // Real household data now (see the PR description): items/locations are
 // read directly via PostgREST, RLS-scoped to the caller's household — no
-// route handler for this plain read, per the settled architecture. Browse,
-// item-detail, Activity, Stash's write path, Add-location, and Edit-item
-// all stay on fixtures until their own separate wiring tasks land (this
-// task's own AC names all of them explicitly as out of scope).
+// route handler for this plain read, per the settled architecture.
 export default async function Page() {
   const supabase = await createClient();
   const {

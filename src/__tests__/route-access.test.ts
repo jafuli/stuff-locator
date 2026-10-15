@@ -11,7 +11,6 @@ const AC_PROTECTED_ROUTES = [
   "/items/2a4e6c9b-0000-4000-8000-000000000002",
   "/items/2a4e6c9b-0000-4000-8000-000000000002/edit",
   "/items/new",
-  "/locations/new",
   "/activity",
 ];
 

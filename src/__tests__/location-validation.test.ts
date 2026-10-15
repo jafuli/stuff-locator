@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
-import { validateLocationName } from "@/lib/location-validation";
+import { validatePlaceName } from "@/lib/location-validation";
 
-test("validateLocationName rejects an empty or whitespace-only name", () => {
-  expect(validateLocationName("")).toBe("Enter a name for this location.");
-  expect(validateLocationName("   ")).toBe("Enter a name for this location.");
+test("validatePlaceName rejects an empty or whitespace-only name", () => {
+  expect(validatePlaceName("")).toBe("Enter a name for this place.");
+  expect(validatePlaceName("   ")).toBe("Enter a name for this place.");
 });
 
-test("validateLocationName accepts a real name", () => {
-  expect(validateLocationName("Red box")).toBeUndefined();
+test("validatePlaceName accepts a real name", () => {
+  expect(validatePlaceName("Red box")).toBeUndefined();
 });

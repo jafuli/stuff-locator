@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AddPlaceHere } from "@/components/add-place-here";
 import { ItemCard } from "@/components/item-card";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { LocationList } from "@/components/location-list";
+import { PlaceManager } from "@/components/place-manager";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
@@ -105,9 +107,9 @@ async function resolveBreadcrumbSegments(
 // stored *directly* in the location, not descendants') — intentional, per
 // this task's AC #1.
 //
-// "Add location"/"Add item" wiring beyond what those separate tasks
-// already do is explicitly out of scope here (AC #5) — this route is
-// read-only.
+// The place's own page is also where it gets tidied up (ADR 0010): a ⋯ menu
+// (Rename / Move into… / Delete, delete blocked until empty) and the
+// name-only "+ Add a place here".
 export default async function Page(props: PageProps<"/browse/[id]">) {
   const { id } = await props.params;
 
@@ -141,13 +143,15 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
     notFound();
   }
 
-  const [childLocationsResult, subtreeItemsResult] = await Promise.all([
+  const [childLocationsResult, subtreeItemsResult, allLocationsResult] = await Promise.all([
     supabase
       .from("locations")
       .select("id, parent_id, name")
       .eq("household_id", membership.household_id)
       .eq("parent_id", currentRow.id),
     supabase.rpc("location_subtree_items", { p_location_id: currentRow.id }),
+    // Every place, for the Move picker (a household is ~20-50 of them).
+    supabase.from("locations").select("id, parent_id, name").eq("household_id", membership.household_id),
   ]);
 
   if (childLocationsResult.error) {
@@ -155,6 +159,9 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
   }
   if (subtreeItemsResult.error) {
     throw new Error(subtreeItemsResult.error.message);
+  }
+  if (allLocationsResult.error) {
+    throw new Error(allLocationsResult.error.message);
   }
 
   const childLocations: Location[] = childLocationsResult.data.map((row) => ({
@@ -168,6 +175,12 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
   for (const row of childLocationsResult.data) {
     cache.set(row.id, { id: row.id, name: row.name, parentId: row.parent_id });
   }
+
+  const allLocations: Location[] = allLocationsResult.data.map((row) => ({
+    id: row.id,
+    parentId: row.parent_id,
+    name: row.name,
+  }));
 
   const items: Item[] = subtreeItemsResult.data.map((row) => ({
     id: row.id,
@@ -217,12 +230,19 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
       </Link>
 
       <div>
-        <h1 className="text-[16px] font-semibold text-ink">{currentRow.name}</h1>
+        <PlaceManager
+          place={{ id: currentRow.id, name: currentRow.name }}
+          afterDeleteHref={parentSegment ? `/browse/${parentSegment.id}` : "/browse"}
+          hasParent={parentSegment !== null}
+          locations={allLocations}
+          itemCount={items.length}
+          placeCount={childLocations.length}
+        />
         <LocationBreadcrumb segments={segments} />
       </div>
 
       {isEmpty ? (
-        <EmptyState title="Nothing stored here yet" description="No items or sub-locations here." />
+        <EmptyState title="Nothing stored here yet" description="No items or places in here." />
       ) : (
         <>
           {childLocations.length > 0 ? <LocationList locations={childLocations} /> : null}
@@ -240,6 +260,8 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
           ) : null}
         </>
       )}
+
+      <AddPlaceHere parentId={currentRow.id} />
     </main>
   );
 }
