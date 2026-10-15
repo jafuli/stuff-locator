@@ -32,13 +32,13 @@ Working against real data, with row-level security scoping every read and write 
 - **Auth** — sign up, sign in, sign out, password reset by email
 - **Households** — every new account is bootstrapped into one; items and locations belong to the *household*, not to a user
 - **Stash / Home / Browse / item detail / edit / delete** — real reads and writes
+- **Activity** — an append-only event log of who added, moved, renamed, edited or deleted what ([ADR 0011](./docs/adr/0011-activity-events.md))
 - **Invite a partner** — generate a link, redeem it, land in the inviter's household
 - **PWA** — installable, with a service worker and an offline fallback
 
-Two things differ from the product design and are called out rather than glossed:
+One thing differs from the product design and is called out rather than glossed:
 
 - **Find is a case-insensitive substring filter today**, not the in-browser embedding search the design calls for. The `transformers.js` version is a future swap behind the same `(items, query) => items` signature, not a rewrite of the caller.
-- **The Activity feed is real but shallow:** it is derived from items' own provenance columns, so it shows each item's creation and *latest* move only. The Locations refactor replaces it with an append-only event log ([ADR 0011](./docs/adr/0011-activity-events.md)).
 
 ## Architecture worth knowing about
 

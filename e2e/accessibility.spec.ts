@@ -6,6 +6,7 @@ import {
   seedItem,
   seedLocationChain,
   seedLocationChainAllIds,
+  signedInClient,
 } from "./supabase-test-client";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
@@ -34,6 +35,31 @@ async function signUpAndSeedHomeItem(page: Page): Promise<void> {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
   await seedItem(email, TEST_PASSWORD, { name: `Spare key ${randomUUID()}`, locationId });
+}
+
+// /activity reads the activity_events log, which only the write functions
+// append to — so this goes through them (signed in as the new account)
+// instead of the service-role seeding above, and produces one of each kind of
+// row layout: a path line, a from → to line, a detail quote and plain text.
+async function signUpAndGenerateActivity(page: Page): Promise<void> {
+  const email = await signUpFreshAccount(page);
+  const client = await signedInClient(email, TEST_PASSWORD);
+  const tag = randomUUID().slice(0, 8);
+  const unwrap = <T>(result: { data: T | null; error: { message: string } | null }): T => {
+    if (result.error || result.data === null) {
+      throw new Error(result.error?.message ?? "no data");
+    }
+    return result.data;
+  };
+  const item = unwrap(await client.rpc("stash_item", { p_name: `Tent ${tag}`, p_new_path: ["Garage", "Shelf"] }));
+  const attic = unwrap(await client.rpc("create_location", { p_name: `Attic ${tag}` }));
+  unwrap(await client.rpc("move_item", { p_item_id: item.id, p_new_location_id: attic.id }));
+  unwrap(
+    await client.rpc("update_item", { p_item_id: item.id, p_name: `Tent (blue) ${tag}`, p_detail: "poles inside" }),
+  );
+  unwrap(await client.rpc("rename_location", { p_location_id: attic.id, p_name: `Loft ${tag}` }));
+  const doomed = unwrap(await client.rpc("stash_item", { p_name: `Charger ${tag}`, p_location_id: attic.id }));
+  unwrap(await client.rpc("delete_item", { p_item_id: doomed.id }));
 }
 
 // Browse now reads real household data (see this task's PR description) —
@@ -74,7 +100,7 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   // to /sign-in and axe would happily scan *that* page and pass — a
   // vacuous test, not a failing one. /~offline needs no setup: the proxy
   // matcher excludes it.
-  { path: "/activity", name: "activity (populated)", setup: signUpAndSeedHomeItem },
+  { path: "/activity", name: "activity (populated)", setup: signUpAndGenerateActivity },
   { path: "/this-route-does-not-exist", name: "root not-found", setup: signUpOnly },
   { path: "/~offline", name: "offline fallback" },
 ];

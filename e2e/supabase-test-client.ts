@@ -102,6 +102,23 @@ export async function seedLocationChainAllIds(
 }
 
 /**
+ * A client signed in as `email`, so a spec can call the write functions
+ * (`stash_item`, `update_item`, …) exactly as the app does and produce real
+ * `activity_events`. Direct table writes are revoked for this role (ADR 0011),
+ * and the service-role seeding helpers below deliberately bypass the log.
+ */
+export async function signedInClient(email: string, password: string): Promise<SupabaseClient<Database>> {
+  const anonClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_ANON_KEY"));
+  const { data, error } = await anonClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    throw new Error(`failed to sign in as ${email}: ${error.message}`);
+  }
+  return createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: `Bearer ${data.session.access_token}` } },
+  });
+}
+
+/**
  * Seeds one real item into `email`'s household at `locationId` (from
  * seedLocationChain) via the service-role client. Returns the item's real
  * id.

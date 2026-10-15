@@ -1,20 +1,20 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ActivityFeedEntry } from "@/components/activity-feed";
+import { toActivityEntry, type ActivityEntry } from "@/lib/activity";
 import type { Database } from "@/lib/database.types";
 import { displayNameFor } from "@/lib/display-name";
-import { getActivityEvents } from "@/lib/fixtures/activity";
-import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
-import type { Item, Location } from "@/lib/fixtures/types";
 import { fetchDisplayNames } from "./profiles";
+
+/** How many of the most recent events the feed shows. */
+export const ACTIVITY_FEED_LIMIT = 100;
 
 /**
  * Builds the /activity feed for the household the caller belongs to.
  *
- * There is no audit table: the feed is derived from the provenance columns
- * items already carry (added_by / added_at / last_moved_by / last_moved_at),
- * so it shows each item's creation and its *most recent* move, not a full
- * history. That is deliberate for v1 — see ADR 0009.
+ * Reads ONLY `activity_events` (ADR 0011): every change to an item or place
+ * is recorded there by the function that made it, in the same transaction,
+ * so there is nothing to derive or merge. Newest first, capped at
+ * ACTIVITY_FEED_LIMIT.
  *
  * Takes its client as a parameter (like ensureHousehold) so it is testable
  * with a hand-built fake. Everything is RLS-scoped through the caller's JWT.
@@ -25,7 +25,7 @@ import { fetchDisplayNames } from "./profiles";
 export async function fetchActivityEntries(
   supabase: SupabaseClient<Database>,
   userId: string,
-): Promise<ActivityFeedEntry[]> {
+): Promise<ActivityEntry[]> {
   const { data: membership, error: membershipError } = await supabase
     .from("household_members")
     .select("household_id")
@@ -41,46 +41,24 @@ export async function fetchActivityEntries(
     throw new Error("activity: signed-in user has no household");
   }
 
-  const [itemsResult, locationsResult] = await Promise.all([
-    supabase
-      .from("items")
-      .select("id, location_id, name, added_by, added_at, last_moved_by, last_moved_at")
-      .eq("household_id", membership.household_id),
-    supabase.from("locations").select("id, parent_id, name").eq("household_id", membership.household_id),
-  ]);
+  const { data: rows, error } = await supabase
+    .from("activity_events")
+    .select("id, household_id, actor_id, kind, subject_id, subject_name, from_text, to_text, detail_text, created_at")
+    .eq("household_id", membership.household_id)
+    .order("created_at", { ascending: false })
+    .limit(ACTIVITY_FEED_LIMIT);
 
-  if (itemsResult.error) {
-    throw new Error(itemsResult.error.message);
-  }
-  if (locationsResult.error) {
-    throw new Error(locationsResult.error.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
   const displayNames = await fetchDisplayNames(
     supabase,
-    itemsResult.data.flatMap((row) => [row.added_by, row.last_moved_by]),
+    rows.map((row) => row.actor_id),
   );
 
-  const locations: Location[] = locationsResult.data.map((row) => ({
-    id: row.id,
-    parentId: row.parent_id,
-    name: row.name,
-  }));
-
-  // The actor is stored as a display name, never the raw uuid — an id on
-  // screen is a bug (see display-name.ts).
-  const items: Item[] = itemsResult.data.map((row) => ({
-    id: row.id,
-    locationId: row.location_id,
-    name: row.name,
-    addedBy: displayNameFor(row.added_by, displayNames),
-    addedAt: new Date(row.added_at),
-    lastMovedBy: row.last_moved_by ? displayNameFor(row.last_moved_by, displayNames) : undefined,
-    lastMovedAt: row.last_moved_at ? new Date(row.last_moved_at) : undefined,
-  }));
-
-  return getActivityEvents(items).map((event) => ({
-    event,
-    segments: getBreadcrumbSegments(event.item.locationId, locations),
-  }));
+  return rows.flatMap((row) => {
+    const entry = toActivityEntry(row, displayNameFor(row.actor_id, displayNames));
+    return entry ? [entry] : [];
+  });
 }

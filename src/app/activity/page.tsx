@@ -4,8 +4,8 @@ import { createClient } from "@/server/db/server";
 import { fetchActivityEntries } from "@/server/services/activity";
 
 // Catch up, core flow #4: a newest-first "who changed what" feed for the
-// household, derived from items' own add/move provenance (see
-// fetchActivityEntries). Real data — this was the last fixture-backed route.
+// household, read from the activity_events log (ADR 0011; see
+// fetchActivityEntries).
 export default async function ActivityPage() {
   const supabase = await createClient();
   const {
