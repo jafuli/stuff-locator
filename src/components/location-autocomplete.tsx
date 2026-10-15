@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { useCombobox } from "downshift";
 import { cn } from "@/lib/cn";
 import type { LocationOption } from "@/lib/fixtures/location-path";
@@ -136,8 +136,8 @@ export function LocationAutocomplete({
         ...(trimmedQuery === "" ? [] : [createItem]),
       ];
 
-  const { isOpen, getLabelProps, getMenuProps, getInputProps, highlightedIndex, getItemProps } = useCombobox<ComboItem>(
-    {
+  const { isOpen, getLabelProps, getMenuProps, getInputProps, highlightedIndex, getItemProps, closeMenu } =
+    useCombobox<ComboItem>({
       items,
       inputValue,
       itemToString,
@@ -168,10 +168,35 @@ export function LocationAutocomplete({
         setInputValue("");
         onInputChange?.("");
       },
-    },
-  );
+    });
 
   const menuOpen = isOpen && !isLoading && items.length > 0;
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    // Enter on a highlighted row is committed here, synchronously, instead of
+    // through downshift's onSelectedItemChange — that callback runs in an
+    // effect after the render, so a fast Tab/Enter right after the pick could
+    // submit the surrounding form while its selection was still unset ("Choose
+    // a location for this item."). React flushes this update at the end of the
+    // keydown, before the next key event is dispatched.
+    if (event.key !== "Enter" || !isOpen || highlightedIndex < 0) {
+      return;
+    }
+    const item = items.at(highlightedIndex);
+    if (!item) {
+      return;
+    }
+    event.preventDefault();
+    Object.assign(event.nativeEvent, { preventDownshiftDefault: true });
+    if (item.kind === "create") {
+      onSelect({ type: "new", name: item.query });
+    } else {
+      onSelect({ type: "existing", option: item.option });
+    }
+    setInputValue("");
+    onInputChange?.("");
+    closeMenu();
+  }
 
   return (
     <div>
@@ -187,6 +212,7 @@ export function LocationAutocomplete({
             "aria-describedby": describedBy,
             "aria-invalid": describedBy ? true : undefined,
             disabled,
+            onKeyDown: handleInputKeyDown,
           })}
           placeholder={placeholder}
           className={cn(
