@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Stuff Locator Wireframes",
+  "schemaVersion": 1,
+  "description": "Stuff Locator wireframes v1 — seven mobile screens covering onboarding, the home list, semantic search, browse-by-place, add-with-autocomplete, item detail with provenance, and the activity feed. Low-fidelity greyscale, annotated with the open design questions.",
+  "mcpTools": [],
+  "mcpServerNames": []
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stuff Locator — Wireframes v1</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --mid:#6b6b6b; --line:#c8c8c8; --wash:#f4f4f2;
+    --paper:#fff; --note:#b8562f; --noteBg:#fdf3ee;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px 24px 80px;background:#e8e8e5;font-family:var(--font);color:var(--ink);line-height:1.5}
+  header{max-width:1180px;margin:0 auto 40px}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--mid);font-size:15px;margin:0}
+  .legend{max-width:1180px;margin:0 auto 36px;padding:14px 18px;background:var(--noteBg);border-left:3px solid var(--note);font-size:13.5px;color:#5a3020}
+  .legend b{color:var(--note)}
+  .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:34px}
+  .cell{display:flex;flex-direction:column}
+  .cap{font-size:12px;font-weight:660;text-transform:uppercase;letter-spacing:.07em;color:var(--mid);margin-bottom:9px}
+  .cap span{color:var(--ink)}
+  .phone{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:580px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .bar{height:22px;background:var(--wash);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--mid);letter-spacing:.04em}
+  .body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:12px}
+  .ttl{font-size:16px;font-weight:680;margin:2px 0 10px;letter-spacing:-.01em}
+  .search{border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--mid);display:flex;align-items:center;gap:7px;margin-bottom:9px;background:var(--paper)}
+  .search.on{border-color:var(--ink);color:var(--ink)}
+  .toggle{display:flex;gap:5px;margin-bottom:11px}
+  .chip{font-size:10.5px;padding:4px 9px;border:1px solid var(--line);border-radius:20px;color:var(--mid);white-space:nowrap}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .item{border-bottom:1px solid #ececec;padding:9px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .item:last-child{border-bottom:0}
+  .iname{font-size:13.5px;font-weight:600;margin-bottom:2px}
+  .ipath{font-size:10.5px;color:var(--mid);font-family:var(--mono);letter-spacing:-.01em}
+  .idet{font-size:10.5px;color:var(--mid);font-style:italic;margin-top:2px}
+  .meta{font-size:9.5px;color:#a0a0a0;white-space:nowrap;padding-top:2px}
+  .why{font-size:9.5px;color:var(--note);background:var(--noteBg);padding:1px 5px;border-radius:3px;display:inline-block;margin-top:3px}
+  .grouphd{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);margin:12px 0 3px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+  .grouphd:first-child{margin-top:0}
+  .indent{padding-left:13px;border-left:2px solid #ececec;margin-left:3px}
+  .tabs{border-top:1px solid var(--line);display:flex;background:var(--wash)}
+  .tab{flex:1;text-align:center;padding:9px 0 10px;font-size:10px;color:var(--mid)}
+  .tab.on{color:var(--ink);font-weight:680;box-shadow:inset 0 2px 0 var(--ink)}
+  .fab{position:absolute;right:14px;bottom:52px;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1}
+  .wrap{position:relative;display:flex;flex-direction:column;flex:1;overflow:hidden}
+  .sheet{margin-top:auto;border-top:1.5px solid var(--ink);background:var(--paper);padding:12px;border-radius:12px 12px 0 0}
+  .fld{margin-bottom:10px}
+  .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);margin-bottom:3px;font-weight:660}
+  .inp{border:1.5px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  .inp.filled{border-color:var(--ink)}
+  .inp.ph{color:#b0b0b0}
+  .drop{border:1.5px solid var(--ink);border-top:0;border-radius:0 0 7px 7px;margin-top:-2px}
+  .opt{padding:6px 9px;font-size:11px;border-bottom:1px solid #f0f0f0;font-family:var(--mono);letter-spacing:-.01em}
+  .opt:last-child{border-bottom:0}
+  .opt.new{font-family:var(--font);color:var(--note);font-weight:600}
+  .opt b{background:#ffe9a8;font-weight:700}
+  .btn{background:var(--ink);color:#fff;text-align:center;padding:10px;border-radius:8px;font-size:13px;font-weight:640;margin-top:2px}
+  .btn.ghost{background:transparent;color:var(--mid);border:1.5px solid var(--line)}
+  .crumb{font-family:var(--mono);font-size:11px;color:var(--mid);background:var(--wash);padding:8px 10px;border-radius:7px;margin-bottom:11px;line-height:1.6}
+  .row{display:flex;justify-content:space-between;font-size:11.5px;padding:7px 0;border-bottom:1px solid #f0f0f0}
+  .row span:first-child{color:var(--mid)}
+  .ev{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #f0f0f0}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--line);margin-top:5px;flex-shrink:0}
+  .dot.now{background:var(--ink)}
+  .evt{font-size:11.5px;line-height:1.45}
+  .evt b{font-weight:660}
+  .evm{font-size:9.5px;color:#a0a0a0;margin-top:2px}
+  .prog{display:flex;gap:4px;margin-bottom:12px}
+  .pdot{height:3px;flex:1;background:var(--line);border-radius:2px}
+  .pdot.on{background:var(--ink)}
+  .big{font-size:17px;font-weight:680;line-height:1.3;margin-bottom:6px;letter-spacing:-.01em}
+  .lead{font-size:12.5px;color:var(--mid);margin-bottom:14px}
+  .note{background:var(--noteBg);border-left:2.5px solid var(--note);padding:8px 10px;font-size:11.5px;color:#5a3020;margin-top:11px;border-radius:0 5px 5px 0}
+  .note b{color:var(--note)}
+  .empty{border:1.5px dashed var(--line);border-radius:9px;padding:16px;text-align:center;font-size:11.5px;color:var(--mid);margin-top:6px}
+  footer{max-width:1180px;margin:44px auto 0;font-size:12.5px;color:var(--mid);border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Stuff Locator — wireframes v1</h1>
+  <p class="sub">Mobile-first PWA · structure only, no visual design · Aug 16, 2026</p>
+</header>
+
+<div class="legend">
+  <b>Deliberately low-fidelity.</b> Greyscale boxes so the conversation stays on structure and flow rather than colour and type. Orange annotations mark the decisions worth arguing about.
+</div>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="cap">01 · <span>Onboarding — guided seeding</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="prog"><div class="pdot on"></div><div class="pdot on"></div><div class="pdot"></div><div class="pdot"></div></div>
+        <div class="big">Where do you keep your passport?</div>
+        <div class="lead">Two of three. We'll start with things people lose most.</div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="inp filled">Bedroom › Filing box</div>
+        </div>
+        <div class="fld">
+          <div class="lbl">Where exactly? <span style="text-transform:none;letter-spacing:0">(optional)</span></div>
+          <div class="inp ph">with the birth certificates</div>
+        </div>
+        <div class="btn">Save and continue</div>
+        <div class="btn ghost" style="margin-top:7px">I don't have one</div>
+        <div class="note"><b>Why these three.</b> Passport, camping tent, spare keys — a filed document, a bulky object, a small hidden thing. Each teaches a different shape of "location". This is also the demo script a reviewer walks.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="cap">02 · <span>Home — everything (default)</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search">⌕ Search…</div>
+          <div class="toggle"><div class="chip on">All 18</div><div class="chip">By place</div><div class="chip">Recent</div></div>
+          <div class="item"><div><div class="iname">Spare house keys</div><div class="ipath">Garage › Closet › Toolbox › Red box</div></div><div class="meta">2d</div></div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Bedroom › Filing box</div><div class="idet">with the birth certificates</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Camping tent</div><div class="ipath">Garage › High shelf</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Winter coats</div><div class="ipath">Bedroom › Under bed</div></div><div class="meta">4m</div></div>
+          <div class="item"><div><div class="iname">Router box + cables</div><div class="ipath">Office › Drawer 2</div></div><div class="meta">6m</div></div>
+        </div>
+        <div class="fab">+</div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div><div class="tab">Home</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="cap">03 · <span>Search — the moment that matters</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search on">⌕ travel documents</div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Bedroom › Filing box</div><div class="idet">with the birth certificates</div><div class="why">≈ matched on meaning</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Old visas folder</div><div class="ipath">Office › Filing cabinet</div><div class="why">≈ matched on meaning</div></div><div class="meta">1y</div></div>
+          <div class="empty">Nothing else close.<br>Try “documents” or browse by place.</div>
+          <div class="note"><b>The whole app in one screen.</b> No item contains the words “travel documents”. Embeddings find it anyway — and the badge says <i>why</i>, so it never feels like magic that might not work next time.</div>
+        </div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div><div class="tab">Home</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="cap">04 · <span>By place — nesting made visible</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search">⌕ Search…</div>
+          <div class="toggle"><div class="chip">All 18</div><div class="chip on">By place</div><div class="chip">Recent</div></div>
+          <div class="grouphd">Garage · 7</div>
+          <div class="item"><div><div class="iname">Camping tent</div><div class="ipath">High shelf</div></div></div>
+          <div class="indent">
+            <div class="grouphd" style="margin-top:8px">Closet › Toolbox</div>
+            <div class="item"><div><div class="iname">Spare house keys</div><div class="ipath">Red box</div></div></div>
+            <div class="item"><div><div class="iname">Bike multi-tool</div><div class="ipath">Red box</div></div></div>
+          </div>
+          <div class="grouphd">Bedroom · 4</div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Filing box</div></div></div>
+        </div>
+        <div class="fab">+</div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div><div class="tab">Home</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="cap">05 · <span>Add — location autocomplete</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body" style="background:rgba(0,0,0,.05)"></div>
+        <div class="sheet">
+          <div class="ttl">Add something</div>
+          <div class="fld">
+            <div class="lbl">What is it?</div>
+            <div class="inp filled">Ski goggles</div>
+          </div>
+          <div class="fld">
+            <div class="lbl">Where?</div>
+            <div class="inp filled">red</div>
+            <div class="drop">
+              <div class="opt">Garage › Closet › Toolbox › <b>Red</b> box</div>
+              <div class="opt">Office › <b>Red</b> folder tray</div>
+              <div class="opt new">+ New place called “red”…</div>
+            </div>
+          </div>
+          <div class="note"><b>Typed, not tapped.</b> Cascading pickers cost one tap per level — four taps to reach the red box. Autocomplete over full paths gets there in three characters, and depth stops being a cost.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="cell">
+    <div class="cap">06 · <span>Item detail — with provenance</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div style="font-size:11px;color:var(--mid);margin-bottom:9px">‹ Back</div>
+          <div class="ttl" style="font-size:19px">Spare house keys</div>
+          <div class="crumb">Garage<br>&nbsp;└ Closet<br>&nbsp;&nbsp;&nbsp;└ Toolbox<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ <b>Red box</b> (locked)</div>
+          <div class="row"><span>Added by</span><span>Itamar · 12 Jun</span></div>
+          <div class="row"><span>Last moved by</span><span>Maayan · 2d ago</span></div>
+          <div class="grouphd" style="margin-top:14px">History</div>
+          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> moved it here from <i>Kitchen › Drawer 1</i></div><div class="evm">2 days ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> added it</div><div class="evm">12 June</div></div></div>
+          <div class="note"><b>“My partner moved it and didn't tell me.”</b> The real failure in a shared home. Provenance turns a dead end into an answer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="cell">
+    <div class="cap">07 · <span>Activity — catch up</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Activity</div>
+          <div class="grouphd">This week</div>
+          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> moved <b>spare house keys</b><br>Kitchen › Drawer 1 → Garage › … › Red box</div><div class="evm">2 days ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> added <b>ski goggles</b></div><div class="evm">4 days ago</div></div></div>
+          <div class="grouphd">Earlier</div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> added <b>camping tent</b></div><div class="evm">24 July</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> created <b>Garage › Closet</b></div><div class="evm">24 July</div></div></div>
+        </div>
+        <div class="tabs"><div class="tab">Stuff</div><div class="tab on">Activity</div><div class="tab">Home</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <b>Open for discussion:</b> three tabs or two (does “Home” earn a tab, or belong in a menu?) · does the “matched on meaning” badge help or patronise · should search be sticky at the top when scrolling · does “By place” need collapsible groups at 18 items, or is that premature.
+</footer>
+
+</body>
+</html>

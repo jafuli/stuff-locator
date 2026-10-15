@@ -17,3 +17,5 @@ supabase/.temp
 supabase/snippets
 # Prose docs are left as authored (tables/wrapping are hand-tuned)
 *.md
+# Design wireframes are hand-written, annotated HTML; v1 is kept as the original
+docs/stuff-locator-wireframes

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Stuff Locator Wireframes",
+  "schemaVersion": 1,
+  "description": "Stuff Locator wireframes v2 — the locations refactor: one chip path picker for Stash, item edit and onboarding (nested places, no duplicates), and Browse reduced to navigate + tidy up (Add a place here, Rename, Move into…, Delete). Stuff screen gains All / By place chips as the way into Browse; Activity gains place rename/move/delete and item rename/detail-edit/delete events. Unchanged v1 screens kept for context. Low-fidelity greyscale, annotated.",
+  "mcpTools": [],
+  "mcpServerNames": []
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stuff Locator — Wireframes v2</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --mid:#6b6b6b; --line:#c8c8c8; --wash:#f4f4f2;
+    --paper:#fff; --note:#b8562f; --noteBg:#fdf3ee;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px 24px 80px;background:#e8e8e5;font-family:var(--font);color:var(--ink);line-height:1.5}
+  header{max-width:1180px;margin:0 auto 28px}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--mid);font-size:15px;margin:0}
+  .legend{max-width:1180px;margin:0 auto 18px;padding:14px 18px;background:var(--noteBg);border-left:3px solid var(--note);font-size:13.5px;color:#5a3020}
+  .legend b{color:var(--note)}
+  .changes{max-width:1180px;margin:0 auto 10px;font-size:13px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 18px}
+  .changes h2{font-size:13px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--mid)}
+  .changes ul{margin:0;padding-left:18px}
+  .changes li{margin:2px 0}
+  .sect{max-width:1180px;margin:44px auto 16px}
+  .sect h2{font-size:18px;margin:0 0 3px;letter-spacing:-.01em}
+  .sect p{margin:0;color:var(--mid);font-size:13.5px;max-width:760px}
+  .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:34px}
+  .cell{display:flex;flex-direction:column}
+  .cap{font-size:12px;font-weight:660;text-transform:uppercase;letter-spacing:.07em;color:var(--mid);margin-bottom:9px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+  .cap span{color:var(--ink)}
+  .tag{font-size:9px;padding:1px 6px;border-radius:3px;letter-spacing:.06em;margin-left:4px;font-weight:700}
+  .tag.new{background:var(--ink);color:#fff}
+  .tag.chg{border:1px solid var(--ink);color:var(--ink)}
+  .tag.same{border:1px solid var(--line);color:var(--mid)}
+  .phone{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:600px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .bar{height:22px;background:var(--wash);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--mid);letter-spacing:.04em;flex-shrink:0}
+  .body{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:12px}
+  .ttl{font-size:16px;font-weight:680;margin:2px 0 10px;letter-spacing:-.01em}
+  .back{font-size:11px;color:var(--mid);margin-bottom:8px}
+  .search{border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--mid);display:flex;align-items:center;gap:7px;margin-bottom:9px;background:var(--paper)}
+  .search.on{border-color:var(--ink);color:var(--ink)}
+  .toggle{display:flex;gap:5px;margin-bottom:11px}
+  .chip{font-size:10.5px;padding:4px 9px;border:1px solid var(--line);border-radius:20px;color:var(--mid);white-space:nowrap}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .item{border-bottom:1px solid #ececec;padding:9px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .item:last-child{border-bottom:0}
+  .iname{font-size:13.5px;font-weight:600;margin-bottom:2px}
+  .ipath{font-size:10.5px;color:var(--mid);font-family:var(--mono);letter-spacing:-.01em}
+  .idet{font-size:10.5px;color:var(--mid);font-style:italic;margin-top:2px}
+  .meta{font-size:9.5px;color:#a0a0a0;white-space:nowrap;padding-top:2px}
+  .why{font-size:9.5px;color:var(--note);background:var(--noteBg);padding:1px 5px;border-radius:3px;display:inline-block;margin-top:3px}
+  .grouphd{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);margin:12px 0 3px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+  .tabs{border-top:1px solid var(--line);display:flex;background:var(--wash);flex-shrink:0}
+  .tab{flex:1;text-align:center;padding:9px 0 10px;font-size:10px;color:var(--mid)}
+  .tab.on{color:var(--ink);font-weight:680;box-shadow:inset 0 2px 0 var(--ink)}
+  .fab{position:absolute;right:14px;bottom:52px;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1}
+  .wrap{position:relative;display:flex;flex-direction:column;flex:1;overflow:hidden}
+  .fld{margin-bottom:10px}
+  .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);margin-bottom:3px;font-weight:660}
+  .inp{border:1.5px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  .inp.filled{border-color:var(--ink)}
+  .inp.ph{color:#b0b0b0}
+  .drop{border:1.5px solid var(--ink);border-top:0;border-radius:0 0 7px 7px;margin-top:-2px;background:var(--paper)}
+  .dhd{font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--mid);padding:4px 9px 3px;background:var(--wash);font-weight:660}
+  .opt{padding:6px 9px;font-size:11px;border-bottom:1px solid #f0f0f0;font-family:var(--mono);letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .opt:last-child{border-bottom:0}
+  .opt.hl{background:#ececea}
+  .opt.new{font-family:var(--font);color:var(--note);font-weight:600}
+  .opt.new .in{color:var(--mid);font-weight:400;font-family:var(--mono)}
+  .opt b{background:#ffe9a8;font-weight:700}
+  .here{font-family:var(--font);font-size:8.5px;color:var(--mid);border:1px solid var(--line);border-radius:3px;padding:0 4px;white-space:nowrap}
+  /* path picker */
+  .pick{border:1.5px solid var(--line);border-radius:7px;padding:5px 6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:33px;font-size:12px}
+  .pick.on{border-color:var(--ink)}
+  .pick.open{border-radius:7px 7px 0 0}
+  .pc{font-family:var(--mono);font-size:10.5px;padding:2px 6px;border-radius:4px;background:var(--wash);border:1px solid var(--line);white-space:nowrap;letter-spacing:-.01em}
+  .pc.new{background:var(--paper);border:1.5px dashed var(--ink)}
+  .sep{color:var(--mid);font-size:10px;margin:0 -2px}
+  .caret{display:inline-block;width:1px;height:14px;background:var(--ink);vertical-align:middle}
+  .ph2{color:#b0b0b0}
+  .hint{font-size:10px;color:var(--mid);margin-top:4px}
+  .hint b{color:var(--ink);font-weight:600}
+  .err{font-size:10px;color:var(--ink);margin-top:4px;font-weight:600}
+  .err:before{content:"! ";color:var(--note)}
+  .btn{background:var(--ink);color:#fff;text-align:center;padding:10px;border-radius:8px;font-size:13px;font-weight:640;margin-top:2px}
+  .btn.ghost{background:transparent;color:var(--mid);border:1.5px solid var(--line)}
+  .btn.sm{padding:6px 10px;font-size:11.5px;border-radius:7px;margin:0}
+  .crumb{font-family:var(--mono);font-size:11px;color:var(--mid);background:var(--wash);padding:8px 10px;border-radius:7px;margin-bottom:11px;line-height:1.6}
+  .row{display:flex;justify-content:space-between;font-size:11.5px;padding:7px 0;border-bottom:1px solid #f0f0f0}
+  .row span:first-child{color:var(--mid)}
+  .ev{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #f0f0f0}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--line);margin-top:5px;flex-shrink:0}
+  .dot.now{background:var(--ink)}
+  .evt{font-size:11.5px;line-height:1.45}
+  .evt b{font-weight:660}
+  .evm{font-size:9.5px;color:#a0a0a0;margin-top:2px}
+  .steprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .steplbl{font-size:9.5px;font-weight:660;text-transform:uppercase;letter-spacing:.06em;color:var(--mid)}
+  .skip{font-size:10.5px;color:var(--mid);text-decoration:underline;text-underline-offset:2px}
+  .prog{display:flex;gap:4px;margin-bottom:12px}
+  .pdot{height:3px;flex:1;background:var(--line);border-radius:2px}
+  .pdot.on{background:var(--ink)}
+  .big{font-size:16px;font-weight:680;line-height:1.3;margin-bottom:4px;letter-spacing:-.01em}
+  .lead{font-size:11.5px;color:var(--mid);margin-bottom:12px}
+  .note{background:var(--noteBg);border-left:2.5px solid var(--note);padding:8px 10px;font-size:11px;color:#5a3020;margin-top:auto;border-radius:0 5px 5px 0;line-height:1.45}
+  .note b{color:var(--note)}
+  .empty{border:1.5px dashed var(--line);border-radius:9px;padding:16px;text-align:center;font-size:11.5px;color:var(--mid);margin-top:6px}
+  /* browse */
+  .hdrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .more{width:32px;height:32px;border:1.5px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:1px;color:var(--ink);flex-shrink:0}
+  .more.on{border-color:var(--ink);background:var(--wash)}
+  .place{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #ececec;font-size:13.5px;font-weight:600}
+  .place .cnt{font-size:9.5px;color:#a0a0a0;font-weight:400;margin-left:auto;margin-right:8px}
+  .place .chev{color:var(--mid);font-weight:400}
+  .addhere{border:1.5px dashed var(--line);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--mid);margin-top:9px}
+  .addrow{display:flex;gap:6px;margin-top:9px}
+  .addrow .inp{flex:1}
+  .crumbline{font-family:var(--mono);font-size:10.5px;color:var(--mid);margin:-6px 0 10px}
+  .titleinp{border:1.5px solid var(--ink);border-radius:7px;padding:4px 8px;font-size:16px;font-weight:680;flex:1}
+  /* overlays */
+  .scrim{position:absolute;inset:22px 0 0 0;background:rgba(0,0,0,.32);display:flex;flex-direction:column;justify-content:flex-end}
+  .scrim.center{justify-content:center;padding:18px}
+  .sheet{background:var(--paper);padding:12px;border-radius:12px 12px 0 0;border-top:1.5px solid var(--ink)}
+  .dialog{background:var(--paper);border-radius:12px;padding:14px;border:1.5px solid var(--ink)}
+  .dialog .dt{font-size:14.5px;font-weight:680;margin-bottom:5px;letter-spacing:-.01em}
+  .dialog .dd{font-size:11.5px;color:var(--mid);margin-bottom:12px}
+  .btns{display:flex;gap:7px;justify-content:flex-end}
+  .menu .mi{padding:11px 4px;font-size:13px;border-bottom:1px solid #f0f0f0}
+  .menu .mi:last-child{border-bottom:0}
+  .menu .mi small{display:block;font-size:10px;color:var(--mid)}
+  .grip{width:34px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 8px}
+  .dim{opacity:.55}
+  footer{max-width:1180px;margin:44px auto 0;font-size:12.5px;color:var(--mid);border-top:1px solid var(--line);padding-top:18px}
+  footer ul{margin:6px 0 0;padding-left:18px}
+  footer li{margin:3px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Stuff Locator — wireframes v2</h1>
+  <p class="sub">Locations refactor · structure only, no visual design · Oct 14, 2026 (rev 3) · supersedes v1 (Aug 16), kept alongside as <code>index.v1.html</code></p>
+</header>
+
+<div class="legend">
+  <b>Still deliberately low-fidelity.</b> Greyscale boxes, orange notes for the reasoning. Screens are tagged
+  <span class="tag new">NEW</span> <span class="tag chg">CHANGED</span> <span class="tag same">UNCHANGED</span>.
+  In the location field, a <span class="pc">solid chip</span> is a place that already exists; a <span class="pc new">dashed chip</span> is a new place that's only saved when the item is.
+</div>
+
+<div class="changes">
+  <h2>What changed since v1</h2>
+  <ul>
+    <li><b>One location picker everywhere an item gets a place</b> (Add, Edit item, Onboarding): pick or create one level at a time, each level becomes a chip, typing continues inside it. Full-path search from v1 stays.</li>
+    <li><b>No more duplicate places:</b> an exact match (any case) under the same parent replaces the “+ New” row.</li>
+    <li><b>Browse is navigate + tidy up:</b> a name-only “Add a place here”, and a ⋯ menu on a place's page with Rename, Move into… and Delete (blocked until empty). The separate Add-location form is gone.</li>
+    <li><b>The way into Browse:</b> the Stuff screen gets two chips under search, <b>All (18)</b> and <b>By place</b>. By place opens Browse, which shows the same header so the chips read as one toggle.</li>
+    <li><b>Activity shows more:</b> place renames, moves and deletes, plus item renames, detail edits and deletes, alongside the existing “added” and “moved” item events.</li>
+    <li>v1's screen 04 (“By place” grouped list) is replaced by the Browse drill-down the app actually built. Tab bar shows the settled two tabs (Stuff, Activity).</li>
+  </ul>
+</div>
+
+<!-- ============ A. CAPTURE ============ -->
+<div class="sect">
+  <h2>A · Capture — one path picker</h2>
+  <p>Used on Add item, Edit item and every onboarding step. Read A1 → A4 as one sequence: find, go inside, build a new path, and the duplicate guard.</p>
+</div>
+<div class="grid">
+
+  <!-- A1 -->
+  <div class="cell">
+    <div class="cap">A1 · <span>Add — find anything by path</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="back">‹ Back to Stuff</div>
+        <div class="ttl">Add item</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Ski goggles</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on open"><span>red</span><span class="caret"></span></div>
+          <div class="drop">
+            <div class="dhd">Matches anywhere</div>
+            <div class="opt hl"><span>Garage › Closet › Toolbox › <b>Red</b> box</span></div>
+            <div class="opt"><span>Office › <b>Red</b> folder tray</span></div>
+            <div class="opt new"><span>+ New place “red”</span><span class="in">top level</span></div>
+          </div>
+        </div>
+        <div class="note"><b>Kept from v1.</b> Full-path search still reaches the red box in three characters. What's new: picking a row turns it into chips, so you can keep going inside it.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A2 -->
+  <div class="cell">
+    <div class="cap">A2 · <span>Picker — going inside a place</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="back">‹ Back to Stuff</div>
+        <div class="ttl">Add item</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Passport</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on open"><span class="pc">Office</span><span class="sep">›</span><span>cab</span><span class="caret"></span></div>
+          <div class="drop">
+            <div class="dhd">Inside Office</div>
+            <div class="opt hl"><span><b>Cab</b>inet</span></div>
+            <div class="opt new"><span>+ New “cab”</span><span class="in">inside Office</span></div>
+            <div class="dhd">Matches anywhere</div>
+            <div class="opt"><span>Kitchen › Spice <b>cab</b>inet</span></div>
+          </div>
+        </div>
+        <div class="note"><b>Picked “Office” → it became a chip.</b> The caret stays, so typing now searches inside it: its own sub-places first, then everywhere. Backspace on an empty field removes the last chip; tapping a chip goes back to that level.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A3 -->
+  <div class="cell">
+    <div class="cap">A3 · <span>Picker — building a new path</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="back">‹ Back to Stuff</div>
+        <div class="ttl">Add item</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Passport</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on"><span class="pc">Office</span><span class="sep">›</span><span class="pc">Cabinet</span><span class="sep">›</span><span class="pc new">Top drawer</span><span class="caret"></span></div>
+          <div class="hint">Goes in <b>Office › Cabinet › Top drawer</b> · 1 new place</div>
+        </div>
+        <div class="fld"><div class="lbl">Detail <span style="text-transform:none;letter-spacing:0">(optional)</span></div><div class="inp filled">with the birth certificates</div></div>
+        <div class="btn">Add item</div>
+        <div class="note"><b>Dashed = not saved yet.</b> You can chain several new levels. New places are created together with the item in one step, so a failed save leaves nothing behind and retrying can't make a duplicate.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A4 -->
+  <div class="cell">
+    <div class="cap">A4 · <span>Picker — no duplicate places</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="back">‹ Back to Stuff</div>
+        <div class="ttl">Add item</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Spare charger</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on open"><span class="pc">Office</span><span class="sep">›</span><span>cabinet</span><span class="caret"></span></div>
+          <div class="drop">
+            <div class="dhd">Inside Office</div>
+            <div class="opt hl"><span><b>Cabinet</b></span><span class="here">already here</span></div>
+            <div class="dhd">Matches anywhere</div>
+            <div class="opt"><span>Kitchen › Spice <b>cabinet</b></span></div>
+          </div>
+        </div>
+        <div class="note"><b>The duplicate-bug fix, visible.</b> An exact match under the same parent, in any case, replaces the “+ New” row, and the database enforces the same rule. The same name under a <i>different</i> parent is fine: every cabinet can have a “Top drawer”.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A5 -->
+  <div class="cell">
+    <div class="cap">A5 · <span>Edit item — same picker, prefilled</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="back">‹ Back to item</div>
+        <div class="ttl">Edit item</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Spare house keys</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on"><span class="pc">Garage</span><span class="sep">›</span><span class="pc">Closet</span><span class="sep">›</span><span class="pc">Toolbox</span><span class="sep">›</span><span class="pc new">Blue tin</span><span class="caret"></span></div>
+          <div class="hint">Moves to <b>Garage › Closet › Toolbox › Blue tin</b> · 1 new place</div>
+        </div>
+        <div class="fld"><div class="lbl">Detail <span style="text-transform:none;letter-spacing:0">(optional)</span></div><div class="inp ph">Add a detail</div></div>
+        <div class="btn">Save changes</div>
+        <div class="btn ghost" style="margin-top:7px">Delete item</div>
+        <div class="note"><b>Moving to a spot that doesn't exist yet.</b> The item was in “Red box”: tap the “Toolbox” chip to go back a level, type “Blue tin”. Before, Edit could only pick existing places.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ B. ONBOARDING ============ -->
+<div class="sect">
+  <h2>B · Onboarding — the full experience from step one</h2>
+  <p>The guided steps as built (three item steps + invite), now with the real picker. A brand-new household has no places, so everything starts dashed.</p>
+</div>
+<div class="grid">
+
+  <!-- B1 -->
+  <div class="cell">
+    <div class="cap">B1 · <span>Onboarding — a nested place, first try</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="steprow"><div class="steplbl">Step 1 of 4</div><div class="skip">Skip guided setup</div></div>
+        <div class="prog"><div class="pdot on"></div><div class="pdot"></div><div class="pdot"></div><div class="pdot"></div></div>
+        <div class="big">Stash something filed away</div>
+        <div class="lead">A passport, a birth certificate — anything tucked in a folder or drawer.</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Passport</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on"><span class="pc new">Office</span><span class="sep">›</span><span class="pc new">Cabinet</span><span class="sep">›</span><span class="pc new">Top drawer</span><span class="caret"></span></div>
+          <div class="hint">3 new places</div>
+        </div>
+        <div class="btn">Add item</div>
+        <div class="btn ghost" style="margin-top:7px">Skip this step</div>
+        <div class="note"><b>Was:</b> one top-level place, nothing deeper. <b>Now:</b> the empty field hints “e.g. Office, then Cabinet…”, and a new household builds the whole path in one go.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B2 -->
+  <div class="cell">
+    <div class="cap">B2 · <span>Onboarding — the next step reuses places</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="bar">9:41</div>
+      <div class="body">
+        <div class="steprow"><div class="steplbl">Step 2 of 4</div><div class="skip">Skip guided setup</div></div>
+        <div class="prog"><div class="pdot on"></div><div class="pdot on"></div><div class="pdot"></div><div class="pdot"></div></div>
+        <div class="big">Stash something bulky</div>
+        <div class="lead">A camping tent, a suitcase — anything stored somewhere out of the way.</div>
+        <div class="fld"><div class="lbl">Name</div><div class="inp filled">Camping tent</div></div>
+        <div class="fld">
+          <div class="lbl">Location</div>
+          <div class="pick on open"><span>office</span><span class="caret"></span></div>
+          <div class="drop">
+            <div class="dhd">Top level</div>
+            <div class="opt hl"><span><b>Office</b></span><span class="here">already here</span></div>
+            <div class="dhd">Matches anywhere</div>
+            <div class="opt"><span><b>Office</b> › Cabinet</span></div>
+            <div class="opt"><span><b>Office</b> › Cabinet › Top drawer</span></div>
+          </div>
+        </div>
+        <div class="note"><b>Your test case.</b> Typing “Office” again used to offer “+ New place” and create a second Office. Now step 1's places are offered and the exact match wins.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ C. BROWSE ============ -->
+<div class="sect">
+  <h2>C · Browse — navigate + tidy up</h2>
+  <p>Creating places mostly happens in the picker. Browse keeps a name-only shortcut and is where places get renamed, moved and deleted, from the place's own page.</p>
+</div>
+<div class="grid">
+
+  <!-- C1 -->
+  <div class="cell">
+    <div class="cap">C1 · <span>By place — Browse top level</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search">⌕ Search…</div>
+          <div class="toggle"><div class="chip">All (18)</div><div class="chip on">By place</div></div>
+          <div class="place">Bedroom<span class="cnt">4 items</span><span class="chev">›</span></div>
+          <div class="place">Garage<span class="cnt">7 items</span><span class="chev">›</span></div>
+          <div class="place">Kitchen<span class="cnt">2 items</span><span class="chev">›</span></div>
+          <div class="place">Office<span class="cnt">5 items</span><span class="chev">›</span></div>
+          <div class="addhere">+ Add a place here</div>
+          <div class="note"><b>Reached from the Stuff screen's “By place” chip</b>, with the same header, so it reads as a toggle (tap “All” to go back). Typing in search switches back to All. The old “+ Add location” form is gone; the name-only shortcut adds a place where you are.</div>
+        </div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 -->
+  <div class="cell">
+    <div class="cap">C2 · <span>A place's page — adding a sub-place</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="back">‹ Back to Office</div>
+          <div class="hdrow"><div class="ttl">Cabinet</div><div class="more">⋯</div></div>
+          <div class="crumbline">Office › Cabinet</div>
+          <div class="place">Bottom drawer<span class="cnt">empty</span><span class="chev">›</span></div>
+          <div class="place">Top drawer<span class="cnt">1 item</span><span class="chev">›</span></div>
+          <div class="addrow"><div class="inp filled">top drawer<span class="caret" style="margin-left:1px"></span></div><div class="btn sm">Add</div></div>
+          <div class="err">You already have “Top drawer” here.</div>
+          <div class="grouphd">Items in Cabinet</div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Top drawer</div></div></div>
+          <div class="item"><div><div class="iname">Spare charger</div><div class="ipath">Cabinet</div></div></div>
+          <div class="note"><b>Same no-duplicates rule as the picker.</b> Empty places are allowed and stay until someone deletes them.</div>
+        </div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C3 -->
+  <div class="cell">
+    <div class="cap">C3 · <span>⋯ menu — manage this place</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body dim">
+          <div class="back">‹ Back to Office</div>
+          <div class="hdrow"><div class="ttl">Cabinet</div><div class="more on">⋯</div></div>
+          <div class="crumbline">Office › Cabinet</div>
+          <div class="place">Bottom drawer<span class="cnt">empty</span><span class="chev">›</span></div>
+          <div class="place">Top drawer<span class="cnt">1 item</span><span class="chev">›</span></div>
+        </div>
+        <div class="scrim">
+          <div class="sheet menu">
+            <div class="grip"></div>
+            <div class="mi">Rename</div>
+            <div class="mi">Move into…<small>Everything inside moves with it</small></div>
+            <div class="mi">Delete</div>
+            <div class="note" style="margin-top:8px"><b>Only on a place's own page,</b> not on every row, so lists stay a clean thing to tap through. Delete stays in the menu even when the place isn't empty: it opens an explanation (C6).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C4 -->
+  <div class="cell">
+    <div class="cap">C4 · <span>Rename — in place</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="back">‹ Back to Office</div>
+          <div class="hdrow"><div class="titleinp">Filing cabinet<span class="caret" style="margin-left:1px;height:17px"></span></div></div>
+          <div class="hint" style="margin-bottom:6px">Enter to save · Esc to cancel</div>
+          <div class="btns" style="justify-content:flex-start;margin-bottom:10px"><div class="btn sm">Save</div><div class="btn sm ghost">Cancel</div></div>
+          <div class="crumbline" style="margin-top:0">Office › Cabinet</div>
+          <div class="place">Bottom drawer<span class="cnt">empty</span><span class="chev">›</span></div>
+          <div class="place">Top drawer<span class="cnt">1 item</span><span class="chev">›</span></div>
+          <div class="note"><b>The heading becomes the input.</b> No separate screen. A clash with a sibling shows the same “You already have … here.” message.</div>
+        </div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C5 -->
+  <div class="cell">
+    <div class="cap">C5 · <span>Move into… — pick-only picker</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body dim">
+          <div class="back">‹ Back to Office</div>
+          <div class="hdrow"><div class="ttl">Cabinet</div><div class="more">⋯</div></div>
+        </div>
+        <div class="scrim">
+          <div class="sheet">
+            <div class="grip"></div>
+            <div class="ttl" style="font-size:14.5px">Move “Cabinet” into…</div>
+            <div class="fld">
+              <div class="pick on open"><span>bed</span><span class="caret"></span></div>
+              <div class="drop">
+                <div class="opt"><span>⤒ Top level</span></div>
+                <div class="dhd">Matches</div>
+                <div class="opt hl"><span><b>Bed</b>room</span></div>
+                <div class="opt"><span><b>Bed</b>room › Wardrobe</span></div>
+              </div>
+            </div>
+            <div class="hint" style="margin:-4px 0 10px">Cabinet and the places inside it aren't offered.</div>
+            <div class="btns"><div class="btn sm ghost">Cancel</div><div class="btn sm">Move</div></div>
+            <div class="note" style="margin-top:10px"><b>Pick-only:</b> no “+ New” rows here, which keeps a move one simple step. A place can't go inside itself.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C6 -->
+  <div class="cell">
+    <div class="cap">C6 · <span>Delete — empty vs not empty</span><span class="tag new">NEW</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body dim">
+          <div class="back">‹ Back to Office</div>
+          <div class="hdrow"><div class="ttl">Cabinet</div><div class="more">⋯</div></div>
+        </div>
+        <div class="scrim center" style="gap:12px">
+          <div class="dialog">
+            <div class="dt">Delete “Bottom drawer”?</div>
+            <div class="dd">It's empty. This can't be undone.</div>
+            <div class="btns"><div class="btn sm ghost">Cancel</div><div class="btn sm">Delete</div></div>
+          </div>
+          <div class="dialog">
+            <div class="dt">“Cabinet” isn't empty</div>
+            <div class="dd">It still holds 2 items and 2 places. Move or delete them first.</div>
+            <div class="btns"><div class="btn sm">OK</div></div>
+          </div>
+          <div class="note" style="margin-top:0"><b>Decided: blocked until empty.</b> An empty place deletes after a confirm (top). A place with anything inside explains what's there and offers no destructive button (bottom).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ E. STUFF + ACTIVITY ============ -->
+<div class="sect">
+  <h2>D · Stuff and Activity</h2>
+  <p>Chips on the Stuff screen are the way into Browse. Activity now also covers what happens to places, and item renames, detail edits and deletes.</p>
+</div>
+<div class="grid">
+
+  <!-- 02 -->
+  <div class="cell">
+    <div class="cap">02 · <span>Stuff — All / By place chips</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search">⌕ Search…</div>
+          <div class="toggle"><div class="chip on">All (18)</div><div class="chip">By place</div></div>
+          <div class="item"><div><div class="iname">Spare house keys</div><div class="ipath">Garage › Closet › Toolbox › Red box</div></div><div class="meta">2d</div></div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Office › Cabinet › Top drawer</div><div class="idet">with the birth certificates</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Camping tent</div><div class="ipath">Garage › High shelf</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Winter coats</div><div class="ipath">Bedroom › Under bed</div></div><div class="meta">4m</div></div>
+          <div class="note" style="margin-right:54px"><b>The way into Browse.</b> “By place” opens C1. v1's “Recent” chip is dropped. The count is all of the household's items, not the search results.</div>
+        </div>
+        <div class="fab" style="bottom:52px">+</div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 -->
+  <div class="cell">
+    <div class="cap">07 · <span>Activity — places, edits and deletes</span><span class="tag chg">CHANGED</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Activity</div>
+          <div class="grouphd" style="margin-top:0">This week</div>
+          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> renamed a place<br><span class="ipath">Office › Cabinet → Filing cabinet</span></div><div class="evm">1 hour ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> renamed <b>passport</b> → <b>Passport (blue)</b></div><div class="evm">3 hours ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> edited the detail of <b>camping tent</b><br><span class="idet">“poles are in the blue bag”</span></div><div class="evm">yesterday</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> moved the place <b>Camping box</b><br><span class="ipath">Garage → Bedroom › Under bed</span></div><div class="evm">yesterday</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> deleted the place <b>Bottom drawer</b><br><span class="ipath">was in Office › Cabinet</span></div><div class="evm">3 days ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Maayan</b> deleted <b>old phone charger</b><br><span class="ipath">was in Office › Cabinet › Top drawer</span></div><div class="evm">4 days ago</div></div></div>
+          <div class="note"><b>New:</b> place renamed, moved, deleted; item renamed, detail edited, deleted. Names and paths are kept <i>as they were</i>, so old events stay readable.</div>
+        </div>
+        <div class="tabs"><div class="tab">Stuff</div><div class="tab on">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ D. UNCHANGED ============ -->
+<div class="sect">
+  <h2>E · Unchanged from v1</h2>
+  <p>Kept for context. The only edit is the settled two-tab bar. Not re-reviewed in this pass.</p>
+</div>
+<div class="grid">
+
+  <!-- 03 -->
+  <div class="cell">
+    <div class="cap">03 · <span>Search — the moment that matters</span><span class="tag same">UNCHANGED</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="ttl">Our stuff</div>
+          <div class="search on">⌕ travel documents</div>
+          <div class="item"><div><div class="iname">Passport</div><div class="ipath">Office › Cabinet › Top drawer</div><div class="idet">with the birth certificates</div><div class="why">≈ matched on meaning</div></div><div class="meta">3w</div></div>
+          <div class="item"><div><div class="iname">Old visas folder</div><div class="ipath">Office › Filing cabinet</div><div class="why">≈ matched on meaning</div></div><div class="meta">1y</div></div>
+          <div class="empty">Nothing else close.<br>Try “documents” or browse by place.</div>
+          <div class="note"><b>The whole app in one screen.</b> No item contains the words “travel documents”. Embeddings find it anyway, and the badge says <i>why</i>, so it never feels like magic that might not work next time.</div>
+        </div>
+        <div class="tabs"><div class="tab on">Stuff</div><div class="tab">Activity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 -->
+  <div class="cell">
+    <div class="cap">06 · <span>Item detail — with provenance</span><span class="tag same">UNCHANGED</span></div>
+    <div class="phone">
+      <div class="wrap">
+        <div class="bar">9:41</div>
+        <div class="body">
+          <div class="back">‹ Back</div>
+          <div class="ttl" style="font-size:19px">Spare house keys</div>
+          <div class="crumb">Garage<br>&nbsp;└ Closet<br>&nbsp;&nbsp;&nbsp;└ Toolbox<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ <b>Red box</b> (locked)</div>
+          <div class="row"><span>Added by</span><span>Itamar · 12 Jun</span></div>
+          <div class="row"><span>Last moved by</span><span>Maayan · 2d ago</span></div>
+          <div class="grouphd" style="margin-top:14px">History</div>
+          <div class="ev"><div class="dot now"></div><div><div class="evt"><b>Maayan</b> moved it here from <i>Kitchen › Drawer 1</i></div><div class="evm">2 days ago</div></div></div>
+          <div class="ev"><div class="dot"></div><div><div class="evt"><b>Itamar</b> added it</div><div class="evm">12 June</div></div></div>
+          <div class="note"><b>“My partner moved it and didn't tell me.”</b> The real failure in a shared home. Provenance turns a dead end into an answer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <b>Settled in this pass</b>
+  <ul>
+    <li><b>Browse keeps “+ Add a place here”</b> as the label, top level included.</li>
+    <li><b>Delete stays blocked until a place is empty</b> for v1. Clearing a nested branch bottom-up is accepted friction; revisit only if it bites.</li>
+    <li><b>Still not in Activity:</b> an item's earlier moves (only its latest move shows, per ADR 0009), and places created while stashing (the item event covers them).</li>
+  </ul>
+</footer>
+
+</body>
+</html>
