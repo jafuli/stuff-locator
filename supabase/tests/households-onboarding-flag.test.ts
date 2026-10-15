@@ -10,7 +10,7 @@
 //
 // `npm run test:rls` auto-loads SUPABASE_URL/SUPABASE_ANON_KEY/
 // SUPABASE_SERVICE_ROLE_KEY from a gitignored .env.rls.local (see
-// items-insert.test.ts for the same shortcut) if you've written one;
+// rls-household-isolation.test.ts for the same shortcut) if you've written one;
 // otherwise export them yourself before running this.
 //
 // Covers this task's AC #4/#5 at the data layer: a brand-new household

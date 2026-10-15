@@ -34,6 +34,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail_text: string | null
+          from_text: string | null
+          household_id: string
+          id: string
+          kind: string
+          subject_id: string
+          subject_name: string
+          to_text: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail_text?: string | null
+          from_text?: string | null
+          household_id: string
+          id?: string
+          kind: string
+          subject_id: string
+          subject_name: string
+          to_text?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail_text?: string | null
+          from_text?: string | null
+          household_id?: string
+          id?: string
+          kind?: string
+          subject_id?: string
+          subject_name?: string
+          to_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_members: {
         Row: {
           household_id: string
@@ -253,6 +300,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_location: {
+        Args: { p_name: string; p_parent_id?: string }
+        Returns: {
+          created_at: string
+          household_id: string
+          id: string
+          name: string
+          parent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "locations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_container: {
         Args: { p_location_id: string }
         Returns: {
@@ -269,6 +332,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_item: {
+        Args: { p_item_id: string }
+        Returns: {
+          added_at: string
+          added_by: string
+          detail: string | null
+          household_id: string
+          id: string
+          last_moved_at: string | null
+          last_moved_by: string | null
+          location_id: string
+          name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       ensure_location_path: {
         Args: { p_household_id: string; p_names: string[]; p_parent_id: string }
         Returns: string
@@ -277,6 +360,7 @@ export type Database = {
         Args: { target_household_id: string }
         Returns: boolean
       }
+      location_path_text: { Args: { p_location_id: string }; Returns: string }
       location_subtree_items: {
         Args: { p_location_id: string }
         Returns: {
@@ -339,6 +423,18 @@ export type Database = {
       }
       normalize_place_name: { Args: { p_name: string }; Returns: string }
       profile_display_name_for: { Args: { p_email: string }; Returns: string }
+      record_activity_event: {
+        Args: {
+          p_detail_text?: string
+          p_from_text?: string
+          p_household_id: string
+          p_kind: string
+          p_subject_id: string
+          p_subject_name: string
+          p_to_text?: string
+        }
+        Returns: undefined
+      }
       redeem_invite: {
         Args: { p_code: string }
         Returns: {
@@ -358,6 +454,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rename_location: {
+        Args: { p_location_id: string; p_name: string }
+        Returns: {
+          created_at: string
+          household_id: string
+          id: string
+          name: string
+          parent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "locations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       shares_household_with: {
         Args: { target_user_id: string }
         Returns: boolean
@@ -365,6 +477,32 @@ export type Database = {
       stash_item: {
         Args: {
           p_detail?: string
+          p_location_id?: string
+          p_name: string
+          p_new_path?: string[]
+        }
+        Returns: {
+          added_at: string
+          added_by: string
+          detail: string | null
+          household_id: string
+          id: string
+          last_moved_at: string | null
+          last_moved_by: string | null
+          location_id: string
+          name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_item: {
+        Args: {
+          p_detail?: string
+          p_item_id: string
           p_location_id?: string
           p_name: string
           p_new_path?: string[]

@@ -163,21 +163,22 @@ describe("RLS household isolation", () => {
     expect(items).toHaveLength(1);
   });
 
-  test("a member can insert/update within their own household", async () => {
-    const { data: newLocation, error: insertError } = await clientA
-      .from("locations")
-      .insert({ household_id: householdA.householdId, name: "New shelf" })
-      .select()
-      .single();
+  // Direct INSERT/UPDATE/DELETE on items and locations are revoked (ADR 0011);
+  // writes go through the SECURITY DEFINER functions, which carry their own
+  // membership checks. See activity-events.test.ts for the full contract.
+  test("a member can create/update within their own household through the functions", async () => {
+    const { data: newLocation, error: insertError } = await clientA.rpc("create_location", {
+      p_name: "New shelf",
+      p_parent_id: householdA.locationId,
+    });
     expect(insertError).toBeNull();
     expect(newLocation?.name).toBe("New shelf");
+    expect(newLocation?.household_id).toBe(householdA.householdId);
 
-    const { data: updated, error: updateError } = await clientA
-      .from("items")
-      .update({ name: "Renamed item" })
-      .eq("id", householdA.itemId)
-      .select()
-      .single();
+    const { data: updated, error: updateError } = await clientA.rpc("update_item", {
+      p_item_id: householdA.itemId,
+      p_name: "Renamed item",
+    });
     expect(updateError).toBeNull();
     expect(updated?.name).toBe("Renamed item");
   });
@@ -209,12 +210,13 @@ describe("RLS household isolation", () => {
   });
 
   test("a member is denied writing to household B — real errors, not silent no-ops", async () => {
+    // Direct writes are refused by privilege now (42501), before RLS runs.
     const { error: insertError } = await clientA.from("locations").insert({
       household_id: householdB.householdId,
       name: "Should not be allowed",
     });
     expect(insertError).not.toBeNull();
-    expect(insertError?.code).toBe("42501"); // insufficient_privilege — RLS WITH CHECK violation
+    expect(insertError?.code).toBe("42501");
 
     const { error: updateError } = await clientA
       .from("items")
@@ -223,6 +225,13 @@ describe("RLS household isolation", () => {
       .select()
       .single();
     expect(updateError).not.toBeNull();
+
+    // And the functions refuse too, with their own explicit membership check.
+    const { error: rpcError } = await clientA.rpc("update_item", {
+      p_item_id: householdB.itemId,
+      p_name: "Hijacked via rpc",
+    });
+    expect(rpcError?.message).toMatch(/update_item:.*not found or not accessible/i);
 
     const { data: unchanged } = await serviceClient.from("items").select().eq("id", householdB.itemId).single();
     expect(unchanged?.name).not.toBe("Hijacked");

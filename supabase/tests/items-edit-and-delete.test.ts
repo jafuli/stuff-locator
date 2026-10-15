@@ -1,9 +1,8 @@
 // Integration test for the Item-edit/detail flow's real write paths
-// (item-edit-form.tsx's direct `.from("items").update(...)`, its
-// `.rpc("move_item", ...)` call, and its direct `.from("items").delete(...)`)
-// — NOT part of `npm run test` (see vitest.config.mts's exclude). Requires a
-// running local Supabase stack with every migration through
-// 20260914090000_move_item_rpc.sql applied:
+// (item-edit-form.tsx's `update_item` and `delete_item` calls; direct writes
+// on items are revoked, ADR 0011) — NOT part of `npm run test` (see
+// vitest.config.mts's exclude). Requires a running local Supabase stack with
+// every migration applied:
 //
 //   npm run supabase:start
 //   npx supabase status -o env   # prints API_URL/ANON_KEY/SERVICE_ROLE_KEY
@@ -11,15 +10,13 @@
 //
 // `npm run test:rls` auto-loads SUPABASE_URL/SUPABASE_ANON_KEY/
 // SUPABASE_SERVICE_ROLE_KEY from a gitignored .env.rls.local (see
-// items-insert.test.ts for the same shortcut) if you've written one;
+// rls-household-isolation.test.ts for the same shortcut) if you've written one;
 // otherwise export them yourself before running this.
 //
-// move_item's own RPC contract (cross-household rejection, RLS visibility)
-// is already covered in isolation by move-item-rpc.test.ts — this file
-// instead proves the specific combination item-edit-form.tsx relies on:
-// a real name/detail-only edit (plain UPDATE), a real location-changing
-// edit (move_item), and a real delete, each exercised end-to-end exactly
-// the way the form itself calls them.
+// The functions' full event contract is in activity-events.test.ts; this
+// file proves the specific combination item-edit-form.tsx relies on: a real
+// name/detail-only edit, a real location-changing move, and a real delete,
+// each exercised end-to-end exactly the way the form itself calls them.
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -160,15 +157,14 @@ describe("Item edit/delete (real write paths)", () => {
     await serviceClient.auth.admin.deleteUser(outsiderHousehold.userId);
   });
 
-  test("a real name/detail-only edit (plain UPDATE) persists and leaves location_id untouched", async () => {
+  test("a real name/detail-only edit (update_item) persists and leaves location_id untouched", async () => {
     const itemId = await seedItem(household.householdId, household.locationAId, household.userId, "Bike pump");
 
-    const { data, error } = await client
-      .from("items")
-      .update({ name: "Bike pump (blue)", detail: "Top shelf" })
-      .eq("id", itemId)
-      .select()
-      .single();
+    const { data, error } = await client.rpc("update_item", {
+      p_item_id: itemId,
+      p_name: "Bike pump (blue)",
+      p_detail: "Top shelf",
+    });
 
     expect(error).toBeNull();
     const updated = assertNotNull(data, "update returned no data");
@@ -217,15 +213,14 @@ describe("Item edit/delete (real write paths)", () => {
     const itemId = await seedItem(household.householdId, household.locationAId, household.userId, "Camping tent");
     const outsiderClient = await signInAs(outsiderHousehold.email, outsiderHousehold.password);
 
-    // RLS makes the row invisible to a non-member, so the delete matches
-    // zero rows rather than erroring — same shape as any other RLS-scoped
-    // write against a row the caller can't see.
-    const { error: outsiderError } = await outsiderClient.from("items").delete().eq("id", itemId);
-    expect(outsiderError).toBeNull();
+    // delete_item is SECURITY DEFINER with its own membership check, so a
+    // non-member gets an explicit error (not RLS's silent zero-row success).
+    const { error: outsiderError } = await outsiderClient.rpc("delete_item", { p_item_id: itemId });
+    expect(outsiderError?.message).toMatch(/delete_item:.*not found or not accessible/i);
     const { data: stillThere } = await serviceClient.from("items").select("id").eq("id", itemId).maybeSingle();
     expect(stillThere?.id).toBe(itemId);
 
-    const { error } = await client.from("items").delete().eq("id", itemId);
+    const { error } = await client.rpc("delete_item", { p_item_id: itemId });
     expect(error).toBeNull();
 
     const { data: reread } = await serviceClient.from("items").select("id").eq("id", itemId).maybeSingle();
