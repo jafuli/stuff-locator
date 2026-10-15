@@ -2,14 +2,12 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ItemEditForm } from "@/components/item-edit-form";
-import { getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 
 const LOCATIONS: Location[] = [
   { id: "garage", parentId: null, name: "Garage" },
   { id: "garage-closet", parentId: "garage", name: "Closet" },
 ];
-const OPTIONS = getFullLocationPaths(LOCATIONS);
 
 const ITEM: Item = {
   id: "bike-pump",
@@ -33,7 +31,7 @@ beforeEach(() => {
 });
 
 function renderForm() {
-  return render(<ItemEditForm item={ITEM} locationOptions={OPTIONS} locations={LOCATIONS} />);
+  return render(<ItemEditForm item={ITEM} locations={LOCATIONS} />);
 }
 
 test("pre-fills the form from the given item", () => {
@@ -41,7 +39,8 @@ test("pre-fills the form from the given item", () => {
 
   expect(screen.getByLabelText("Name")).toHaveProperty("value", "Bike pump");
   expect(screen.getByLabelText("Detail (optional)")).toHaveProperty("value", "Top shelf");
-  expect(screen.getByText("Selected: Garage")).toBeDefined();
+  // The item's current place starts as solid chips.
+  expect(screen.getByRole("group", { name: "Location: Garage" })).toBeDefined();
 });
 
 test("submitting with an empty name shows a specific inline error, associated to the field", async () => {
@@ -58,40 +57,57 @@ test("submitting with an empty name shows a specific inline error, associated to
   expect(rpc).not.toHaveBeenCalled();
 });
 
-test("typing a new location without selecting it invalidates the pre-filled selection instead of silently keeping it", async () => {
+test("text typed into the place field but never turned into a chip is rejected instead of silently keeping the old place", async () => {
   const user = userEvent.setup();
   renderForm();
 
-  // Starts pre-filled with the item's current location.
-  expect(screen.getByText("Selected: Garage")).toBeDefined();
+  // Starts pre-filled with the item's current place.
+  expect(screen.getByRole("group", { name: "Location: Garage" })).toBeDefined();
 
   await user.type(screen.getByRole("combobox"), "Closet");
-  // The stale "Selected: Garage" caption disappears the moment typing
-  // diverges from a confirmed selection — no on-screen contradiction
-  // between what the combobox shows and what's actually selected.
-  expect(screen.queryByText("Selected: Garage")).toBeNull();
-
-  // Never actually selected a suggestion — submitting must fail, not
-  // silently keep using the original ("Garage") location.
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  expect(
-    screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeDefined();
+
+  expect(screen.getByText("Choose a location for this item.")).toBeDefined();
   expect(screen.queryByRole("status")).toBeNull();
+  expect(rpc).not.toHaveBeenCalled();
 });
 
-test("clearing the location and picking the '+ New place' row rejects it instead of silently accepting it", async () => {
+test("emptying the path (Backspace on the last chip) and saving asks for a place", async () => {
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.click(screen.getByRole("combobox"));
+  await user.keyboard("{Backspace}");
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+  expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+test("moving into a place that doesn't exist yet sends the new level along, in the same single call", async () => {
+  rpc.mockResolvedValueOnce({
+    data: { id: "bike-pump", name: "Bike pump", detail: "Top shelf", location_id: "attic-id" },
+    error: null,
+  });
+
   const user = userEvent.setup();
   renderForm();
 
   await user.type(screen.getByRole("combobox"), "Attic");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("option", { name: "New place 'Attic' inside Garage" }));
+  expect(screen.getByRole("group", { name: "Location: Garage › Attic" })).toBeDefined();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-  expect(
-    screen.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeDefined();
-  expect(screen.queryByRole("status")).toBeNull();
+  const status = await screen.findByRole("status");
+  expect(status.textContent).toContain("Garage › Attic");
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledWith("update_item", {
+    p_item_id: "bike-pump",
+    p_name: "Bike pump",
+    p_detail: "Top shelf",
+    p_location_id: "garage",
+    p_new_path: ["Attic"],
+  });
 });
 
 test("a save is ONE update_item call carrying name, detail and the place", async () => {

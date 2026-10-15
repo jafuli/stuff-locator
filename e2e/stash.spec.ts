@@ -58,7 +58,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox › Red box")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
   await page.getByLabel("Detail (optional)").fill("Top shelf, behind the shoebox");
   await page.getByRole("button", { name: "Add item" }).click();
@@ -101,26 +101,121 @@ test("submitting with an empty name and no location shows specific inline errors
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
-test("a location that's typed but never resolved to an existing place is rejected with its own specific message", async ({
-  page,
-}) => {
+test("a place that's typed but never turned into a chip is rejected, not silently dropped", async ({ page }) => {
   await signUpFreshAccount(page);
   await page.goto("/items/new");
 
   await page.getByLabel("Name").fill("Mystery gadget");
+  // Typed, but neither Enter nor a row click: the text never becomes a chip.
   await page.getByRole("combobox").fill("Attic");
-  await page.keyboard.press("ArrowDown");
-  // Only the "+ New place called…" row exists for a query with no match —
-  // this selects it, exactly like a user who typed a place that isn't in
-  // the list yet and picked the only row on offer.
-  await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Add item" }).click();
 
-  await expect(
-    page.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeVisible();
+  await expect(page.getByText("Choose a location for this item.")).toBeVisible();
   await expect(page).toHaveURL(/\/items\/new$/);
   await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("stashing into a brand-new 3-level path creates every level once and puts the item in the deepest", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  const itemName = `Passport ${randomUUID()}`;
+
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Name").fill(itemName);
+
+  for (const level of ["Office", "Cabinet", "Top drawer"]) {
+    await page.getByRole("combobox").fill(level);
+    // A brand-new level: the "+ New" row is the only option on offer.
+    await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+  }
+
+  await expect(page.getByText("3 new places")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Office › Cabinet › Top drawer" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Add item" }).click();
+
+  const status = page.getByRole("status");
+  await expect(status).toBeVisible();
+  await expect(status.getByText("Office › Cabinet › Top drawer")).toBeVisible();
+
+  // One of each level exists, reachable through Browse.
+  await page.goto("/browse");
+  await expect(page.getByRole("link", { name: "Office", exact: true })).toHaveCount(1);
+  await page.getByRole("link", { name: "Office", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Cabinet", exact: true })).toHaveCount(1);
+});
+
+test("an existing prefix plus one new level reuses the prefix and creates only the new place", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet"]);
+  const itemName = `Torch ${randomUUID()}`;
+
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Name").fill(itemName);
+
+  // Reach the existing Closet by its path, then add one new level inside it.
+  await page.getByRole("combobox").fill("Closet");
+  await page.getByRole("option", { name: "Garage › Closet" }).click();
+  await page.getByRole("combobox").fill("Toolbox");
+  await page.getByRole("option", { name: "New place 'Toolbox' inside Garage › Closet" }).click();
+
+  await expect(page.getByText("1 new place")).toBeVisible();
+  await page.getByRole("button", { name: "Add item" }).click();
+
+  const status = page.getByRole("status");
+  await expect(status.getByText("Garage › Closet › Toolbox")).toBeVisible();
+
+  await page.goto("/browse");
+  await expect(page.getByRole("link", { name: "Garage", exact: true })).toHaveCount(1);
+});
+
+test("typing an existing place's name, in any case, lists it 'already here' instead of offering + New", async ({
+  page,
+}) => {
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Office"]);
+
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("combobox").fill("OFFICE");
+
+  await expect(page.getByRole("option", { name: "Office, already here" })).toBeVisible();
+  await expect(page.getByRole("option", { name: /^New place/ })).toHaveCount(0);
+});
+
+test("a brand-new path can be built keyboard-only, including backing out of a level with Backspace", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+
+  await page.getByLabel("Name").focus();
+  await page.keyboard.type("Spare keys", { delay: 20 });
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("combobox")).toBeFocused();
+
+  await page.keyboard.type("Hallway", { delay: 20 });
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Shelf", { delay: 20 });
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("group", { name: "Location: Hallway › Shelf" })).toBeVisible();
+
+  // Backspace in the empty field removes the last level.
+  await page.keyboard.press("Backspace");
+  await expect(page.getByRole("group", { name: "Location: Hallway" })).toBeVisible();
+
+  await page.keyboard.type("Key hook", { delay: 20 });
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("group", { name: "Location: Hallway › Key hook" })).toBeVisible();
 });
 
 test("the whole form, including the autocomplete, is operable keyboard-only", async ({ page }) => {
@@ -152,7 +247,7 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox › Red box")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Detail (optional)")).toBeFocused();

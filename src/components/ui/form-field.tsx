@@ -13,8 +13,8 @@ export interface FormFieldProps {
 }
 
 /**
- * A real labelled input + inline error, matching LocationAutocomplete's
- * label/input/error styling (src/components/location-autocomplete.tsx) so
+ * A real labelled input + inline error, matching LocationPathPicker's
+ * label/input/error styling (src/components/location-path-picker.tsx) so
  * forms across the app don't invent a second visual language for the same
  * thing. `type="text"` exists alongside email/password for plain fields
  * (e.g. stash-form.tsx's Name/Detail) that need this same label+error
@@ -49,10 +49,10 @@ export function FormField({ id, label, type, value, onChange, error, disabled = 
           "placeholder:text-[#b0b0b0] disabled:opacity-60",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
           // No dedicated error/danger color exists in this token set yet
-          // (--note is explicitly scoped to the autocomplete's "+ New
-          // place" row, per its own comment in globals.css) — border-ink
-          // plus the visible role="alert" text below is the same "invalid"
-          // signal LocationAutocomplete's own error state uses.
+          // (--note is explicitly scoped to the path picker's "+ New place"
+          // row, per its own comment in globals.css) — border-ink plus the
+          // visible role="alert" text below is the same "invalid" signal
+          // LocationPathPicker's own error state uses.
           error ? "border-ink" : "border-line",
         )}
       />

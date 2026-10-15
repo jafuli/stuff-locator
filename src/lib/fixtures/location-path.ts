@@ -52,7 +52,7 @@ export interface LocationOption {
 
 /**
  * Flattens every location into its full "Garage › Closet › Toolbox › Red
- * box" path string — the shape location-autocomplete's fixture data needs.
+ * box" path string.
  */
 export function getFullLocationPaths(locations: readonly Location[]): LocationOption[] {
   return locations.map((location) => ({

@@ -20,7 +20,7 @@
   --wash: #f4f4f2;
   --paper: #fff;
 
-  /* Scoped narrowly to location-autocomplete's "+ New place…" row. This is
+  /* Scoped narrowly to location-path-picker's "+ New place" row. This is
      the wireframe file's own annotation-callout orange, deliberately reused
      for exactly that one row — not part of the general product palette. */
   --note: #b8562f;

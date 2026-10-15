@@ -181,6 +181,33 @@ test("item edit (real seeded item) has no critical or serious axe violations", a
   expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
 });
 
+// The path picker in its busiest state: chips (solid and dashed), an open
+// listbox with a "Matches anywhere" group, an "already here" row and a create
+// row. The default scan above only sees the picker closed.
+test("add item with the path picker open and chips built has no critical or serious axe violations", async ({
+  page,
+}) => {
+  const email = await signUpFreshAccount(page);
+  await seedLocationChain(email, TEST_PASSWORD, ["Office", "Cabinet", "Top drawer"]);
+  await seedLocationChain(email, TEST_PASSWORD, ["Kitchen", "Spice cabinet"]);
+
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+
+  await page.getByRole("combobox").fill("Office");
+  await page.getByRole("option", { name: "Office, already here" }).click();
+  await page.getByRole("combobox").fill("Shelf");
+  await page.getByRole("option", { name: "New place 'Shelf' inside Office" }).click();
+  await page.getByRole("combobox").fill("cab");
+  await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
+
+  const results = await new AxeBuilder({ page }).analyze();
+  const seriousOrWorse = results.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+});
+
 // /join/[code] needs a real, redeemable invite code (computed at test
 // time), which the static ROUTES table above can't express, so it lives as
 // its own test — same reason the other dynamic-id cases above do.

@@ -2,23 +2,18 @@
 
 import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
-import { LocationAutocomplete, type AutocompleteSelection } from "@/components/location-autocomplete";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import {
-  getBreadcrumbSegments,
-  type LocationBreadcrumbSegment,
-  type LocationOption,
-} from "@/lib/fixtures/location-path";
+import { getBreadcrumbSegments, type LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
-import { validateLocationName, validateParentSelection } from "@/lib/location-validation";
+import { validateLocationName } from "@/lib/location-validation";
+import { lastExistingId, type PathChip } from "@/lib/location-path-picker";
 import { createClient } from "@/server/db/client";
 
 export interface AddLocationFormProps {
-  /** Full-path options to feed the parent-location LocationAutocomplete. */
-  locationOptions: readonly LocationOption[];
-  /** Raw location tree, needed to resolve a selected parent id into breadcrumb segments for the success state. */
+  /** Every place in the household: the parent picker's options and the success breadcrumb's source. */
   locations: readonly Location[];
 }
 
@@ -43,9 +38,10 @@ const PARENT_ERROR_ID = "add-location-parent-error";
  * the function re-checks membership if bypassed. This form is removed in
  * Locations 6/7, when Browse gains "+ Add a place here".
  */
-export function AddLocationForm({ locationOptions, locations }: AddLocationFormProps) {
+export function AddLocationForm({ locations }: AddLocationFormProps) {
   const [name, setName] = useState("");
-  const [parentSelection, setParentSelection] = useState<AutocompleteSelection | null>(null);
+  const [parentChips, setParentChips] = useState<PathChip[]>([]);
+  const [pendingParentText, setPendingParentText] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [captured, setCaptured] = useState<CapturedLocation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +52,9 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
 
     const errors: FieldErrors = {
       name: validateLocationName(name),
-      parent: validateParentSelection(parentSelection),
+      // The parent is optional (no chips = top level), but text typed into
+      // the field that never became a chip is not silently dropped.
+      parent: pendingParentText.trim() === "" ? undefined : "Pick a place from the list, or clear the field.",
     };
     setFieldErrors(errors);
 
@@ -65,10 +63,9 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
     }
 
     const trimmedName = name.trim();
-    // Unlike Stash's required location field, `parentSelection` being
-    // `null` (or, after the check above, anything other than "existing")
-    // here is a valid, top-level result — no ancestor segments to prepend.
-    const parentId = parentSelection?.type === "existing" ? parentSelection.option.id : null;
+    // Unlike Stash's required location field, no chips here is a valid,
+    // top-level result — no ancestor segments to prepend.
+    const parentId = lastExistingId(parentChips);
     const parentSegments = parentId ? getBreadcrumbSegments(parentId, locations) : [];
 
     setSubmitError(null);
@@ -96,20 +93,15 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
     });
   }
 
-  function handleParentSelect(selection: AutocompleteSelection) {
-    setParentSelection(selection);
-    // Clears a stale error the moment the user actually resolves an
-    // existing location, mirroring stash-form.tsx's handleLocationSelect —
-    // without this, picking a real parent left the old error visible right
-    // next to the new "Selected: …" confirmation line.
-    if (selection.type === "existing") {
-      setFieldErrors((previous) => ({ ...previous, parent: undefined }));
-    }
+  function handleParentChange(next: PathChip[]) {
+    setParentChips(next);
+    setFieldErrors((previous) => ({ ...previous, parent: undefined }));
   }
 
   function handleAddAnother() {
     setName("");
-    setParentSelection(null);
+    setParentChips([]);
+    setPendingParentText("");
     setFieldErrors({});
     setCaptured(null);
     setSubmitError(null);
@@ -155,16 +147,16 @@ export function AddLocationForm({ locationOptions, locations }: AddLocationFormP
       />
 
       <div>
-        <LocationAutocomplete
+        <LocationPathPicker
           label="Parent location (optional)"
-          options={locationOptions}
-          onSelect={handleParentSelect}
+          locations={locations}
+          value={parentChips}
+          onChange={handleParentChange}
+          onInputChange={setPendingParentText}
           describedBy={fieldErrors.parent ? PARENT_ERROR_ID : undefined}
           disabled={isSubmitting}
+          pickOnly
         />
-        {parentSelection?.type === "existing" ? (
-          <p className="mt-1 text-[11px] text-mid">Selected: {parentSelection.option.path}</p>
-        ) : null}
         {fieldErrors.parent ? (
           <p id={PARENT_ERROR_ID} role="alert" className="mt-1 text-[10.5px] text-mid">
             {fieldErrors.parent}

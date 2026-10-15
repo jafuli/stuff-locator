@@ -9,8 +9,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 // GuidedOnboarding writes to `households`; the item steps' embedded
 // StashForm calls the `stash_item` RPC — both go through this same mocked
 // module, same shortcut stash-form.test.tsx already established.
-const { stashRpc, updateEq, updateSelect } = vi.hoisted(() => ({
+const { stashRpc, locationsResult, updateEq, updateSelect } = vi.hoisted(() => ({
   stashRpc: vi.fn(),
+  // What the post-stash re-read of the household's places resolves to.
+  locationsResult: vi.fn(),
   updateEq: vi.fn(),
   updateSelect: vi.fn(),
 }));
@@ -29,10 +31,8 @@ vi.mock("@/server/db/client", () => ({
           }),
         };
       }
-      // The embedded StashForm's read-back of a typed new place.
-      return {
-        select: () => ({ eq: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }) }),
-      };
+      // GuidedOnboarding re-reading the household's places after a stash.
+      return { select: () => ({ eq: locationsResult }) };
     },
     rpc: stashRpc,
   }),
@@ -48,12 +48,17 @@ const HOUSEHOLD_ID = "11111111-1111-1111-1111-111111111111";
 
 beforeEach(() => {
   updateSelect.mockResolvedValue({ data: [{ id: HOUSEHOLD_ID }], error: null });
+  locationsResult.mockResolvedValue({
+    data: LOCATIONS.map((location) => ({ id: location.id, parent_id: location.parentId, name: location.name })),
+    error: null,
+  });
 });
 
 afterEach(() => {
   push.mockReset();
   refresh.mockReset();
   stashRpc.mockReset();
+  locationsResult.mockReset();
   updateEq.mockReset();
   updateSelect.mockReset();
 });
@@ -178,54 +183,85 @@ test("a stash shows a plain confirmation with only Continue — no competing Vie
   expect(screen.queryByRole("button", { name: "Add another" })).toBeNull();
 });
 
-test("a place created in one step is offered as an existing place in the next step", async () => {
+/** Types a place that doesn't exist yet and takes the "+ New" row (the only option). */
+async function stashIntoNewPlace(user: ReturnType<typeof userEvent.setup>, name: string, place: string) {
+  await user.type(screen.getByLabelText("Name"), name);
+  await user.type(screen.getByRole("combobox"), place);
+  await user.keyboard("{ArrowDown}{Enter}");
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+}
+
+test("a place created in one step is offered as an existing place in the next step, with no '+ New' row", async () => {
   stashRpc.mockResolvedValueOnce({
-    data: { id: "33333333-3333-3333-3333-333333333333", name: "Passport", detail: null, location_id: "loc-attic" },
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "loc-attic" },
+    error: null,
+  });
+  locationsResult.mockResolvedValue({
+    data: [
+      { id: "garage", parent_id: null, name: "Garage" },
+      { id: "loc-attic", parent_id: null, name: "Attic" },
+    ],
     error: null,
   });
   const user = userEvent.setup();
   renderOnboarding();
 
-  await stash(user, "Passport", "Attic");
+  await stashIntoNewPlace(user, "Passport", "Attic");
+  expect(stashRpc).toHaveBeenCalledWith("stash_item", { p_name: "Passport", p_new_path: ["Attic"] });
   await user.click(await screen.findByRole("button", { name: "Continue" }));
 
-  await user.type(screen.getByRole("combobox"), "Attic");
-  // Without the shared list this option would be missing and only the
-  // "+ New place called…" row would appear, so the user would create a
-  // second "Attic".
-  expect(screen.getByRole("option", { name: "Attic" })).toBeDefined();
+  await user.type(screen.getByRole("combobox"), "attic");
+  // Without the refreshed list only "+ New place" would appear, and the
+  // person would be invited to create a second Attic.
+  expect(screen.getByRole("option", { name: "Attic, already here" })).toBeDefined();
+  expect(screen.queryByRole("option", { name: /^New place/ })).toBeNull();
 });
 
-test("typing the same new place again resolves to the same place, which is listed once", async () => {
-  // Both steps resolve "Attic" to the same row: names are unique per parent.
-  stashRpc
-    .mockResolvedValueOnce({
-      data: { id: "item-1", name: "Passport", detail: null, location_id: "loc-attic" },
-      error: null,
-    })
-    .mockResolvedValueOnce({
-      data: { id: "item-2", name: "Camping tent", detail: null, location_id: "loc-attic" },
-      error: null,
-    });
+test("the refreshed places are keyed by id, so a place can only be listed once", async () => {
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "loc-attic" },
+    error: null,
+  });
+  // A read that returns the same row twice (e.g. a retried request).
+  locationsResult.mockResolvedValue({
+    data: [
+      { id: "loc-attic", parent_id: null, name: "Attic" },
+      { id: "loc-attic", parent_id: null, name: "Attic" },
+    ],
+    error: null,
+  });
   const user = userEvent.setup();
   renderOnboarding();
 
-  await stash(user, "Passport", "Attic");
+  await stashIntoNewPlace(user, "Passport", "Attic");
   await user.click(await screen.findByRole("button", { name: "Continue" }));
-
-  // Step 2: type Attic again and deliberately take the "+ New place" row
-  // (second option, after the existing Attic).
-  await user.type(screen.getByLabelText("Name"), "Camping tent");
   await user.type(screen.getByRole("combobox"), "Attic");
-  await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
-  await user.click(screen.getByRole("button", { name: "Add item" }));
-  await user.click(await screen.findByRole("button", { name: "Continue" }));
 
-  expect(stashRpc).toHaveBeenLastCalledWith("stash_item", { p_name: "Camping tent", p_new_path: ["Attic"] });
+  expect(screen.getAllByRole("option", { name: "Attic, already here" })).toHaveLength(1);
+});
 
-  // Step 3: exactly one "Attic" option, not two.
-  await user.type(screen.getByRole("combobox"), "Attic");
-  expect(screen.getAllByRole("option", { name: "Attic" })).toHaveLength(1);
+test("a failed refresh doesn't turn a saved item into an error", async () => {
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "loc-attic" },
+    error: null,
+  });
+  locationsResult.mockResolvedValue({ data: null, error: { message: "network down" } });
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await stashIntoNewPlace(user, "Passport", "Attic");
+
+  expect(await screen.findByRole("button", { name: "Continue" })).toBeDefined();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("each step's place field hints that places can nest", async () => {
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  expect(screen.getByPlaceholderText("e.g. Office, then Cabinet…")).toBeDefined();
+  await user.click(screen.getByRole("button", { name: "Skip this step" }));
+  expect(screen.getByPlaceholderText("e.g. Garage, then Shelf…")).toBeDefined();
 });
 
 test("advancing moves focus to the new step's heading; the first render does not steal focus", async () => {

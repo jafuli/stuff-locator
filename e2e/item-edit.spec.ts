@@ -48,7 +48,7 @@ test("the form is pre-filled with the item's current values", async ({ page }) =
 
   await expect(page.getByLabel("Name")).toHaveValue("Passport");
   await expect(page.getByLabel("Detail (optional)")).toHaveValue("with the birth certificates");
-  await expect(page.getByText("Selected: Bedroom › Filing box")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Bedroom › Filing box" })).toBeVisible();
 });
 
 test("changing only name/detail persists via a plain update, leaving the location unchanged", async ({ page }) => {
@@ -100,7 +100,7 @@ test("changing the location exercises the real move_item RPC, showing the new fu
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox › Red box")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
   await page.getByRole("button", { name: "Save changes" }).click();
 
@@ -130,7 +130,9 @@ test("submitting with an empty name shows a specific inline error and never navi
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
-test("no location resolved (typed but never selected) is rejected with its own specific message", async ({ page }) => {
+test("no location resolved (typed but never turned into a chip) is rejected with its own specific message", async ({
+  page,
+}) => {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
   const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });
@@ -138,15 +140,38 @@ test("no location resolved (typed but never selected) is rejected with its own s
   await page.goto(`/items/${itemId}/edit`);
 
   await page.getByRole("combobox").fill("Attic");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  await expect(
-    page.getByText("Pick an existing location from the list — adding a new one isn't supported here yet."),
-  ).toBeVisible();
+  await expect(page.getByText("Choose a location for this item.")).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/items/${itemId}/edit$`));
   await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("moving into a place that doesn't exist yet: tap a chip to go back a level, type the new name, save", async ({
+  page,
+}) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox", "Red box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Spare house keys", locationId });
+
+  await page.goto(`/items/${itemId}/edit`);
+  await page.waitForLoadState("networkidle");
+
+  // Back up from "Red box" to "Toolbox", then add a brand-new "Blue tin".
+  await page.getByRole("button", { name: "Toolbox. Go back to this level" }).click();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox" })).toBeVisible();
+  await page.getByRole("combobox").fill("Blue tin");
+  await page.getByRole("option", { name: "New place 'Blue tin' inside Garage › Closet › Toolbox" }).click();
+  await expect(page.getByText("1 new place")).toBeVisible();
+
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  const status = page.getByRole("status");
+  await expect(status.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
+
+  await page.goto(`/items/${itemId}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
 });
 
 test("delete requires confirmation: cancel leaves the item unchanged, confirm performs a real delete with a path to Home", async ({
@@ -194,6 +219,12 @@ test("the whole edit form, including delete confirmation, is operable keyboard-o
 
   await page.getByLabel("Name").focus();
   await expect(page.getByLabel("Name")).toBeFocused();
+  // The item's current place is a path of chips, each a real tab stop
+  // (tapping one goes back to that level), then the field itself.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Bedroom. Go back to this level" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Filing box. Go back to this level" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("combobox")).toBeFocused();
   // A small per-key delay — real keystrokes need it for a controlled input
@@ -202,7 +233,7 @@ test("the whole edit form, including delete confirmation, is operable keyboard-o
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Selected: Garage › Closet › Toolbox › Red box")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Detail (optional)")).toBeFocused();

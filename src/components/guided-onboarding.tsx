@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { StashForm, type StashResult } from "@/components/stash-form";
+import { useEffect, useRef, useState } from "react";
+import { StashForm } from "@/components/stash-form";
 import { Button } from "@/components/ui/button";
-import { getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/client";
 
@@ -21,6 +20,8 @@ export interface GuidedOnboardingProps {
 interface ItemStep {
   title: string;
   description: string;
+  /** Placeholder for the place field — hints that a place can nest. */
+  locationHint: string;
 }
 
 // Per the Design Journal's stated examples — three different location
@@ -29,14 +30,17 @@ const ITEM_STEPS: readonly ItemStep[] = [
   {
     title: "Stash something filed away",
     description: "A passport, a birth certificate — anything tucked in a folder or drawer.",
+    locationHint: "e.g. Office, then Cabinet…",
   },
   {
     title: "Stash something bulky",
     description: "A camping tent, a suitcase — anything stored somewhere out of the way.",
+    locationHint: "e.g. Garage, then Shelf…",
   },
   {
     title: "Stash something small and easy to lose",
     description: "Spare keys, a charger — anything that tends to go missing.",
+    locationHint: "e.g. Hallway, then Key hook…",
   },
 ];
 
@@ -77,14 +81,11 @@ const SKIP_LINK_CLASSES =
  * a user who wants out immediately never has to click through the
  * remaining steps one at a time.
  *
- * `allowNewLocation` on each step's StashForm is load-bearing, not a nice-
- * to-have: a genuinely brand-new household (this component's whole reason
- * to exist) has zero locations yet, and Stash's own AC deliberately
- * rejects picking "+ New place" everywhere else — without this, every item
- * step would be unsatisfiable for the exact household onboarding exists
- * for. Each new location is created top-level (no parent), matching
- * Add-location's own default and CLAUDE.md's "shallow by default" capture
- * guidance.
+ * A brand-new household has zero places, so every step builds its place with
+ * the same path picker as Stash: each new level becomes a dashed chip and
+ * the whole path is saved with the item. After each stash this component
+ * re-reads the household's places, so the next step offers (and matches
+ * against) what the earlier steps created instead of proposing a duplicate.
  */
 export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingProps) {
   const router = useRouter();
@@ -92,16 +93,11 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
   const [stashedThisStep, setStashedThisStep] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
-  // Locations created by earlier steps. The `locations` prop is the snapshot
-  // from when Home rendered; without this, a room named in step 1 would be
-  // invisible to step 2's autocomplete, which would then offer to create a
-  // second room with the same name.
-  const [createdLocations, setCreatedLocations] = useState<Location[]>([]);
-  const locationOptions = useMemo(
-    () => getFullLocationPaths([...locations, ...createdLocations]),
-    [locations, createdLocations],
-  );
-  const knownLocations = useMemo(() => [...locations, ...createdLocations], [locations, createdLocations]);
+  // The household's places. The `locations` prop is the snapshot from when
+  // Home rendered; after each stash this is re-read so a place named in step
+  // 1 is offered in step 2 (and an exact name resolves to it rather than
+  // proposing a second one). Keyed by id, so a place can only appear once.
+  const [knownLocations, setKnownLocations] = useState<Location[]>(() => [...locations]);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Set by advance(), consumed by the effect below — focus only moves in
@@ -165,17 +161,31 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
     router.refresh();
   }
 
-  function handleStashed(result: StashResult) {
-    setStashedThisStep(true);
-    if (result.createdLocation) {
-      const created = result.createdLocation;
-      // De-duplicated by id: a name typed again in a later step resolves to
-      // the place the earlier step already created (names are unique per
-      // parent), and appending it twice would list that place twice.
-      setCreatedLocations((previous) =>
-        previous.some((location) => location.id === created.id) ? previous : [...previous, created],
-      );
+  async function refreshLocations() {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("locations")
+        .select("id, parent_id, name")
+        .eq("household_id", householdId);
+      if (error) {
+        // Not fatal: the item is saved, and the database resolves a typed
+        // name to the existing place anyway. The picker just won't suggest it.
+        return;
+      }
+      const byId = new Map<string, Location>();
+      for (const row of data) {
+        byId.set(row.id, { id: row.id, parentId: row.parent_id, name: row.name });
+      }
+      setKnownLocations([...byId.values()]);
+    } catch {
+      // Same reasoning: a failed refresh must not turn a saved item into an error.
     }
+  }
+
+  function handleStashed() {
+    setStashedThisStep(true);
+    void refreshLocations();
   }
 
   function advance() {
@@ -232,9 +242,8 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
             // Forces a fresh instance per step (rather than one instance
             // whose props silently change underneath it).
             key={step}
-            locationOptions={locationOptions}
             locations={knownLocations}
-            allowNewLocation
+            locationPlaceholder={ITEM_STEPS[step].locationHint}
             embedded
             onStashed={handleStashed}
           />

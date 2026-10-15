@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ItemEditForm } from "@/components/item-edit-form";
-import { getFullLocationPaths } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
 
@@ -68,7 +67,6 @@ export default async function Page(props: PageProps<"/items/[id]/edit">) {
     lastMovedBy: itemResult.data.last_moved_by ?? undefined,
     lastMovedAt: itemResult.data.last_moved_at ? new Date(itemResult.data.last_moved_at) : undefined,
   };
-  const locationOptions = getFullLocationPaths(locations);
 
   return (
     <main className="flex flex-col gap-3 p-4">
@@ -79,7 +77,7 @@ export default async function Page(props: PageProps<"/items/[id]/edit">) {
         ‹ Back to item
       </Link>
       <h1 className="text-[16px] font-semibold text-ink">Edit item</h1>
-      <ItemEditForm item={item} locationOptions={locationOptions} locations={locations} />
+      <ItemEditForm item={item} locations={locations} />
     </main>
   );
 }
