@@ -10,15 +10,20 @@ import { createClient } from "@/server/db/server";
 const ADD_ITEM_LINK_CLASSES =
   "inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[7px] text-[12px] font-semibold text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-// Wireframe screen 02, "Home — everything (default)": search box + the full
-// item list, each row showing its full location path. The "All/By place/
-// Recent" toggle chips drawn on that screen are a separate flow (Browse) —
-// out of scope here, not silently dropped.
+// Wireframe screen 02, "Home — everything (default)": search box, the
+// "All (n)" / "By place" chips (the way into Browse; v1's "Recent" chip is
+// deliberately not added) and the full item list, each row showing its full
+// location path.
 //
 // Real household data now (see the PR description): items/locations are
 // read directly via PostgREST, RLS-scoped to the caller's household — no
 // route handler for this plain read, per the settled architecture.
-export default async function Page() {
+export default async function Page(props: PageProps<"/">) {
+  const searchParams = await props.searchParams;
+  // A search typed on Browse arrives as ?q=; only a plain string is used.
+  const rawQuery = searchParams.q;
+  const initialQuery = typeof rawQuery === "string" ? rawQuery : "";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -140,6 +145,7 @@ export default async function Page() {
         */
         <SearchableStuffList
           entries={entries}
+          initialQuery={initialQuery}
           emptyStateAction={
             <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
               Stash your first item

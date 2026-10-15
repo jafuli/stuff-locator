@@ -85,3 +85,33 @@ test("forwards emptyStateAction to StuffList's zero-entries empty state, not the
   expect(screen.getByText("No matches")).toBeDefined();
   expect(screen.queryByRole("link", { name: "Stash your first item" })).toBeNull();
 });
+
+test("shows All (n) with the household total, and the count does not follow the search", async () => {
+  const user = userEvent.setup();
+  render(<SearchableStuffList entries={entries} />);
+
+  expect(screen.getByRole("link", { name: "All (2)" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "By place" }).getAttribute("href")).toBe("/browse");
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
+
+  // One result, but still the whole household's count.
+  expect(screen.getByRole("link", { name: "All (2)" })).toBeDefined();
+});
+
+test("an initial query is applied, and the field is focused with the caret at the end", () => {
+  render(<SearchableStuffList entries={entries} initialQuery="tent" />);
+
+  const input = screen.getByRole<HTMLInputElement>("searchbox", { name: "Search your stuff" });
+  expect(input.value).toBe("tent");
+  expect(screen.getByText("Camping tent")).toBeDefined();
+  expect(screen.queryByText("Passport")).toBeNull();
+  expect(document.activeElement).toBe(input);
+  expect(input.selectionStart).toBe(4);
+});
+
+test("without an initial query the field is not focused (no stolen focus on load)", () => {
+  render(<SearchableStuffList entries={entries} />);
+
+  expect(document.activeElement).toBe(document.body);
+});

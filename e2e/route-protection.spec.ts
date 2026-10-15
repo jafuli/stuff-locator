@@ -65,7 +65,7 @@ test("signed in, every protected route reaches its real page", async ({ page }) 
 
   const routes: { path: string; heading: RegExp }[] = [
     { path: "/", heading: /Our stuff/ },
-    { path: "/browse", heading: /Browse/ },
+    { path: "/browse", heading: /Our stuff/ },
     { path: `/browse/${locationId}`, heading: /Toolbox/ },
     { path: `/items/${itemId}`, heading: /Spare keys/ },
     { path: `/items/${itemId}/edit`, heading: /Edit item/ },
@@ -114,7 +114,9 @@ test("the return-to path also survives choosing 'sign up' instead", async ({ pag
   await page.getByRole("button", { name: "Create account" }).click();
 
   await page.waitForURL("/browse");
-  await expect(page.getByRole("heading", { level: 1, name: /Browse/ })).toBeVisible();
+  // Browse's top level shares Home's header; By place being the current chip
+  // is what says this is Browse and not Home.
+  await expect(page.getByRole("link", { name: "By place" })).toHaveAttribute("aria-current", "page");
 });
 
 test("a ?next= pointing off-origin is ignored rather than followed", async ({ page }) => {

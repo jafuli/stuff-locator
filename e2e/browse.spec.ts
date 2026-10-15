@@ -39,7 +39,7 @@ test("drilling down through nested locations from /browse reaches an item, and b
 
   await page.goto("/browse");
   await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { level: 1, name: "Browse" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
 
   await page.getByRole("link", { name: "Garage" }).click();
   await page.waitForLoadState("networkidle");

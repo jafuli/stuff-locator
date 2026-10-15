@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StuffList, type StuffListEntry } from "@/components/stuff-list";
+import { StuffSearchInput } from "@/components/stuff-search-input";
+import { StuffViewChips } from "@/components/stuff-view-chips";
 import { EmptyState } from "@/components/ui/empty-state";
 import { filterItems } from "@/lib/fixtures/search";
 
@@ -11,6 +13,12 @@ export interface SearchableStuffListProps {
   entries: readonly StuffListEntry[];
   /** Forwarded to StuffList's zero-entries empty state — see its own doc comment. Never shown for the "no search matches" case, which is a different, unrelated empty state below. */
   emptyStateAction?: ReactNode;
+  /**
+   * A query to start with, e.g. one carried over from the search box on
+   * Browse. When set, the field is focused with the caret at the end so the
+   * person can keep typing where they left off.
+   */
+  initialQuery?: string;
 }
 
 /**
@@ -24,8 +32,20 @@ export interface SearchableStuffListProps {
  * (entries) is still resolved server-side in page.tsx and passed down —
  * this component only filters an already-computed list, it doesn't fetch.
  */
-export function SearchableStuffList({ entries, emptyStateAction }: SearchableStuffListProps) {
-  const [query, setQuery] = useState("");
+export function SearchableStuffList({ entries, emptyStateAction, initialQuery = "" }: SearchableStuffListProps) {
+  const [query, setQuery] = useState(initialQuery);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Arriving with a query means the person was typing: put them back in the
+  // field, caret at the end, instead of leaving them on a page they must
+  // click into. Only on arrival, never on later edits.
+  useEffect(() => {
+    if (initialQuery !== "") {
+      const input = inputRef.current;
+      input?.focus();
+      input?.setSelectionRange(input.value.length, input.value.length);
+    }
+  }, [initialQuery]);
 
   const matchedIds = new Set(
     filterItems(
@@ -39,31 +59,11 @@ export function SearchableStuffList({ entries, emptyStateAction }: SearchableStu
 
   return (
     <>
-      {/*
-        type="text" + explicit role="searchbox" rather than type="search":
-        Chromium injects a client-only inline style onto native
-        <input type="search"> elements (its own clear-button bookkeeping),
-        which caused a real hydration mismatch against the server-rendered
-        HTML. This sidesteps that while keeping the same accessible role
-        and visual result.
-      */}
-      <div role="search">
-        <label htmlFor="stuff-search" className="sr-only">
-          Search your stuff
-        </label>
-        <input
-          id="stuff-search"
-          type="text"
-          role="searchbox"
-          placeholder="Search…"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-          }}
-          className="w-full rounded-[9px] border-[1.5px] border-line px-[10px] py-[8px] text-[12.5px] text-ink outline-none placeholder:text-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        />
-      </div>
+      <StuffSearchInput ref={inputRef} value={query} onChange={setQuery} />
+
+      {/* The household's total, not the filtered count: the chip names the
+          whole view, the live region below reports the search. */}
+      <StuffViewChips total={entries.length} active="all" />
 
       {/*
         Narrowing the list (or swapping to the "No matches" empty state) is
