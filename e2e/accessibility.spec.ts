@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { seedInviteForNewHousehold, seedItem, seedLocationChain, seedLocationChainAllIds } from "./supabase-test-client";
+import {
+  seedInviteForNewHousehold,
+  seedItem,
+  seedLocationChain,
+  seedLocationChainAllIds,
+} from "./supabase-test-client";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -119,7 +124,11 @@ test("browse/[id] (a location with a nested child) has no critical or serious ax
 test("item detail (real seeded item) has no critical or serious axe violations", async ({ page }) => {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
-  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", detail: "with the birth certificates", locationId });
+  const itemId = await seedItem(email, TEST_PASSWORD, {
+    name: "Passport",
+    detail: "with the birth certificates",
+    locationId,
+  });
 
   await page.goto(`/items/${itemId}`);
   await page.waitForLoadState("networkidle");

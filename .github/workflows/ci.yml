@@ -25,6 +25,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Cheapest gate first. Formatting is Prettier's job (.prettierrc.json),
+      # not a review comment: `npm run format` fixes it locally.
+      - run: npm run format:check
       # typecheck must run before lint: it's what invokes `next typegen`,
       # and ESLint's type-aware rules need the generated `PageProps`/
       # `LayoutProps` route types to exist on a fresh checkout (.next/ is

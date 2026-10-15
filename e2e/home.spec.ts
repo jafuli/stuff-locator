@@ -76,21 +76,22 @@ test("a real item's breadcrumb segment links to the correct /browse/[id] — Bro
   await expect(page.getByRole("link", { name: "Filing box" })).toHaveAttribute("href", `/browse/${locationId}`);
 });
 
-test("a brand-new household with zero items shows the real empty state with a working Stash CTA", async ({ page }) => {
+test("a brand-new household with zero items shows guided onboarding, not the plain empty state", async ({ page }) => {
+  // The plain "No items yet" empty state is still real — see
+  // guided-onboarding.spec.ts's "skip path" test, which reaches it by
+  // completing onboarding with zero items added. A genuinely never-
+  // onboarded household sees the guided sequence first (see that task's
+  // own PR description for why: Home replaces the empty state with it,
+  // not the whole page).
   await signUpFreshAccount(page);
 
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
-  await expect(page.getByText("No items yet")).toBeVisible();
-  await expect(page.getByText("Stash your first thing to see it here.")).toBeVisible();
-
-  const cta = page.getByRole("link", { name: "Stash your first item" });
-  await expect(cta).toBeVisible();
-  await cta.click();
-  await page.waitForURL("/items/new");
-  await expect(page.getByRole("heading", { level: 1, name: "Add an item" })).toBeVisible();
+  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Stash something filed away" })).toBeVisible();
+  await expect(page.getByText("No items yet")).toHaveCount(0);
 });
 
 test("home has a visible, keyboard-reachable entry point into the Stash flow", async ({ page }) => {
@@ -104,7 +105,12 @@ test("home has a visible, keyboard-reachable entry point into the Stash flow", a
     consoleErrors.push(err.message);
   });
 
-  await signUpFreshAccount(page);
+  // Seeded with one item: a household with none shows guided onboarding,
+  // which hides this header link on purpose (guided-onboarding.spec.ts
+  // asserts that).
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  await seedItem(email, TEST_PASSWORD, { name: `Spare key ${randomUUID()}`, locationId });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 

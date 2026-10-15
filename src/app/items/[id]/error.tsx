@@ -19,13 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // the tree here — an error boundary replaces the segment's content, it
 // doesn't sit alongside it. So titleAs="h1" gives this route its own real
 // heading instead of shipping with none.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     // Matches Next's own documented pattern. Only runs when a real error
     // boundary trips, not during normal rendering — doesn't violate the

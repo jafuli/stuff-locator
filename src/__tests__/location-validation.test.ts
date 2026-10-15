@@ -15,9 +15,7 @@ test("validateParentSelection accepts null (no parent chosen) as valid, not an e
 });
 
 test("validateParentSelection accepts an existing-location selection", () => {
-  expect(
-    validateParentSelection({ type: "existing", option: { id: "garage", path: "Garage" } }),
-  ).toBeUndefined();
+  expect(validateParentSelection({ type: "existing", option: { id: "garage", path: "Garage" } })).toBeUndefined();
 });
 
 test("validateParentSelection rejects a '+ New place' selection", () => {

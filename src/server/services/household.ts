@@ -19,8 +19,7 @@ export function deriveHouseholdName(email: string | null | undefined): string {
 }
 
 export type EnsureHouseholdResult =
-  | { readonly ok: true; readonly created: boolean }
-  | { readonly ok: false; readonly error: string };
+  { readonly ok: true; readonly created: boolean } | { readonly ok: false; readonly error: string };
 
 /**
  * Makes sure `userId` belongs to at least one household, creating one via

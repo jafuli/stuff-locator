@@ -44,9 +44,7 @@ const LINK_CLASSES =
  */
 export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps) {
   const [authMode, setAuthMode] = useState<AuthMode>("sign-up");
-  const [stage, setStage] = useState<Stage>(
-    initiallySignedIn ? { status: "redeeming" } : { status: "authenticating" },
-  );
+  const [stage, setStage] = useState<Stage>(initiallySignedIn ? { status: "redeeming" } : { status: "authenticating" });
 
   useEffect(() => {
     if (stage.status !== "redeeming") {
@@ -74,7 +72,9 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
 
   function handleRedeemed(result: RedeemInviteResult) {
     setStage(
-      result.ok ? { status: "success", householdName: result.householdName } : { status: "error", message: result.error },
+      result.ok
+        ? { status: "success", householdName: result.householdName }
+        : { status: "error", message: result.error },
     );
   }
 
@@ -82,8 +82,7 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
     return (
       <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
         <p className="text-[13px] text-ink">
-          You&apos;ve joined <span className="font-semibold">{stage.householdName ?? "the household"}</span>&apos;s
-          home
+          You&apos;ve joined <span className="font-semibold">{stage.householdName ?? "the household"}</span>&apos;s home
         </p>
         <Link href="/" className={LINK_CLASSES}>
           Go to Stuff Locator

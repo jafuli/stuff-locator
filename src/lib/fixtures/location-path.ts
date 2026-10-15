@@ -21,10 +21,7 @@ export interface LocationBreadcrumbSegment {
  * cycles defensively — fixture data has none, but this mirrors the care the
  * real recursive-CTE version needs to take.
  */
-export function getBreadcrumbSegments(
-  locationId: string,
-  locations: readonly Location[],
-): LocationBreadcrumbSegment[] {
+export function getBreadcrumbSegments(locationId: string, locations: readonly Location[]): LocationBreadcrumbSegment[] {
   const byId = new Map(locations.map((location) => [location.id, location]));
   const segments: LocationBreadcrumbSegment[] = [];
   const visited = new Set<string>();

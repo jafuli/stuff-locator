@@ -43,16 +43,17 @@ export function ItemCard({ item, segments, href, linkLocationSegments = false }:
   // contrast against the paper background as a WCAG AA failure (needs
   // 4.5:1 for text this size) — text-mid clears it at 5.33:1.
   const timeBadge = lastTouched ? (
-    <div className="shrink-0 pt-0.5 text-[9.5px] whitespace-nowrap text-mid">
-      {formatRelativeShort(lastTouched)}
-    </div>
+    <div className="shrink-0 pt-0.5 text-[9.5px] whitespace-nowrap text-mid">{formatRelativeShort(lastTouched)}</div>
   ) : null;
 
   if (!linkLocationSegments) {
     return (
       <Link
         href={href}
-        className={cn("flex items-start justify-between gap-2 border-b border-[#ececec] py-[9px] last:border-b-0", linkClasses)}
+        className={cn(
+          "flex items-start justify-between gap-2 border-b border-[#ececec] py-[9px] last:border-b-0",
+          linkClasses,
+        )}
       >
         <div>
           {nameAndDetail}

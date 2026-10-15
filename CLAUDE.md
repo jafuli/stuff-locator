@@ -71,6 +71,7 @@ Not optional polish — a task isn't done unless all hold:
 - Sensible component boundaries — one thing per component, no grab-bag props
 - Tests on the tricky logic, not coverage theater
 - No console errors/warnings in the browser
+- Formatted: `npm run format` (Prettier, config in `.prettierrc.json`: 2-space indent, 120 cols) — CI runs `format:check`, so run it before opening a PR. Don't let an IDE reformat with its own style; `.editorconfig` pins 2 spaces for it
 
 ## Notes for autonomous sessions
 

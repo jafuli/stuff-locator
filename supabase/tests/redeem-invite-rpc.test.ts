@@ -70,7 +70,11 @@ async function signInAs(email: string, password: string): Promise<SupabaseClient
   });
 }
 
-async function createInvite(householdId: string, createdBy: string, expiresAt?: string): Promise<{ id: string; code: string }> {
+async function createInvite(
+  householdId: string,
+  createdBy: string,
+  expiresAt?: string,
+): Promise<{ id: string; code: string }> {
   const { data, error } = await serviceClient
     .from("invites")
     .insert({ household_id: householdId, created_by: createdBy, expires_at: expiresAt ?? null })

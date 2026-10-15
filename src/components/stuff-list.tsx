@@ -40,11 +40,7 @@ export interface StuffListProps {
 export function StuffList({ entries, linkLocationSegments = false, emptyStateAction }: StuffListProps) {
   if (entries.length === 0) {
     return (
-      <EmptyState
-        title="No items yet"
-        description="Stash your first thing to see it here."
-        action={emptyStateAction}
-      />
+      <EmptyState title="No items yet" description="Stash your first thing to see it here." action={emptyStateAction} />
     );
   }
 

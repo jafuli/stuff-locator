@@ -18,13 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // the "Fix missing headings" task's fix to this route too: it merged after
 // that task's AC was written, so it wasn't in the AC's original list, but
 // has the identical gap.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);

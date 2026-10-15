@@ -6,7 +6,11 @@ import { LocationAutocomplete, type AutocompleteSelection } from "@/components/l
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
+import {
+  getBreadcrumbSegments,
+  type LocationBreadcrumbSegment,
+  type LocationOption,
+} from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 // Reused directly rather than duplicated: the validation rules for editing
 // an item's name/location are identical to Stash's ("empty name" / "no
@@ -258,9 +262,7 @@ export function ItemEditForm({ item, locationOptions, locations }: ItemEditFormP
         <h2 ref={deleteHeadingRef} tabIndex={-1} className="text-[13px] font-semibold text-ink outline-none">
           Delete this item?
         </h2>
-        <p className="text-[11px] text-mid">
-          {item.name} will be removed. This can&apos;t be undone.
-        </p>
+        <p className="text-[11px] text-mid">{item.name} will be removed. This can&apos;t be undone.</p>
         {deleteError ? (
           <p role="alert" className="text-[11.5px] text-mid">
             {deleteError}

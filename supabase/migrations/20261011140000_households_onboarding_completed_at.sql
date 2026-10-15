@@ -1,0 +1,25 @@
+-- households: guided-onboarding completion flag
+--
+-- Home shows a guided onboarding sequence instead of the plain empty state
+-- for a household with zero items — see GuidedOnboarding. "Zero items" on
+-- its own can't tell "never onboarded" apart from "onboarded, skipped
+-- everything, still has zero items" — a household that skipped the whole
+-- sequence would otherwise see onboarding resurface on every visit for as
+-- long as it stays empty. This column is the persisted signal that breaks
+-- that tie: once the sequence has run to completion for a household (by
+-- adding items, by skipping, or by mixing both — anything that reaches the
+-- end of the flow), it's set once and never shows onboarding again,
+-- independent of the item count from then on.
+--
+-- Named onboarding_completed_at, not onboarding_skipped_at: it's set on
+-- EVERY path through the sequence's end, not only the skip path, and a
+-- name implying "only skips set this" would be actively misleading to a
+-- future reader.
+--
+-- Nullable, default null (existing households — none exist locally at
+-- migration time, but this is the correct shape regardless — are treated
+-- as "not yet onboarded"). No RLS change needed: households_member_access
+-- already covers SELECT and UPDATE for any member of the household, which
+-- is exactly who should be able to read and set this.
+alter table public.households
+  add column onboarding_completed_at timestamptz;

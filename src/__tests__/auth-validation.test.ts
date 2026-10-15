@@ -28,7 +28,9 @@ test("validateSignUpPassword rejects an empty value", () => {
 
 test("validateSignUpPassword rejects a password shorter than the minimum", () => {
   const shortPassword = "a".repeat(MIN_PASSWORD_LENGTH - 1);
-  expect(validateSignUpPassword(shortPassword)).toBe(`Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`);
+  expect(validateSignUpPassword(shortPassword)).toBe(
+    `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
+  );
 });
 
 test("validateSignUpPassword accepts a password at exactly the minimum length", () => {

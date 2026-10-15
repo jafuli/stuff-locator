@@ -148,10 +148,7 @@ describe("delete_container RPC", () => {
     expect(data?.id).toBe(leafId);
     expect(data?.name).toBe("Empty shelf");
 
-    const { data: reread, error: rereadError } = await serviceClient
-      .from("locations")
-      .select("id")
-      .eq("id", leafId);
+    const { data: reread, error: rereadError } = await serviceClient.from("locations").select("id").eq("id", leafId);
     expect(rereadError).toBeNull();
     expect(reread).toHaveLength(0);
   });
@@ -165,10 +162,7 @@ describe("delete_container RPC", () => {
     expect(error).not.toBeNull();
     expect(error?.message).toMatch(/delete_container:.*child locations/i);
 
-    const { data: rows } = await serviceClient
-      .from("locations")
-      .select("id")
-      .in("id", [parentId, childId]);
+    const { data: rows } = await serviceClient.from("locations").select("id").in("id", [parentId, childId]);
     expect(rows).toHaveLength(2);
   });
 
@@ -182,10 +176,7 @@ describe("delete_container RPC", () => {
     expect(error?.message).toMatch(/delete_container:.*items/i);
     expect(error?.message).not.toMatch(/child locations/i);
 
-    const { data: locationRows } = await serviceClient
-      .from("locations")
-      .select("id")
-      .eq("id", locationId);
+    const { data: locationRows } = await serviceClient.from("locations").select("id").eq("id", locationId);
     expect(locationRows).toHaveLength(1);
 
     const { data: itemRows } = await serviceClient.from("items").select("id").eq("id", itemId);

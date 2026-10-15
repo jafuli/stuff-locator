@@ -6,7 +6,11 @@ import { LocationAutocomplete, type AutocompleteSelection } from "@/components/l
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment, type LocationOption } from "@/lib/fixtures/location-path";
+import {
+  getBreadcrumbSegments,
+  type LocationBreadcrumbSegment,
+  type LocationOption,
+} from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { validateItemName, validateLocationSelection } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
@@ -20,6 +24,45 @@ export interface StashFormProps {
   householdId: string;
   /** The signed-in caller's id — written as `added_by` on the inserted row. */
   userId: string;
+  /**
+   * Fires once, right after a real insert succeeds — in addition to, not
+   * instead of, this form's own success panel below. Optional: only
+   * GuidedOnboarding uses it, to know when to reveal its own "Continue"
+   * control; every other caller leaves this unset and is unaffected.
+   *
+   * Reports the location this stash created, if it created one, so a caller
+   * that keeps its own copy of the location list (GuidedOnboarding) can add
+   * it — the `locations`/`locationOptions` props are a snapshot and don't
+   * know about it.
+   */
+  onStashed?: (result: StashResult) => void;
+  /**
+   * When true, the success panel is a plain confirmation with no
+   * navigation of its own (no "View item" / "Add another" / "Back to
+   * home"). For hosts like GuidedOnboarding that supply the next action
+   * themselves — otherwise the user sees two competing sets of buttons and
+   * can wander out of the guided flow by accident.
+   */
+  embedded?: boolean;
+  /**
+   * When true, picking the autocomplete's "+ New place called…" row is
+   * accepted instead of rejected: a brand-new top-level location (no
+   * parent — matches Add-location's own default, and keeps this out of
+   * the "arbitrary depth" capture flow CLAUDE.md reserves for Browse) is
+   * created first, then the item is inserted into it. Off by default,
+   * preserving this form's existing behavior everywhere else: Stash's own
+   * task deliberately scoped inline location creation out ("adding a new
+   * one isn't supported here yet"). GuidedOnboarding turns this on because
+   * a genuinely brand-new household has zero existing locations to pick
+   * from at all — without this, its item steps could never succeed.
+   */
+  allowNewLocation?: boolean;
+}
+
+export interface StashResult {
+  itemId: string;
+  /** Set only when this stash created a brand-new (top-level) location. */
+  createdLocation?: Location;
 }
 
 interface FieldErrors {
@@ -46,7 +89,15 @@ const LOCATION_ERROR_ID = "stash-location-error";
  * itself (`items_access`'s `is_household_member(household_id)` check) —
  * this component adds no redundant check of its own, per this task's AC.
  */
-export function StashForm({ locationOptions, locations, householdId, userId }: StashFormProps) {
+export function StashForm({
+  locationOptions,
+  locations,
+  householdId,
+  userId,
+  onStashed,
+  embedded = false,
+  allowNewLocation = false,
+}: StashFormProps) {
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
   const [locationSelection, setLocationSelection] = useState<AutocompleteSelection | null>(null);
@@ -58,28 +109,56 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const locationError = allowNewLocation
+      ? locationSelection === null
+        ? "Choose a location for this item."
+        : undefined
+      : validateLocationSelection(locationSelection);
     const errors: FieldErrors = {
       name: validateItemName(name),
-      location: validateLocationSelection(locationSelection),
+      location: locationError,
     };
     setFieldErrors(errors);
 
-    // The `locationSelection.type !== "existing"` check (rather than trusting
-    // `errors.location` alone) is what lets TypeScript narrow the
-    // discriminated union below without a non-null assertion — it's the same
-    // condition validateLocationSelection just checked, made visible here.
-    if (errors.name || errors.location || locationSelection?.type !== "existing") {
+    if (errors.name || errors.location || locationSelection === null) {
       return;
     }
 
     const trimmedName = name.trim();
     const trimmedDetail = detail.trim();
-    const locationId = locationSelection.option.id;
 
     setSubmitError(null);
     setIsSubmitting(true);
 
     const supabase = createClient();
+    let locationId: string;
+    let newLocationSegments: LocationBreadcrumbSegment[] | null = null;
+    let createdLocation: Location | undefined;
+
+    if (locationSelection.type === "existing") {
+      locationId = locationSelection.option.id;
+    } else {
+      // Only reachable when allowNewLocation — validated above. A
+      // top-level location, same default as Add-location's own optional
+      // parent (see this prop's own doc comment for why depth doesn't
+      // belong in this capture flow).
+      const { data: newLocation, error: newLocationError } = await supabase
+        .from("locations")
+        .insert({ name: locationSelection.name, parent_id: null, household_id: householdId })
+        .select()
+        .single();
+      if (newLocationError) {
+        setIsSubmitting(false);
+        setSubmitError(newLocationError.message);
+        return;
+      }
+      locationId = newLocation.id;
+      // No ancestors to resolve for a brand-new top-level location — no
+      // need to consult `locations` (which doesn't know about it yet).
+      newLocationSegments = [{ id: newLocation.id, name: newLocation.name }];
+      createdLocation = { id: newLocation.id, parentId: null, name: newLocation.name };
+    }
+
     const { data, error } = await supabase
       .from("items")
       .insert({
@@ -105,9 +184,10 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
     setCaptured({
       id: data.id,
       name: data.name,
-      segments: getBreadcrumbSegments(locationId, locations),
+      segments: newLocationSegments ?? getBreadcrumbSegments(locationId, locations),
       detail: data.detail ?? undefined,
     });
+    onStashed?.({ itemId: data.id, createdLocation });
   }
 
   function handleLocationSelect(selection: AutocompleteSelection) {
@@ -130,6 +210,17 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
     setCaptured(null);
   }
 
+  if (captured && embedded) {
+    return (
+      <div role="status" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
+        <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
+        <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
+        <LocationBreadcrumb segments={captured.segments} />
+        {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
+      </div>
+    );
+  }
+
   if (captured) {
     return (
       <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
@@ -139,10 +230,7 @@ export function StashForm({ locationOptions, locations, householdId, userId }: S
         </div>
         <LocationBreadcrumb segments={captured.segments} />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
-        <p className="text-[10.5px] text-mid">
-          Saved. It won&apos;t show up on Home, Browse, or Find yet — those still read fixture data until their own
-          real-data-wiring tasks land.
-        </p>
+        <p className="text-[10.5px] text-mid">Saved. It shows up on Home and in Browse right away.</p>
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/items/${captured.id}`}

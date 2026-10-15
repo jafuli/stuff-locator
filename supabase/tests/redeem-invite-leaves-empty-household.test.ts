@@ -65,11 +65,7 @@ describe("redeem_invite leaves the caller's empty household", () => {
   let sharedHouseholdId: string;
 
   async function seedHousehold(name: string, members: TestUser[]): Promise<string> {
-    const { data, error } = await serviceClient
-      .from("households")
-      .insert({ name })
-      .select()
-      .single();
+    const { data, error } = await serviceClient.from("households").insert({ name }).select().single();
     if (error) throw new Error(`failed to seed household: ${error.message}`);
     householdIds.push(data.id);
     const { error: memberError } = await serviceClient.from("household_members").insert(
@@ -100,10 +96,7 @@ describe("redeem_invite leaves the caller's empty household", () => {
   }
 
   async function membershipHouseholds(userId: string): Promise<string[]> {
-    const { data, error } = await serviceClient
-      .from("household_members")
-      .select("household_id")
-      .eq("user_id", userId);
+    const { data, error } = await serviceClient.from("household_members").select("household_id").eq("user_id", userId);
     expect(error).toBeNull();
     return (data ?? []).map((row) => row.household_id);
   }
@@ -204,7 +197,7 @@ describe("redeem_invite leaves the caller's empty household", () => {
     expect(error).toBeNull();
 
     expect(await householdExists(keptId)).toBe(true);
-    expect((await membershipHouseholds(otherMember.id))).toEqual([keptId]);
+    expect(await membershipHouseholds(otherMember.id)).toEqual([keptId]);
   });
 
   test("a rejected redemption deletes nothing", async () => {
@@ -220,7 +213,9 @@ describe("redeem_invite leaves the caller's empty household", () => {
   });
 
   test("the inviter redeeming their own code does not delete the household they invited from", async () => {
-    const { error } = await (await signInAs(inviter)).rpc("redeem_invite", {
+    const { error } = await (
+      await signInAs(inviter)
+    ).rpc("redeem_invite", {
       p_code: await newInvite(),
     });
     expect(error).toBeNull();

@@ -145,10 +145,7 @@ describe("RLS household isolation", () => {
   afterAll(async () => {
     // Deleting the households cascades to their locations/items;
     // deleting the users cascades to household_members.
-    await serviceClient
-      .from("households")
-      .delete()
-      .in("id", [householdA.householdId, householdB.householdId]);
+    await serviceClient.from("households").delete().in("id", [householdA.householdId, householdB.householdId]);
     await serviceClient.auth.admin.deleteUser(householdA.userId);
     await serviceClient.auth.admin.deleteUser(householdB.userId);
   });
@@ -161,10 +158,7 @@ describe("RLS household isolation", () => {
     expect(locationsError).toBeNull();
     expect(locations).toHaveLength(1);
 
-    const { data: items, error: itemsError } = await clientA
-      .from("items")
-      .select()
-      .eq("id", householdA.itemId);
+    const { data: items, error: itemsError } = await clientA.from("items").select().eq("id", householdA.itemId);
     expect(itemsError).toBeNull();
     expect(items).toHaveLength(1);
   });
@@ -206,17 +200,10 @@ describe("RLS household isolation", () => {
     expect(locationsError).toBeNull();
     expect(locations).toHaveLength(0);
 
-    const { data: controlItem } = await serviceClient
-      .from("items")
-      .select()
-      .eq("id", householdB.itemId)
-      .single();
+    const { data: controlItem } = await serviceClient.from("items").select().eq("id", householdB.itemId).single();
     expect(controlItem).not.toBeNull();
 
-    const { data: items, error: itemsError } = await clientA
-      .from("items")
-      .select()
-      .eq("id", householdB.itemId);
+    const { data: items, error: itemsError } = await clientA.from("items").select().eq("id", householdB.itemId);
     expect(itemsError).toBeNull();
     expect(items).toHaveLength(0);
   });
@@ -237,11 +224,7 @@ describe("RLS household isolation", () => {
       .single();
     expect(updateError).not.toBeNull();
 
-    const { data: unchanged } = await serviceClient
-      .from("items")
-      .select()
-      .eq("id", householdB.itemId)
-      .single();
+    const { data: unchanged } = await serviceClient.from("items").select().eq("id", householdB.itemId).single();
     expect(unchanged?.name).not.toBe("Hijacked");
   });
 });

@@ -18,13 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // pre-existing error/not-found routes via an EmptyState prop. This route
 // didn't exist when that task's scope was written, so it supplies its own
 // sr-only <h1> independently here rather than waiting on that prop to land.
-export default function Error({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     // Matches Next's own documented pattern. Only runs when a real error
     // boundary trips, not during normal rendering — doesn't violate the

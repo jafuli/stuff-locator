@@ -287,6 +287,9 @@ test("the save button shows a loading state and disables fields while in flight"
   expect(submitButton.disabled).toBe(true);
   expect(screen.getByLabelText<HTMLInputElement>("Name").disabled).toBe(true);
 
-  resolveUpdate({ data: { id: "bike-pump", name: "Bike pump (blue)", detail: "Top shelf", location_id: "garage" }, error: null });
+  resolveUpdate({
+    data: { id: "bike-pump", name: "Bike pump (blue)", detail: "Top shelf", location_id: "garage" },
+    error: null,
+  });
   await screen.findByRole("status");
 });

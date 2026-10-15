@@ -122,10 +122,7 @@ describe("invites RLS", () => {
   afterAll(async () => {
     // Deleting the households cascades to their invites (ON DELETE CASCADE);
     // deleting the users cascades to household_members.
-    await serviceClient
-      .from("households")
-      .delete()
-      .in("id", [householdA.householdId, householdB.householdId]);
+    await serviceClient.from("households").delete().in("id", [householdA.householdId, householdB.householdId]);
     await serviceClient.auth.admin.deleteUser(householdA.userId);
     await serviceClient.auth.admin.deleteUser(householdB.userId);
   });
@@ -184,26 +181,16 @@ describe("invites RLS", () => {
     // Positive control: prove via the service role (bypasses RLS) that this
     // row genuinely exists, so household A getting nothing back below is
     // provably RLS omission, not a nonexistent-row false negative.
-    const { data: control } = await serviceClient
-      .from("invites")
-      .select("id")
-      .eq("id", bInvite.id)
-      .single();
+    const { data: control } = await serviceClient.from("invites").select("id").eq("id", bInvite.id).single();
     expect(control).not.toBeNull();
 
-    const { data: asA, error: asAError } = await clientA
-      .from("invites")
-      .select("*")
-      .eq("id", bInvite.id);
+    const { data: asA, error: asAError } = await clientA.from("invites").select("*").eq("id", bInvite.id);
     expect(asAError).toBeNull();
     expect(asA).toHaveLength(0);
   });
 
   test("members have no UPDATE or DELETE grant at all — rejected before RLS even applies", async () => {
-    const invite = assertNotNull(
-      createdInviteIds[0],
-      "expected an earlier test to have created household A's invite",
-    );
+    const invite = assertNotNull(createdInviteIds[0], "expected an earlier test to have created household A's invite");
 
     // `authenticated` holds no UPDATE/DELETE privilege on this table (not
     // merely no policy), so Postgres refuses the statement outright with
@@ -225,22 +212,14 @@ describe("invites RLS", () => {
     expect(updateError).not.toBeNull();
     expect(updateError?.code).toBe("42501");
 
-    const { data: stillThere } = await serviceClient
-      .from("invites")
-      .select("redeemed_at")
-      .eq("id", invite)
-      .single();
+    const { data: stillThere } = await serviceClient.from("invites").select("redeemed_at").eq("id", invite).single();
     expect(stillThere?.redeemed_at).toBeNull();
 
     const { error: deleteError } = await clientA.from("invites").delete().eq("id", invite);
     expect(deleteError).not.toBeNull();
     expect(deleteError?.code).toBe("42501");
 
-    const { data: stillExists } = await serviceClient
-      .from("invites")
-      .select("id")
-      .eq("id", invite)
-      .single();
+    const { data: stillExists } = await serviceClient.from("invites").select("id").eq("id", invite).single();
     expect(stillExists?.id).toBe(invite);
   });
 });

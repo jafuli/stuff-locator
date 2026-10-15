@@ -41,7 +41,9 @@ test("the app shell has a visible, keyboard-reachable entry point into the invit
   await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
 });
 
-test("generating an invite shows a real code and link, and copying it shows a visible confirmation", async ({ page }) => {
+test("generating an invite shows a real code and link, and copying it shows a visible confirmation", async ({
+  page,
+}) => {
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") {

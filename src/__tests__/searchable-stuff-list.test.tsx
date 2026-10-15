@@ -6,7 +6,12 @@ import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import type { StuffListEntry } from "@/components/stuff-list";
 import type { Item } from "@/lib/fixtures/types";
 
-const passport: Item = { id: "passport", locationId: "bedroom-filing-box", name: "Passport", detail: "with the birth certificates" };
+const passport: Item = {
+  id: "passport",
+  locationId: "bedroom-filing-box",
+  name: "Passport",
+  detail: "with the birth certificates",
+};
 const tent: Item = { id: "camping-tent", locationId: "garage-high-shelf", name: "Camping tent" };
 
 const entries: StuffListEntry[] = [
@@ -68,12 +73,7 @@ test("a query matching nothing announces zero results via the status region", as
 
 test("forwards emptyStateAction to StuffList's zero-entries empty state, not the no-matches one", async () => {
   const user = userEvent.setup();
-  render(
-    <SearchableStuffList
-      entries={[]}
-      emptyStateAction={<Link href="/items/new">Stash your first item</Link>}
-    />,
-  );
+  render(<SearchableStuffList entries={[]} emptyStateAction={<Link href="/items/new">Stash your first item</Link>} />);
   // Zero total entries, no query typed — StuffList's own empty state, with
   // the action.
   expect(screen.getByRole("link", { name: "Stash your first item" })).toBeDefined();
