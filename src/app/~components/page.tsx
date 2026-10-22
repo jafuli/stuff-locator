@@ -5,9 +5,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LocationBreadcrumb } from "@/components/location-breadcrumb";
 import { ItemCard } from "@/components/item-card";
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
-import { BottomNav } from "@/components/bottom-nav";
+import { TabCapsule } from "@/components/tab-capsule";
 import { PathPickerDemo } from "./path-picker-demo";
-import { DialogDemo, FormFieldDemo } from "./primitive-demos";
+import { DialogDemo, FormFieldDemo, HouseholdSheetDemo } from "./primitive-demos";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -193,6 +193,19 @@ export default function ComponentsDemoPage() {
         </ThemePair>
       </Section>
 
+      <Section id="tab-capsule-heading" title="Tab capsule">
+        <ThemePair>
+          <TabCapsule tabs={NAV_TABS} activePath="/" />
+          <TabCapsule tabs={NAV_TABS} activePath="/activity" />
+        </ThemePair>
+      </Section>
+
+      <Section id="household-sheet-heading" title="Household button and sheet">
+        <ThemePair>
+          <HouseholdSheetDemo />
+        </ThemePair>
+      </Section>
+
       <div className="flex flex-col gap-2 border-t border-divider pt-8">
         <h2 className="text-title text-ink">Not yet migrated</h2>
         <p className="text-meta text-muted">
@@ -254,15 +267,6 @@ export default function ComponentsDemoPage() {
             Pick-only (no &quot;+ New&quot; row; Garage and everything inside it excluded)
           </p>
           <PathPickerDemo label="Move into…" locations={LOCATIONS} pickOnly excludeIds={["garage"]} />
-        </div>
-      </Section>
-
-      <Section id="bottom-nav-heading" title="Bottom nav">
-        <div className="max-w-xs overflow-hidden rounded-control border border-hairline">
-          <BottomNav tabs={NAV_TABS} activePath="/" />
-        </div>
-        <div className="max-w-xs overflow-hidden rounded-control border border-hairline">
-          <BottomNav tabs={NAV_TABS} activePath="/activity" />
         </div>
       </Section>
     </main>

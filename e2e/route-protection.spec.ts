@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { signOutViaMenu } from "./utils";
 
 // Runs against a real local Supabase stack — see sign-up.spec.ts's header
 // comment. Proves the gate in src/proxy.ts both ways: every route the
@@ -88,7 +89,7 @@ test("the return-to path survives sign-in, so a shared link lands where it point
   const itemName = `Passport ${randomUUID()}`;
   const itemId = await seedItem(email, TEST_PASSWORD, { name: itemName, locationId });
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
 
   await page.goto(`/items/${itemId}`);
@@ -124,7 +125,7 @@ test("a ?next= pointing off-origin is ignored rather than followed", async ({ pa
   // page, so anyone can craft this link. Signing in must land on "/",
   // not on the attacker's host.
   const email = await signUpFreshAccount(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
 
   await page.goto("/sign-in?next=https://evil.example/phish");

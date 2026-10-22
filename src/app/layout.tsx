@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Next, IBM_Plex_Mono } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
-import { SiteNav } from "@/components/site-nav";
+import { NavClearance, SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 // The design system's two families. Weights are exactly what the type styles
@@ -57,7 +57,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       */}
       <body className="flex h-dvh flex-col overflow-hidden">
         <SerwistProvider swUrl="/serwist/sw.js">
-          <div className="flex-1 overflow-y-auto">{children}</div>
+          <div className="flex-1 overflow-y-auto">
+            {children}
+            <NavClearance />
+          </div>
           <SiteNav />
         </SerwistProvider>
       </body>

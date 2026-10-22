@@ -23,7 +23,7 @@ vi.mock("@/server/db/client", () => ({
 // Static import is safe here: vi.mock calls are hoisted above imports, so
 // next/navigation and @/server/db/client are already mocked by the time
 // site-nav.tsx evaluates them.
-import { SiteNav } from "@/components/site-nav";
+import { NavClearance, SiteNav } from "@/components/site-nav";
 
 test("marks the Stuff tab active on /", () => {
   usePathname.mockReturnValue("/");
@@ -32,14 +32,14 @@ test("marks the Stuff tab active on /", () => {
   expect(screen.getByRole("link", { name: "Activity" }).getAttribute("aria-current")).toBeNull();
 });
 
-test("has a visible Invite partner link to /settings/invite, distinct from the two BottomNav tabs", () => {
+test("has exactly two capsule tabs, and no loose Invite link or Sign out button under them any more", () => {
   usePathname.mockReturnValue("/");
   render(<SiteNav />);
-  const inviteLink = screen.getByRole("link", { name: "Invite partner" });
-  expect(inviteLink.getAttribute("href")).toBe("/settings/invite");
-  // Still exactly two BottomNav tabs — this is a separate nav link, not a
-  // third tab (nav-tabs.ts's own settled 2-tab decision is unchanged).
+  // Invite partner / Settings / Sign out moved into the household sheet (see
+  // household-menu.test.tsx) — the primary nav is just the two tabs.
   expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(2);
+  expect(screen.queryByRole("link", { name: "Invite partner" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
 });
 
 test("marks the Activity tab active on /activity", () => {
@@ -70,5 +70,17 @@ test("renders nothing on /forgot-password", () => {
 test("renders nothing on /reset-password", () => {
   usePathname.mockReturnValue("/reset-password");
   const { container } = render(<SiteNav />);
+  expect(container.firstChild).toBeNull();
+});
+
+test("NavClearance reserves room for the floating nav on app pages", () => {
+  usePathname.mockReturnValue("/");
+  const { container } = render(<NavClearance />);
+  expect(container.firstChild).not.toBeNull();
+});
+
+test("NavClearance renders nothing on a standalone auth page, so it doesn't add a phantom scroll area", () => {
+  usePathname.mockReturnValue("/sign-in");
+  const { container } = render(<NavClearance />);
   expect(container.firstChild).toBeNull();
 });

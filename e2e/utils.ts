@@ -48,3 +48,15 @@ export async function tabUntilHrefFocused(page: Page, href: string, max = 25): P
   }
   return false;
 }
+
+/** Opens the household sheet (the primary home of Invite partner / Settings / Sign out). */
+export async function openHouseholdMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Household menu" }).click();
+  await page.getByRole("dialog").waitFor();
+}
+
+/** Signs out the way a person does now: household button, then Sign out in the sheet. */
+export async function signOutViaMenu(page: Page): Promise<void> {
+  await openHouseholdMenu(page);
+  await page.getByRole("button", { name: "Sign out" }).click();
+}

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import { tabUntilFocused } from "./utils";
+import { tabUntilFocused, signOutViaMenu } from "./utils";
 import { fetchLatestLinkForEmail } from "./mailpit-test-client";
 
 // Runs against a real local Supabase stack — same stance as sign-in.spec.ts
@@ -22,7 +22,7 @@ async function signUpFreshAccount(page: Page, password: string): Promise<string>
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("/");
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
   return email;
 }

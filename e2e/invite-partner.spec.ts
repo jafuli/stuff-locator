@@ -25,20 +25,24 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.waitForURL("/");
 }
 
-test("the app shell has a visible, keyboard-reachable entry point into the invite flow", async ({ page }) => {
+test("the household button is a keyboard-reachable entry point into the invite flow", async ({ page }) => {
   await signUpFreshAccount(page);
 
-  const inviteLink = page.getByRole("link", { name: "Invite partner" });
-  await expect(inviteLink).toBeVisible();
-  // Raised like home.spec.ts's own equivalent check (AC #4 there) — Home's
-  // fixture item list contributes many real tab stops (each item's own
-  // link plus one per breadcrumb segment) before reaching the bottom nav
-  // and this link, which sits right after it.
-  expect(await tabUntilFocused(page, "Invite partner", 45)).toBe(true);
+  const menuButton = page.getByRole("button", { name: "Household menu" });
+  await expect(menuButton).toBeVisible();
+  // Home's item list contributes many real tab stops before the floating nav
+  // at the end of the document, so allow a generous number of presses.
+  expect(await tabUntilFocused(page, "Household menu", 45)).toBe(true);
 
-  await inviteLink.click();
+  await page.keyboard.press("Enter");
+  const inviteLink = page.getByRole("dialog").getByRole("link", { name: "Invite partner" });
+  await expect(inviteLink).toBeFocused();
+
+  await page.keyboard.press("Enter");
   await page.waitForURL("/settings/invite");
   await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
+  // Choosing a row closes the sheet.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("generating an invite shows a real code and link, and copying it shows a visible confirmation", async ({
