@@ -71,3 +71,17 @@ export function toActivityEntry(row: EventRow, actor: string): ActivityEntry | n
     at: new Date(row.created_at),
   };
 }
+
+/**
+ * Splits one of an event's path snapshots ("Garage › Closet › Toolbox") into
+ * PathTrail segments. The snapshot is only text — the places may have been
+ * renamed, moved or deleted since — so the segments carry synthetic ids and
+ * the trail is never linked.
+ */
+export function pathSegmentsFromText(text: string | null | undefined): { id: string; name: string }[] {
+  return (text ?? "")
+    .split("›")
+    .map((name) => name.trim())
+    .filter((name) => name !== "")
+    .map((name, index) => ({ id: `${String(index)}-${name}`, name }));
+}

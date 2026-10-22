@@ -1,17 +1,24 @@
-// Next's loading.tsx convention, scoped to this segment: without it, the
-// root loading.tsx (home-page-shaped, "Our stuff" heading + search
-// skeleton) would cascade here, which is wrong content for Browse. page.tsx
-// is now an async Server Component (a real household/locations read), so
-// Next suspends on it and this fallback genuinely shows while that resolves.
+import { ItemCardSkeleton } from "@/components/item-card-skeleton";
+import { STUFF_HEADING } from "@/lib/stuff-heading";
+
+// Next's loading.tsx convention, scoped to this segment: Browse's top level
+// shares the Stuff header, so this is the same shape — heading, search
+// field, a panel of rows — but is its own file so the skeleton can't drift
+// when Stuff's does. page.tsx is an async Server Component (a real
+// household/locations read), so Next suspends on it and this fallback
+// genuinely shows while that resolves.
 export default function Loading() {
   return (
-    <main className="flex flex-col gap-3 p-4" aria-busy="true" aria-live="polite">
-      <div className="h-[11.5px] w-20 animate-pulse rounded bg-wash" aria-hidden="true" />
-      <div className="h-[18px] w-16 animate-pulse rounded bg-wash" aria-hidden="true" />
-      <div className="flex flex-col gap-2">
-        <div className="h-[13.5px] w-1/3 animate-pulse rounded bg-wash" aria-hidden="true" />
-        <div className="h-[13.5px] w-1/3 animate-pulse rounded bg-wash" aria-hidden="true" />
-        <div className="h-[13.5px] w-1/3 animate-pulse rounded bg-wash" aria-hidden="true" />
+    <main className="flex flex-col gap-4 px-gutter pt-6" aria-busy="true" aria-live="polite">
+      <h1 className="text-display text-ink">{STUFF_HEADING}</h1>
+      <div
+        className="h-control-height animate-pulse rounded-control border border-border-control bg-surface"
+        aria-hidden="true"
+      />
+      <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+        <ItemCardSkeleton />
+        <ItemCardSkeleton />
+        <ItemCardSkeleton />
       </div>
       <span className="sr-only">Loading rooms…</span>
     </main>

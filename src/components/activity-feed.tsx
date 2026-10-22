@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArrowRightIcon } from "@/components/icons";
+import { PathTrail } from "@/components/path-trail";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ActivityEntry } from "@/lib/activity";
+import { pathSegmentsFromText, type ActivityEntry } from "@/lib/activity";
+import { firstNameOf } from "@/lib/display-name";
 import { formatRelativeLong } from "@/lib/format-relative-time";
 
 export interface ActivityFeedProps {
@@ -13,7 +16,7 @@ export interface ActivityFeedProps {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 const ITEM_LINK_CLASS =
-  "rounded-sm font-semibold underline-offset-2 outline-none hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "rounded-tape font-medium underline-offset-2 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 /** What one event reads as: a sentence after the actor, and an optional second line. */
 interface Description {
@@ -22,7 +25,7 @@ interface Description {
 }
 
 function Strong({ children }: { children: ReactNode }) {
-  return <span className="font-semibold">{children}</span>;
+  return <span className="font-medium">{children}</span>;
 }
 
 function ItemLink({ entry, name }: { entry: ActivityEntry; name: string }) {
@@ -33,10 +36,61 @@ function ItemLink({ entry, name }: { entry: ActivityEntry; name: string }) {
   );
 }
 
-/** "A → B", or "to B" when the earlier place wasn't recorded (a backfilled move). */
-function describeMove(from: string | null, to: string | null, topLevel: string): string {
-  const target = to ?? topLevel;
-  return from === null ? `to ${target}` : `${from} → ${target}`;
+/**
+ * A renamed place's "to": its old path with the last segment swapped for the
+ * new name (the event stores the new name bare, not the whole path).
+ */
+function renamedPath(entry: ActivityEntry): string {
+  const parents = pathSegmentsFromText(entry.fromText).slice(0, -1);
+  return [...parents.map((segment) => segment.name), entry.toText ?? entry.subjectName].join(" › ");
+}
+
+/** A word, then a path: "in Garage › Shelf", "was in Office › Cabinet". */
+function TrailAfter({ word, path }: { word: string; path: string }) {
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="text-meta text-muted">{word} </span>
+      <PathTrail segments={pathSegmentsFromText(path)} />
+    </span>
+  );
+}
+
+/**
+ * Where it was and where it went, as two PathTrails with an arrow between
+ * them — or just "to <path>" when the earlier place wasn't recorded (a
+ * backfilled move). A missing side is the top level, which has no path to
+ * put on tape, so it's plain muted text. The arrow is decorative; assistive
+ * tech hears "to".
+ */
+function Move({
+  from,
+  to,
+  topLevelOnBothSides = false,
+}: {
+  from: string | null;
+  to: string | null;
+  /** Place moves name the top level on either side; item moves never show a "from" they don't have. */
+  topLevelOnBothSides?: boolean;
+}) {
+  const side = (text: string | null, fallback: string) =>
+    text === null ? (
+      <span className="text-meta text-muted">{fallback}</span>
+    ) : (
+      <PathTrail segments={pathSegmentsFromText(text)} />
+    );
+
+  if (from === null && !topLevelOnBothSides) {
+    return <TrailAfter word="to" path={to ?? "Top level"} />;
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {side(from, "Top level")}
+      <ArrowRightIcon className="shrink-0 text-faint" width={16} height={16} />
+      <span className="sr-only">to</span>
+      {side(to, "Top level")}
+    </span>
+  );
 }
 
 /**
@@ -53,7 +107,7 @@ function describe(entry: ActivityEntry): Description {
             added <ItemLink entry={entry} name={entry.subjectName} />
           </>
         ),
-        detail: entry.toText ? `in ${entry.toText}` : undefined,
+        detail: entry.toText ? <TrailAfter word="in" path={entry.toText} /> : undefined,
       };
     case "item_moved":
       return {
@@ -62,7 +116,7 @@ function describe(entry: ActivityEntry): Description {
             moved <ItemLink entry={entry} name={entry.subjectName} />
           </>
         ),
-        detail: describeMove(entry.fromText, entry.toText, "the top level"),
+        detail: <Move from={entry.fromText} to={entry.toText} />,
       };
     case "item_renamed":
       return {
@@ -79,7 +133,11 @@ function describe(entry: ActivityEntry): Description {
             edited the detail of <ItemLink entry={entry} name={entry.subjectName} />
           </>
         ),
-        detail: entry.detailText ? `“${entry.detailText}”` : "removed the detail",
+        detail: (
+          <span className="text-meta text-muted">
+            {entry.detailText ? `“${entry.detailText}”` : "removed the detail"}
+          </span>
+        ),
       };
     case "item_deleted":
       return {
@@ -88,12 +146,12 @@ function describe(entry: ActivityEntry): Description {
             deleted <Strong>{entry.subjectName}</Strong>
           </>
         ),
-        detail: entry.fromText ? `was in ${entry.fromText}` : undefined,
+        detail: entry.fromText ? <TrailAfter word="was in" path={entry.fromText} /> : undefined,
       };
     case "place_renamed":
       return {
         headline: "renamed a place",
-        detail: `${entry.fromText ?? ""} → ${entry.toText ?? entry.subjectName}`.trim(),
+        detail: <Move from={entry.fromText} to={renamedPath(entry)} />,
       };
     case "place_moved":
       return {
@@ -102,7 +160,7 @@ function describe(entry: ActivityEntry): Description {
             moved the place <Strong>{entry.subjectName}</Strong>
           </>
         ),
-        detail: `${entry.fromText ?? "Top level"} → ${entry.toText ?? "Top level"}`,
+        detail: <Move from={entry.fromText} to={entry.toText} topLevelOnBothSides />,
       };
     case "place_deleted":
       return {
@@ -111,7 +169,11 @@ function describe(entry: ActivityEntry): Description {
             deleted the place <Strong>{entry.subjectName}</Strong>
           </>
         ),
-        detail: `was in ${entry.fromText ?? "the top level"}`,
+        detail: entry.fromText ? (
+          <TrailAfter word="was in" path={entry.fromText} />
+        ) : (
+          <span className="text-meta text-muted">was in the top level</span>
+        ),
       };
   }
 }
@@ -119,16 +181,12 @@ function describe(entry: ActivityEntry): Description {
 function FeedEntry({ entry, now }: { entry: ActivityEntry; now: Date }) {
   const { headline, detail } = describe(entry);
   return (
-    <li className="border-b border-divider py-[9px] last:border-b-0">
-      <p className="text-[13px] break-words text-ink">
-        <Strong>{entry.actor}</Strong> {headline}
+    <li className="flex min-h-14 flex-col gap-1 border-b border-divider px-4 py-3 last:border-b-0">
+      <p className="text-body break-words text-ink">
+        <Strong>{firstNameOf(entry.actor) ?? entry.actor}</Strong> {headline}
       </p>
-      {detail ? <p className="font-wire-mono text-[10.5px] tracking-[-0.01em] break-words text-mid">{detail}</p> : null}
-      {/* text-mid, not the lighter --dim token: axe-core flagged
-          --dim's 2.81:1 contrast against the paper background as a
-          WCAG AA failure (needs 4.5:1 for text this size) — text-mid
-          clears it at 5.33:1. */}
-      <time dateTime={entry.at.toISOString()} title={entry.at.toLocaleString()} className="text-[9.5px] text-mid">
+      {detail}
+      <time dateTime={entry.at.toISOString()} title={entry.at.toLocaleString()} className="text-meta text-muted">
         {formatRelativeLong(entry.at, now)}
       </time>
     </li>
@@ -140,11 +198,9 @@ function FeedGroup({ title, entries, now }: { title: string; entries: readonly A
     return null;
   }
   return (
-    <section aria-label={title} className="flex flex-col">
-      <h2 className="border-b border-line pt-3 pb-[3px] text-[10.5px] font-bold tracking-[.06em] text-mid uppercase first:pt-0">
-        {title}
-      </h2>
-      <ol className="flex flex-col">
+    <section aria-label={title} className="flex flex-col gap-2">
+      <h2 className="text-section-label text-muted">{title}</h2>
+      <ol className="overflow-hidden rounded-panel border border-hairline bg-surface">
         {entries.map((entry) => (
           <FeedEntry key={entry.id} entry={entry} now={now} />
         ))}
@@ -177,7 +233,7 @@ export function ActivityFeed({ entries, now = new Date() }: ActivityFeedProps) {
   const earlier = entries.filter((entry) => entry.at.getTime() <= cutoff);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-6">
       <FeedGroup title="This week" entries={thisWeek} now={now} />
       <FeedGroup title="Earlier" entries={earlier} now={now} />
     </div>

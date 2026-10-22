@@ -57,3 +57,33 @@ export function SearchIcon(props: SVGProps<SVGSVGElement>) {
     </LineIcon>
   );
 }
+
+/** Lucide "chevron-right" — marks a row that navigates somewhere. */
+export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <LineIcon {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </LineIcon>
+  );
+}
+
+/** Lucide "arrow-right" — between a "from" path and a "to" path. */
+export function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <LineIcon {...props}>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </LineIcon>
+  );
+}
+
+/** Lucide "ellipsis" — the ⋯ on a place's menu button. */
+export function MoreIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <LineIcon {...props}>
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="19" cy="12" r="1" />
+      <circle cx="5" cy="12" r="1" />
+    </LineIcon>
+  );
+}

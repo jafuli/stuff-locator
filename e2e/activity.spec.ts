@@ -39,7 +39,7 @@ test("a household with nothing stashed shows the empty state, not fixture entrie
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What did you miss?" })).toBeVisible();
   await expect(page.getByText("Nothing has happened yet")).toBeVisible();
   await expect(page.getByRole("listitem")).toHaveCount(0);
 });
@@ -63,7 +63,7 @@ test("a stashed item appears as '<name> added <item>' with where it went, and li
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What did you miss?" })).toBeVisible();
   await expect(page.getByText("Nothing has happened yet")).toHaveCount(0);
 
   const entry = page.getByRole("listitem").first();
@@ -128,13 +128,16 @@ test("every kind of change shows up, newest first, and an item moved twice shows
   }
 
   // Both moves of the tent are there, each with its own from → to.
-  await expect(page.getByText("Garage › Closet → Attic", { exact: true })).toBeVisible();
-  await expect(page.getByText("Attic → Garage", { exact: true })).toBeVisible();
-  await expect(page.getByText("was in Garage › Closet", { exact: true })).toBeVisible();
+  // (A move is two PathTrails with the direction spoken for screen readers,
+  // so the row's text reads "<from>to<to>".)
+  const rows = page.getByRole("listitem");
+  await expect(rows.filter({ hasText: /Garage › Closet.*to.*Attic/ }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: /Attic.*to.*Garage/ }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: /was in.*Garage › Closet/ }).first()).toBeVisible();
   await expect(page.getByText("“poles in the blue bag”")).toBeVisible();
   // A place deleted from under Garage says where it was; created places log nothing.
-  await expect(page.getByText("was in Garage", { exact: true })).toBeVisible();
-  await expect(page.getByText(`Garage › Box ${tag} → Camping box ${tag}`)).toBeVisible();
+  await expect(rows.filter({ hasText: /deleted the place.*was in.*Garage/ }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: new RegExp(`Garage › Box ${tag}.*Garage › Camping box ${tag}`) })).toHaveCount(1);
   await expect(page.getByText(`added Box ${tag}`)).toHaveCount(0);
 });
 

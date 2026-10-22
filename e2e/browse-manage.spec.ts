@@ -79,7 +79,9 @@ test("rename: the heading becomes an input, Enter saves, Esc cancels, and Activi
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("renamed a place")).toBeVisible();
-  await expect(page.getByText("Office › Cabinet → Filing cabinet", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: /Office › Cabinet.*Office › Filing cabinet/ }),
+  ).toBeVisible();
 });
 
 test("rename to a sibling's name (any case) shows the duplicate message and keeps editing", async ({ page }) => {
@@ -134,7 +136,7 @@ test("move: a place can't be moved into itself or its descendants; moving update
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("moved the place Cabinet")).toBeVisible();
-  await expect(page.getByText("Office → Bedroom", { exact: true })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: /Office.*to.*Bedroom/ })).toBeVisible();
 });
 
 test("move to the top level", async ({ page }) => {

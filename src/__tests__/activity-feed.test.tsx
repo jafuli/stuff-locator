@@ -40,7 +40,7 @@ describe("each kind", () => {
     expect(row.textContent).toContain("in Garage › Shelf");
   });
 
-  test("item_moved: the item link and 'from → to'", () => {
+  test("item_moved: the item link and a 'from' trail then a 'to' trail", () => {
     const row = renderOne({
       kind: "item_moved",
       subjectName: "Spare house keys",
@@ -50,14 +50,17 @@ describe("each kind", () => {
 
     expect(row.textContent).toContain("moved");
     expect(within(row).getByRole("link", { name: "Spare house keys" })).toBeDefined();
-    expect(row.textContent).toContain("Hallway › Hook → Kitchen › Key bowl");
+    // Two trails, from then to, with the direction spoken for screen readers.
+    expect(row.textContent).toContain("Hallway › Hook");
+    expect(row.textContent).toContain("Kitchen › Key bowl");
+    expect(row.textContent).toMatch(/Hallway › Hook.*to.*Kitchen › Key bowl/);
   });
 
   test("item_moved without from_text (a backfilled move) reads 'to <path>'", () => {
     const row = renderOne({ kind: "item_moved", fromText: null, toText: "Kitchen › Key bowl" });
 
     expect(row.textContent).toContain("to Kitchen › Key bowl");
-    expect(row.textContent).not.toContain("→");
+    expect(row.querySelectorAll("svg")).toHaveLength(0);
   });
 
   test("item_renamed: 'renamed <old> → <new>', the new name linking to the item", () => {
@@ -97,7 +100,7 @@ describe("each kind", () => {
     expect(row.textContent).toContain("was in Office › Cabinet › Top drawer");
   });
 
-  test("place_renamed: 'renamed a place' and '<parent> › <old> → <new>'", () => {
+  test("place_renamed: 'renamed a place', the old path then the same path with the new name", () => {
     const row = renderOne({
       kind: "place_renamed",
       subjectName: "Filing cabinet",
@@ -106,7 +109,8 @@ describe("each kind", () => {
     });
 
     expect(row.textContent).toContain("renamed a place");
-    expect(row.textContent).toContain("Office › Cabinet → Filing cabinet");
+    expect(row.textContent).toContain("Office › Cabinet");
+    expect(row.textContent).toContain("Office › Filing cabinet");
   });
 
   test("place_moved: 'moved the place <name>' and 'from → to', with the top level named", () => {
@@ -118,7 +122,8 @@ describe("each kind", () => {
     });
 
     expect(row.textContent).toContain("moved the place Camping box");
-    expect(row.textContent).toContain("Top level → Bedroom › Under bed");
+    expect(row.textContent).toContain("Top level");
+    expect(row.textContent).toContain("Bedroom › Under bed");
   });
 
   test("place_deleted: 'deleted the place <name>' and 'was in <parent path>'", () => {
@@ -170,5 +175,19 @@ describe("grouping and order", () => {
 
     expect(row.querySelector("time")?.textContent).toBe("3 hours ago");
     expect(row.textContent).toContain("Someone");
+  });
+});
+
+describe("path trails", () => {
+  test("a moved item's from and to are PathTrails with only the last segment on tape", () => {
+    const row = renderOne({ kind: "item_moved", fromText: "Hallway › Hook", toText: "Kitchen › Key bowl" });
+    const tape = Array.from(row.querySelectorAll("span")).filter((span) => span.className.includes("bg-tape"));
+    expect(tape.map((span) => span.textContent)).toEqual(["Hook", "Key bowl"]);
+  });
+
+  test("the actor is shown by first name", () => {
+    const row = renderOne({ actor: "Noa Levi" });
+    expect(row.textContent).toContain("Noa added");
+    expect(row.textContent).not.toContain("Levi");
   });
 });

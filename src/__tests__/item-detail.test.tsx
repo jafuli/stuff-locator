@@ -50,10 +50,10 @@ test("renders every optional field when present", () => {
   expect(screen.getByText("the ones with the blue tag")).toBeDefined();
   expect(screen.getByText("Added by")).toBeDefined();
   expect(screen.getByText("Itamar")).toBeDefined();
-  expect(screen.getByText("1w ago")).toBeDefined();
+  expect(screen.getByText("1 week ago")).toBeDefined();
   expect(screen.getByText("Last moved by")).toBeDefined();
   expect(screen.getByText("Maayan")).toBeDefined();
-  expect(screen.getByText("2d ago")).toBeDefined();
+  expect(screen.getByText("2 days ago")).toBeDefined();
 });
 
 test("omits fields that are absent, without any filler", () => {
