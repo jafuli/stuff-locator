@@ -12,9 +12,9 @@
 // spacer would overflow by exactly the spacer's height.
 export default function OfflinePage() {
   return (
-    <main className="flex min-h-[calc(100%-var(--spacing-nav-clearance))] flex-col items-center justify-center gap-2 p-6 text-center">
-      <h1 className="text-2xl font-semibold">You&apos;re offline</h1>
-      <p className="text-sm text-muted-foreground">
+    <main className="flex min-h-[calc(100%-var(--spacing-nav-clearance))] flex-col items-center justify-center gap-3 px-gutter text-center">
+      <h1 className="text-display text-ink">You&apos;re offline</h1>
+      <p className="max-w-sm text-body text-muted">
         Stuff Locator needs a connection for this page. Anything you&apos;ve already loaded is still available.
       </p>
     </main>

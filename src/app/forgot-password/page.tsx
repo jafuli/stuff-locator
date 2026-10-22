@@ -6,8 +6,8 @@ import { ForgotPasswordForm } from "@/components/forgot-password-form";
 // such as Stash or item-detail).
 export default function ForgotPasswordPage() {
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <h1 className="text-[16px] font-semibold text-ink">Reset your password</h1>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <h1 className="text-display text-ink">Reset your password</h1>
       <ForgotPasswordForm />
     </main>
   );

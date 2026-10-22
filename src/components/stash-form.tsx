@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
 import { PathTrail } from "@/components/path-trail";
 import { LocationPathPicker } from "@/components/location-path-picker";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
 import { resolvePath, type PathChip } from "@/lib/location-path-picker";
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 export interface StashFormProps {
   /** Every place in the household — the picker searches and descends through these. */
@@ -153,39 +154,33 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
 
   if (captured && embedded) {
     return (
-      <div role="status" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
-        <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
-        <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
+      <div role="status" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4">
+        <p className="text-section-label text-muted">Added</p>
+        <p className="text-title text-ink">{captured.name}</p>
         <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
+        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
       </div>
     );
   }
 
   if (captured) {
     return (
-      <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         <div>
-          <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
-          <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
+          <p className="text-section-label text-muted">Added</p>
+          <p className="text-title text-ink">{captured.name}</p>
         </div>
         <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
-        <p className="text-[10.5px] text-mid">Saved. It shows up on Home and in Browse right away.</p>
+        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
+        <p className="text-meta text-muted">Saved. It shows up on Home and in Browse right away.</p>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/items/${captured.id}`}
-            className="inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
+          <Link href={`/items/${captured.id}`} className={buttonClassName("primary")}>
             View item
           </Link>
           <Button type="button" variant="secondary" onClick={handleAddAnother}>
             Add another
           </Button>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-[8px] px-[10px] py-[10px] text-[13px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
+          <Link href="/" className={textLinkClassName()}>
             Back to home
           </Link>
         </div>
@@ -217,7 +212,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
           disabled={isSubmitting}
         />
         {fieldErrors.location ? (
-          <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-[10.5px] text-mid">
+          <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
             {fieldErrors.location}
           </p>
         ) : null}
@@ -233,7 +228,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
       />
 
       {submitError ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {submitError}
         </p>
       ) : null}

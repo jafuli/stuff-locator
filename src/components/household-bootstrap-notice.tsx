@@ -16,8 +16,8 @@ interface HouseholdBootstrapNoticeProps {
  */
 export function HouseholdBootstrapNotice({ onContinue }: HouseholdBootstrapNoticeProps) {
   return (
-    <div role="alert" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
-      <p className="text-[11.5px] text-mid">
+    <div role="alert" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4">
+      <p className="text-meta text-muted">
         We couldn&apos;t finish setting up your household. You can still continue — we&apos;ll try again next time you
         sign in.
       </p>

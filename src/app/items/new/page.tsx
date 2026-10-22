@@ -53,8 +53,8 @@ export default async function Page() {
   }));
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <h1 className="text-[16px] font-semibold text-ink">Add an item</h1>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <h1 className="text-display text-ink">Add an item</h1>
       <StashForm locations={locations} />
     </main>
   );

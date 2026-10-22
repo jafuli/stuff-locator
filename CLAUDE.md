@@ -24,7 +24,7 @@ The look comes from the **Stuff Locator design system** ("Label Maker"), not fro
 - **One `display` heading per screen**, phrased as the screen's question ("What are you looking for?").
 - Quiet by default: weights 400/500 (600 at most, never 700/800), thin warm borders, soft shadows. `signal` is the one accent — Closest match, destructive actions and errors — as text or a small marker, never a large fill. Text first; line icons only (1.5px stroke, round caps, `currentColor`), no emoji.
 - A control's only edge is `border-strong`, never `border-control` (below 3:1); every interactive element gets the 2px `focus` outline with a 2px offset; inputs are 16px.
-- The wireframe tokens (`--mid`, `--dim`, `--line`, `--wash`, `--note`) and `--font-wire*` survive only as temporary aliases in `globals.css` while the Design series (Notion "Design 1/5"–"5/5") migrates screens; don't use them in new code.
+- The wireframe tokens (`--mid`, `--dim`, `--line`, `--wash`, `--note`, `--font-wire*`) are gone — don't reintroduce them. A check that the rule holds: `rg 'text-\[|rounded-\[|#[0-9a-f]{3,6}' src/components src/app -i` should return only `globals.css` (where the tokens are defined) and the commented `themeColor` / manifest exceptions.
 - `/~components` (dev only) shows the tokens and every shared primitive in both themes — add new primitives there.
 
 ## What this app is

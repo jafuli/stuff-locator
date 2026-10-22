@@ -58,12 +58,12 @@ export interface LocationPathPickerProps {
 }
 
 const SECTION_CLASS = "border-b border-divider last:border-b-0";
-const HEADER_CLASS = "px-[9px] pt-[6px] pb-[2px] text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase";
+const HEADER_CLASS = "px-4 pt-3 pb-1 text-section-label text-muted";
 
 function MatchedPath({ path, query }: { path: string; query: string }): ReactNode {
   return splitMatchSegments(path, query).map((segment, index) =>
     segment.matched ? (
-      <b key={index} className="bg-divider font-bold">
+      <b key={index} className="font-medium underline decoration-2 underline-offset-2">
         {segment.text}
       </b>
     ) : (
@@ -191,7 +191,7 @@ export function LocationPathPicker({
 
   function renderOption(item: ComboItem, index: number) {
     const isHighlighted = highlightedIndex === index;
-    const base = "px-[9px] py-[7px] text-[11px] min-h-11 flex items-center justify-between gap-[6px]";
+    const base = "flex min-h-12 items-center justify-between gap-3 px-4 py-2";
     if (item.kind === "create") {
       const where = rows.createInside === null ? "at the top level" : `inside ${rows.createInside}`;
       return (
@@ -199,10 +199,10 @@ export function LocationPathPicker({
           key="__create__"
           {...getItemProps({ item, index })}
           aria-label={`New place '${item.name}' ${where}`}
-          className={cn(base, "font-wire font-semibold text-note", isHighlighted && "bg-wash")}
+          className={cn(base, "text-body font-medium text-ink", isHighlighted && "bg-divider")}
         >
           <span>{rows.createInside === null ? `+ New place “${item.name}”` : `+ New “${item.name}”`}</span>
-          <span className="font-wire-mono text-[10px] font-normal text-mid">
+          <span className="shrink-0 text-meta font-normal text-muted">
             {rows.createInside === null ? "top level" : `inside ${rows.createInside}`}
           </span>
         </li>
@@ -217,22 +217,19 @@ export function LocationPathPicker({
         key={row.place.id}
         {...getItemProps({ item, index })}
         aria-label={row.isExactSibling ? `${row.path}, already here` : row.path}
-        className={cn(base, "font-wire-mono tracking-[-0.01em] text-ink", isHighlighted && "bg-wash")}
+        className={cn(base, "text-path text-ink", isHighlighted && "bg-divider")}
       >
         <span>
           <MatchedPath path={text} query={inputValue} />
         </span>
-        {row.isExactSibling ? <span className="font-wire text-[10px] text-mid">already here</span> : null}
+        {row.isExactSibling ? <span className="shrink-0 text-meta text-muted">already here</span> : null}
       </li>
     );
   }
 
   return (
     <div>
-      <label
-        {...getLabelProps()}
-        className="mb-[3px] block text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase"
-      >
+      <label {...getLabelProps()} className="mb-1 block text-meta text-muted">
         {label}
       </label>
 
@@ -240,18 +237,18 @@ export function LocationPathPicker({
           single control; the group's label announces the current path. */}
       <div
         className={cn(
-          "flex min-h-11 flex-wrap items-center gap-[4px] rounded-[7px] border-[1.5px] bg-paper px-[6px] py-[4px]",
-          "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink",
-          value.length > 0 || inputValue.length > 0 ? "border-ink" : "border-line",
+          "flex min-h-control-height flex-wrap items-center gap-1.5 rounded-control border bg-surface px-3 py-1.5 shadow-control",
+          "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus",
+          value.length > 0 || inputValue.length > 0 ? "border-border-strong" : "border-border-control",
           disabled && "opacity-60",
         )}
         role="group"
         aria-label={`Location: ${pathLabel}`}
       >
         {value.map((chip, index) => (
-          <span key={`${chip.kind}-${String(index)}-${chip.name}`} className="flex items-center gap-[4px]">
+          <span key={`${chip.kind}-${String(index)}-${chip.name}`} className="flex items-center gap-1.5">
             {index > 0 ? (
-              <span aria-hidden="true" className="text-[11px] text-mid">
+              <span aria-hidden="true" className="text-path text-faint">
                 ›
               </span>
             ) : null}
@@ -266,9 +263,18 @@ export function LocationPathPicker({
               }}
               aria-label={`${chip.name}${chip.kind === "new" ? ", new place" : ""}. Go back to this level`}
               className={cn(
-                "font-wire-mono inline-flex min-h-11 min-w-11 items-center justify-center rounded-[4px] px-[6px] py-[2px] text-[10.5px] tracking-[-0.01em] break-words text-ink outline-none",
-                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink",
-                chip.kind === "new" ? "border-[1.5px] border-dashed border-ink bg-paper" : "border border-line bg-wash",
+                // Chips speak the path language: uppercase mono. The last chip,
+                // when that place already exists, is on tape (it is the
+                // location so far); a chip that doesn't exist yet is dashed
+                // and untaped until the item is saved — the tape prints in
+                // then (see StashForm's success panel).
+                "inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-tape px-2 text-path break-words outline-none",
+                "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
+                chip.kind === "new"
+                  ? "border border-dashed border-border-strong bg-transparent text-ink"
+                  : index === value.length - 1
+                    ? "bg-tape text-on-tape shadow-tape"
+                    : "border border-hairline bg-paper text-muted",
               )}
             >
               {chip.name}
@@ -283,14 +289,14 @@ export function LocationPathPicker({
             onKeyDown: handleKeyDown,
           })}
           placeholder={value.length === 0 ? placeholder : undefined}
-          className="min-h-9 min-w-[7ch] flex-1 bg-transparent px-[3px] py-[3px] text-[12.5px] text-ink outline-none placeholder:text-muted disabled:opacity-60"
+          className="min-h-11 min-w-[7ch] flex-1 bg-transparent px-1 text-body text-ink outline-none placeholder:text-muted disabled:opacity-60"
         />
       </div>
 
       <ul
         {...getMenuProps()}
         className={cn(
-          "-mt-[2px] rounded-b-[7px] border-[1.5px] border-t-0 border-ink bg-paper",
+          "mt-2 overflow-hidden rounded-panel border border-hairline bg-surface shadow-float",
           menuOpen ? "block" : "hidden",
         )}
       >
@@ -328,8 +334,8 @@ export function LocationPathPicker({
       </ul>
 
       {value.length > 0 ? (
-        <p className="mt-1 text-[11px] text-mid">
-          Goes in <b className="font-semibold text-ink">{chipsPath(value)}</b>
+        <p className="mt-1 text-meta text-muted">
+          Goes in <b className="font-medium text-ink">{chipsPath(value)}</b>
           {newCount > 0 ? ` · ${String(newCount)} new place${newCount === 1 ? "" : "s"}` : ""}
         </p>
       ) : null}

@@ -241,7 +241,38 @@ describe("accessibility wiring", () => {
 
     const chip = screen.getByRole("button", { name: "Office. Go back to this level" });
     expect(chip.tagName).toBe("BUTTON");
-    expect(chip.className).toContain("min-h-11");
-    expect(chip.className).toContain("min-w-11");
+    expect(chip.className).toContain("min-h-target-min");
+    expect(chip.className).toContain("min-w-target-min");
+  });
+
+  test("a new chip is dashed and untaped, and nothing before it is on tape either", () => {
+    render(
+      <Harness
+        initial={[
+          { kind: "existing", id: "office", name: "Office" },
+          { kind: "existing", id: "cabinet", name: "Cabinet" },
+          { kind: "new", name: "Top drawer" },
+        ]}
+      />,
+    );
+    const chip = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) });
+    // Top drawer isn't saved yet, so the tape waits for it (it prints in on save).
+    expect(chip("Cabinet").className).not.toContain("bg-tape");
+    expect(chip("Top drawer").className).toContain("border-dashed");
+    expect(chip("Top drawer").className).not.toContain("bg-tape");
+    expect(chip("Office").className).not.toContain("bg-tape");
+  });
+
+  test("with only existing chips, only the last one is on tape", () => {
+    render(
+      <Harness
+        initial={[
+          { kind: "existing", id: "office", name: "Office" },
+          { kind: "existing", id: "cabinet", name: "Cabinet" },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^Cabinet/ }).className).toContain("bg-tape");
+    expect(screen.getByRole("button", { name: /^Office/ }).className).not.toContain("bg-tape");
   });
 });

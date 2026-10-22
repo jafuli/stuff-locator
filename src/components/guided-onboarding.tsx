@@ -6,6 +6,7 @@ import { StashForm } from "@/components/stash-form";
 import { Button } from "@/components/ui/button";
 import type { Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 export interface GuidedOnboardingProps {
   householdId: string;
@@ -46,10 +47,12 @@ const ITEM_STEPS: readonly ItemStep[] = [
 
 const TOTAL_STEPS = ITEM_STEPS.length + 1; // + the closing invite step
 
-// min-h-[44px]: a 10.5px text link is an unreliable touch target on a phone,
-// and this control sits next to the form's own inputs.
-const SKIP_LINK_CLASSES =
-  "-mr-2 inline-flex min-h-[44px] items-center px-2 text-[10.5px] text-mid underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60";
+// textLinkClassName is 44px tall: a small text link is an unreliable touch
+// target on a phone, and this control sits next to the form's own inputs.
+const SKIP_LINK_CLASSES = textLinkClassName({
+  muted: true,
+  className: "-mr-2 px-2 disabled:cursor-not-allowed disabled:opacity-60",
+});
 
 /**
  * Guided onboarding — the "ends with inviting your partner... doubles as
@@ -197,9 +200,9 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
   const isInviteStep = step === ITEM_STEPS.length;
 
   return (
-    <div className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+    <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
       <div className="flex items-center justify-between gap-2">
-        <p aria-live="polite" className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">
+        <p aria-live="polite" className="text-section-label text-muted">
           Step {step + 1} of {TOTAL_STEPS}
         </p>
         <button type="button" onClick={() => void finish("home")} disabled={isFinishing} className={SKIP_LINK_CLASSES}>
@@ -208,7 +211,7 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
       </div>
 
       {finishError ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           Couldn&apos;t save your progress: {finishError} Try again.
         </p>
       ) : null}
@@ -216,10 +219,10 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
       {isInviteStep ? (
         <>
           <div>
-            <h2 ref={headingRef} tabIndex={-1} className="text-[15px] font-semibold text-ink outline-none">
+            <h2 ref={headingRef} tabIndex={-1} className="text-title text-ink outline-none">
               Invite your partner
             </h2>
-            <p className="text-[12px] text-mid">Stuff Locator works best shared — invite them to your household.</p>
+            <p className="text-meta text-muted">Stuff Locator works best shared — invite them to your household.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="primary" isLoading={isFinishing} onClick={() => void finish("invite")}>
@@ -233,10 +236,10 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
       ) : (
         <>
           <div>
-            <h2 ref={headingRef} tabIndex={-1} className="text-[15px] font-semibold text-ink outline-none">
+            <h2 ref={headingRef} tabIndex={-1} className="text-title text-ink outline-none">
               {ITEM_STEPS[step].title}
             </h2>
-            <p className="text-[12px] text-mid">{ITEM_STEPS[step].description}</p>
+            <p className="text-meta text-muted">{ITEM_STEPS[step].description}</p>
           </div>
           <StashForm
             // Forces a fresh instance per step (rather than one instance
