@@ -5,10 +5,15 @@ import type { StuffListEntry } from "@/components/stuff-list";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
+import { firstNameOf } from "@/lib/display-name";
+import { STUFF_HEADING } from "@/lib/stuff-heading";
+import { buttonClassName } from "@/components/ui/button";
 import { createClient } from "@/server/db/server";
+import { fetchDisplayNames } from "@/server/services/profiles";
 
-const ADD_ITEM_LINK_CLASSES =
-  "inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[7px] text-[12px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+// The Stash entry point is a link (it navigates) wearing the system's primary
+// button look: ink fill, paper text.
+const STASH_LINK_CLASSES = buttonClassName("primary", "shrink-0");
 
 // Wireframe screen 02, "Home — everything (default)": search box, the
 // "All (n)" / "By place" chips (the way into Browse; v1's "Recent" chip is
@@ -105,10 +110,23 @@ export default async function Page(props: PageProps<"/">) {
     lastMovedAt: row.last_moved_at ? new Date(row.last_moved_at) : undefined,
   }));
 
-  const entries: StuffListEntry[] = items.map((item) => ({
-    item,
-    segments: getBreadcrumbSegments(item.locationId, locations),
-  }));
+  // First names for the "Noa, 3 days ago" meta line, via the same profiles
+  // service the item page and Activity use. An id RLS hides is simply absent,
+  // and that row just shows the time.
+  const displayNames = await fetchDisplayNames(
+    supabase,
+    items.map((item) => item.lastMovedBy ?? item.addedBy),
+  );
+
+  const entries: StuffListEntry[] = items.map((item) => {
+    const toucherId = item.lastMovedBy ?? item.addedBy;
+    const fullName = toucherId ? displayNames.get(toucherId) : undefined;
+    return {
+      item,
+      segments: getBreadcrumbSegments(item.locationId, locations),
+      byName: firstNameOf(fullName),
+    };
+  });
 
   // Guided onboarding replaces the plain empty state, not the whole page,
   // and only for a household that's both actually empty AND hasn't already
@@ -117,17 +135,8 @@ export default async function Page(props: PageProps<"/">) {
   const showOnboarding = items.length === 0 && householdResult.data.onboarding_completed_at === null;
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-[16px] font-semibold text-ink">Our stuff</h1>
-        {/* Hidden while onboarding runs: it's a second, unguided way into
-            the same flow, and a tap on it silently abandons the sequence. */}
-        {showOnboarding ? null : (
-          <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
-            + Add item
-          </Link>
-        )}
-      </div>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <h1 className="text-display text-ink">{STUFF_HEADING}</h1>
 
       {showOnboarding ? (
         <GuidedOnboarding householdId={membership.household_id} locations={locations} />
@@ -137,17 +146,24 @@ export default async function Page(props: PageProps<"/">) {
           `entries` client-side (src/lib/fixtures/search.ts) — a real,
           working filter now, not the earlier visual-only placeholder.
           Entries themselves are still resolved server-side here, not
-          fetched by the client component. emptyStateAction only ever shows
-          for the true "this household has zero items" case (StuffList's
-          own empty state) — a "no search matches" query shows a
-          different, unrelated empty state that isn't a candidate for this
-          CTA.
+          fetched by the client component. The Stash button is hidden while
+          onboarding runs (above): it's a second, unguided way into the same
+          flow, and a tap on it silently abandons the sequence.
+          emptyStateAction only ever shows for the true "this household has
+          zero items" case (StuffList's own empty state) — a "no search
+          matches" query shows a different, unrelated empty state that isn't
+          a candidate for this CTA.
         */
         <SearchableStuffList
           entries={entries}
           initialQuery={initialQuery}
+          searchAction={
+            <Link href="/items/new" className={STASH_LINK_CLASSES}>
+              Stash
+            </Link>
+          }
           emptyStateAction={
-            <Link href="/items/new" className={ADD_ITEM_LINK_CLASSES}>
+            <Link href="/items/new" className={buttonClassName("primary")}>
               Stash your first item
             </Link>
           }

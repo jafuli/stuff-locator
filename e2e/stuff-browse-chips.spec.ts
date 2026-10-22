@@ -61,7 +61,7 @@ test("Stuff → By place → Browse → All → Stuff, by keyboard", async ({ pa
   await page.keyboard.press("Enter");
 
   await page.waitForURL("/browse");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   // Same header as Home, with By place now the current one.
   await expect(page.getByRole("link", { name: "By place" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: "All (2)" })).toBeVisible();

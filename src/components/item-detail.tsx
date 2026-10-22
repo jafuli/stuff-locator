@@ -1,6 +1,6 @@
 import { formatRelativeShort } from "@/lib/format-relative-time";
 import type { Item } from "@/lib/fixtures/types";
-import { LocationBreadcrumb, type LocationBreadcrumbSegment } from "@/components/location-breadcrumb";
+import { PathTrail, type LocationBreadcrumbSegment } from "@/components/path-trail";
 
 export interface ItemDetailProps {
   item: Item;
@@ -54,7 +54,7 @@ export function ItemDetail({ item, segments }: ItemDetailProps) {
     <div className="flex flex-col gap-3">
       <div>
         <h1 className="text-[18px] font-semibold text-ink">{item.name}</h1>
-        <LocationBreadcrumb segments={segments} />
+        <PathTrail segments={segments} />
       </div>
 
       {fields.length > 0 ? (

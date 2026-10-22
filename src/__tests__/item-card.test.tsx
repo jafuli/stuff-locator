@@ -20,7 +20,7 @@ const segments = [
 test("renders the name, full path, and links to the given href", () => {
   render(<ItemCard item={baseItem} segments={segments} href="/items/spare-house-keys" />);
   expect(screen.getByText("Spare house keys")).toBeDefined();
-  expect(screen.getByText("Garage › Closet › Toolbox › Red box")).toBeDefined();
+  expect(document.body.textContent).toContain("Garage › Closet › Toolbox › Red box");
   const link = screen.getByRole("link");
   expect(link.getAttribute("href")).toBe("/items/spare-house-keys");
 });
@@ -66,4 +66,31 @@ test("with linkLocationSegments, the item link and each breadcrumb segment are s
     expect(segmentLink).toBeDefined();
     expect(segmentLink?.textContent).toBe(segment.name);
   });
+});
+
+test("the meta line reads 'First name, how long ago'", () => {
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  render(
+    <ItemCard
+      item={{ ...baseItem, lastMovedAt: threeDaysAgo }}
+      segments={segments}
+      href="/items/spare-house-keys"
+      byName="Noa"
+    />,
+  );
+  expect(screen.getByText("Noa, 3 days ago")).toBeDefined();
+});
+
+test("without a known name the meta line is just the time, never a placeholder", () => {
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  render(<ItemCard item={{ ...baseItem, lastMovedAt: threeDaysAgo }} segments={segments} href="/items/x" />);
+  expect(screen.getByText("3 days ago")).toBeDefined();
+});
+
+test("only the closest row carries the CLOSEST marker, and no score is ever shown", () => {
+  const { rerender } = render(<ItemCard item={baseItem} segments={segments} href="/items/x" />);
+  expect(screen.queryByText("Closest")).toBeNull();
+  rerender(<ItemCard item={baseItem} segments={segments} href="/items/x" closest />);
+  expect(screen.getByText("Closest")).toBeDefined();
+  expect(document.body.textContent).not.toMatch(/\d+(\.\d+)?\s?%|score|similarity/i);
 });

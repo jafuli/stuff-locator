@@ -31,6 +31,16 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary: "border border-border-strong bg-surface text-ink shadow-control",
 };
 
+/**
+ * The Button look as a class string, for the places a link has to look like
+ * a button (the Stash link on the Stuff screen). A link is the right element
+ * there — it navigates — but it should wear exactly the same shape, height
+ * and focus ring.
+ */
+export function buttonClassName(variant: ButtonVariant = "primary", className?: string): string {
+  return cn(baseClasses, variantClasses[variant], className);
+}
+
 export function Button({
   variant = "primary",
   isLoading = false,
@@ -45,7 +55,7 @@ export function Button({
     <button
       ref={ref}
       type={type}
-      className={cn(baseClasses, variantClasses[variant], className)}
+      className={buttonClassName(variant, className)}
       disabled={disabled ?? isLoading}
       aria-busy={isLoading || undefined}
       {...rest}

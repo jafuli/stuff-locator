@@ -138,7 +138,7 @@ test("complete-through-invite path: real items added during onboarding show up o
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   await expect(page.getByText("Passport")).toBeVisible();
   await expect(page.getByText("Camping tent")).toBeVisible();
   await expect(page.getByText("Spare keys")).toBeVisible();
@@ -168,7 +168,7 @@ test("a household that already has items never shows onboarding, even with onboa
   await page.reload();
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   await expect(page.getByText("Passport")).toBeVisible();
   await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
 });
@@ -221,7 +221,7 @@ test("the onboarding screen has one way forward: no header '+ Add item', no View
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("link", { name: "+ Add item" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Stash", exact: true })).toHaveCount(0);
 
   await stashViaOnboardingStep(page, "Passport", "Filing box");
 

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AddPlaceHere } from "@/components/add-place-here";
 import { ItemCard } from "@/components/item-card";
-import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { PathTrail } from "@/components/path-trail";
 import { LocationList } from "@/components/location-list";
 import { PlaceManager } from "@/components/place-manager";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -238,7 +238,7 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
           itemCount={items.length}
           placeCount={childLocations.length}
         />
-        <LocationBreadcrumb segments={segments} />
+        <PathTrail segments={segments} />
       </div>
 
       {isEmpty ? (
@@ -247,7 +247,7 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
         <>
           {childLocations.length > 0 ? <LocationList locations={childLocations} /> : null}
           {items.length > 0 ? (
-            <div>
+            <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
               {items.map((item) => (
                 <ItemCard
                   key={item.id}

@@ -14,7 +14,7 @@ beforeEach(() => {
 test("shows the same header Home has: title, search, and the chips with By place current", () => {
   render(<BrowseHeader total={12} />);
 
-  expect(screen.getByRole("heading", { level: 1, name: "Our stuff" })).toBeDefined();
+  expect(screen.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeDefined();
   expect(screen.getByRole("searchbox", { name: "Search your stuff" })).toBeDefined();
   expect(screen.getByRole("link", { name: "All (12)" })).toBeDefined();
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("aria-current")).toBe("page");

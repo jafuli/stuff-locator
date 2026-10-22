@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 import { ItemCard } from "@/components/item-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { LocationBreadcrumbSegment } from "@/components/location-breadcrumb";
+import type { LocationBreadcrumbSegment } from "@/components/path-trail";
 import type { Item } from "@/lib/fixtures/types";
 
 export interface StuffListEntry {
   item: Item;
-  /** Root→leaf breadcrumb segments for item.locationId — already resolved by the caller. */
+  /** Root→leaf path segments for item.locationId — already resolved by the caller. */
   segments: LocationBreadcrumbSegment[];
+  /** First name of whoever last touched the item, when the caller could resolve it. */
+  byName?: string;
 }
 
 export interface StuffListProps {
@@ -23,6 +25,8 @@ export interface StuffListProps {
    * unchanged.
    */
   emptyStateAction?: ReactNode;
+  /** Marks the first row CLOSEST — only while a search is showing results. */
+  markClosest?: boolean;
 }
 
 /**
@@ -37,7 +41,12 @@ export interface StuffListProps {
  * parent's only (and therefore "last") child, silently dropping every
  * divider. Matches the existing /~components catalog page's pattern.
  */
-export function StuffList({ entries, linkLocationSegments = false, emptyStateAction }: StuffListProps) {
+export function StuffList({
+  entries,
+  linkLocationSegments = false,
+  emptyStateAction,
+  markClosest = false,
+}: StuffListProps) {
   if (entries.length === 0) {
     return (
       <EmptyState title="No items yet" description="Stash your first thing to see it here." action={emptyStateAction} />
@@ -45,14 +54,19 @@ export function StuffList({ entries, linkLocationSegments = false, emptyStateAct
   }
 
   return (
-    <div>
-      {entries.map(({ item, segments }) => (
+    // The ResultList panel: surface, hairline border, radius-panel, dividers
+    // between rows. overflow-hidden keeps the first/last rows inside the
+    // rounded corners.
+    <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+      {entries.map(({ item, segments, byName }, index) => (
         <ItemCard
           key={item.id}
           item={item}
           segments={segments}
+          byName={byName}
           href={`/items/${item.id}`}
           linkLocationSegments={linkLocationSegments}
+          closest={markClosest && index === 0}
         />
       ))}
     </div>

@@ -45,7 +45,7 @@ test("home route boots cleanly, shows a real item, and is keyboard-reachable", a
   // racing ahead of it.
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   await expect(page.getByRole("searchbox", { name: "Search your stuff" })).toBeVisible();
   await expect(page.getByText(itemName)).toBeVisible();
   await expect(page.getByText("Garage › Closet")).toBeVisible();
@@ -88,7 +88,7 @@ test("a brand-new household with zero items shows guided onboarding, not the pla
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   await expect(page.getByText("Step 1 of 4")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Stash something filed away" })).toBeVisible();
   await expect(page.getByText("No items yet")).toHaveCount(0);
@@ -114,11 +114,11 @@ test("home has a visible, keyboard-reachable entry point into the Stash flow", a
   await page.goto("/");
   await page.waitForLoadState("networkidle");
 
-  const addItemLink = page.getByRole("link", { name: "+ Add item" });
+  const addItemLink = page.getByRole("link", { name: "Stash", exact: true });
   await expect(addItemLink).toBeVisible();
 
   // It's one of the very first tab stops on the page, right beside the h1.
-  expect(await tabUntilFocused(page, "+ Add item", 5)).toBe(true);
+  expect(await tabUntilFocused(page, "Stash", 5)).toBe(true);
 
   await addItemLink.click();
   await page.waitForURL("/items/new");

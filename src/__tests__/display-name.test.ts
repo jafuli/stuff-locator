@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { UNKNOWN_DISPLAY_NAME, displayNameFor } from "@/lib/display-name";
+import { UNKNOWN_DISPLAY_NAME, displayNameFor, firstNameOf } from "@/lib/display-name";
 
 const NAMES = new Map([
   ["11111111-1111-4111-8111-111111111111", "jane"],
@@ -27,4 +27,12 @@ test("handles a missing id without throwing", () => {
 
 test("an empty name map resolves everything to the fallback, not to undefined", () => {
   expect(displayNameFor("11111111-1111-4111-8111-111111111111", new Map())).toBe(UNKNOWN_DISPLAY_NAME);
+});
+
+test("firstNameOf takes the first word and leaves blanks undefined", () => {
+  expect(firstNameOf("Noa Levi")).toBe("Noa");
+  expect(firstNameOf("  jane ")).toBe("jane");
+  expect(firstNameOf("")).toBeUndefined();
+  expect(firstNameOf("   ")).toBeUndefined();
+  expect(firstNameOf(null)).toBeUndefined();
 });

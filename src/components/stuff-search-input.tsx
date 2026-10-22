@@ -1,4 +1,5 @@
 import type { Ref } from "react";
+import { SearchIcon } from "@/components/icons";
 
 export interface StuffSearchInputProps {
   value: string;
@@ -9,7 +10,9 @@ export interface StuffSearchInputProps {
 /**
  * The Stuff screen's search field — shared by Home (which filters in place)
  * and the top of Browse (which hands the query to Home), so both show the
- * same control.
+ * same control: a SearchField — surface fill, control-height, shadow at rest,
+ * border-strong on focus, with a line search icon (decorative; the label is
+ * for assistive tech).
  *
  * type="text" + explicit role="searchbox" rather than type="search":
  * Chromium injects a client-only inline style onto native
@@ -19,10 +22,11 @@ export interface StuffSearchInputProps {
  */
 export function StuffSearchInput({ value, onChange, ref }: StuffSearchInputProps) {
   return (
-    <div role="search">
+    <div role="search" className="relative">
       <label htmlFor="stuff-search" className="sr-only">
         Search your stuff
       </label>
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
       <input
         ref={ref}
         id="stuff-search"
@@ -34,7 +38,7 @@ export function StuffSearchInput({ value, onChange, ref }: StuffSearchInputProps
         onChange={(event) => {
           onChange(event.target.value);
         }}
-        className="w-full rounded-[9px] border-[1.5px] border-line px-[10px] py-[8px] text-[12.5px] text-ink outline-none placeholder:text-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control outline-none placeholder:text-muted focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       />
     </div>
   );

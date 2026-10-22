@@ -55,7 +55,7 @@ test("an unmatched route renders the app's own 404, not Next's default, and link
   await page.waitForLoadState("networkidle");
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   // Not "Spare house keys" or any other route's content — beyond that,
   // what a brand-new signed-up account's household shows here (Guided
   // onboarding, since it has zero items — see guided-onboarding.spec.ts)

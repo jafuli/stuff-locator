@@ -7,5 +7,5 @@ test("renders an accessible, item-detail-scoped loading state", () => {
   const region = screen.getByText("Loading this item…").closest("main");
   expect(region?.getAttribute("aria-busy")).toBe("true");
   // Guards against the root loading.tsx's home-page copy leaking in here.
-  expect(screen.queryByText("Our stuff")).toBeNull();
+  expect(screen.queryByText("What are you looking for?")).toBeNull();
 });

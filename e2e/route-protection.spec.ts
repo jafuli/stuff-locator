@@ -65,8 +65,8 @@ test("signed in, every protected route reaches its real page", async ({ page }) 
   const itemId = await seedItem(email, TEST_PASSWORD, { name: `Spare keys ${randomUUID()}`, locationId });
 
   const routes: { path: string; heading: RegExp }[] = [
-    { path: "/", heading: /Our stuff/ },
-    { path: "/browse", heading: /Our stuff/ },
+    { path: "/", heading: /What are you looking for\?/ },
+    { path: "/browse", heading: /What are you looking for\?/ },
     { path: `/browse/${locationId}`, heading: /Toolbox/ },
     { path: `/items/${itemId}`, heading: /Spare keys/ },
     { path: `/items/${itemId}/edit`, heading: /Edit item/ },
@@ -134,7 +134,7 @@ test("a ?next= pointing off-origin is ignored rather than followed", async ({ pa
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 });
 
 test("the invite landing stays reachable without an account", async ({ page }) => {

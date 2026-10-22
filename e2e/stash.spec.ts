@@ -82,7 +82,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
 
   await status.getByRole("link", { name: "Back to home" }).click();
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

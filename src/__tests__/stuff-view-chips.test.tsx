@@ -33,6 +33,6 @@ test("the chips are links in a labelled nav with 44px touch targets", () => {
 
   expect(screen.getByRole("navigation", { name: "Stuff view" })).toBeDefined();
   for (const link of screen.getAllByRole("link")) {
-    expect(link.className).toContain("min-h-11");
+    expect(link.className).toContain("min-h-target-min");
   }
 });
