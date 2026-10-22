@@ -99,6 +99,8 @@ export function Dialog({ open, onClose, title, children, dismissOnBackdrop = tru
         aria-label="Close dialog"
         disabled={!dismissOnBackdrop}
         onClick={onClose}
+        // Neutral black rather than a token: the scrim has to darken both themes, and
+        // `ink` is light in dark mode.
         className="absolute inset-0 cursor-default bg-black/40"
       />
       <div
@@ -107,9 +109,9 @@ export function Dialog({ open, onClose, title, children, dismissOnBackdrop = tru
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative flex max-h-full w-full max-w-sm flex-col gap-3 overflow-y-auto rounded-[12px] border-[1.5px] border-line bg-paper p-4 outline-none"
+        className="relative flex max-h-full w-full max-w-sm flex-col gap-3 overflow-y-auto rounded-panel border border-hairline bg-surface p-5 text-body text-ink shadow-float outline-none"
       >
-        <h2 id={titleId} className="text-[14.5px] font-semibold text-ink">
+        <h2 id={titleId} className="text-title text-ink">
           {title}
         </h2>
         {children}

@@ -1,17 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, IBM_Plex_Mono } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// The design system's two families. Weights are exactly what the type styles
+// use — 400/500/600 sans, 500 mono — so a stray font-bold can't render a
+// weight the brand book rules out (it would be synthesised, not loaded).
+const atkinson = Atkinson_Hyperlegible_Next({
+  variable: "--font-atkinson",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: "500",
 });
 
 export const metadata: Metadata = {
@@ -27,12 +32,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f172a",
+  // The one place the tokens can't be referenced: a <meta> tag has no CSS
+  // variables. These are the design system's `paper` in each theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f1e7" },
+    { media: "(prefers-color-scheme: dark)", color: "#17140f" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${atkinson.variable} ${plexMono.variable} h-full antialiased`}>
       {/*
         Fixed-height flex column so BottomNav (rendered via SiteNav below)
         pins to the bottom of the viewport instead of getting pushed below

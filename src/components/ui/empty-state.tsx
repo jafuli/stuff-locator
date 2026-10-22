@@ -32,14 +32,14 @@ export interface EmptyStateProps {
  */
 export function EmptyState({ icon, title, description, action, titleAs: TitleTag = "p" }: EmptyStateProps) {
   return (
-    <div className="rounded-[9px] border-[1.5px] border-dashed border-line p-4 text-center">
+    <div className="rounded-panel border border-dashed border-border-control bg-surface p-6 text-center">
       {icon ? (
-        <div aria-hidden="true" className="mb-2 flex justify-center text-mid">
+        <div aria-hidden="true" className="mb-2 flex justify-center text-muted">
           {icon}
         </div>
       ) : null}
-      <TitleTag className="text-[12px] font-semibold text-ink">{title}</TitleTag>
-      {description ? <p className="mt-1 text-[11.5px] text-mid">{description}</p> : null}
+      <TitleTag className="text-title text-ink">{title}</TitleTag>
+      {description ? <p className="mt-1 text-meta text-muted">{description}</p> : null}
       {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
     </div>
   );

@@ -1,55 +1,298 @@
 @import "tailwindcss";
 
-:root {
-  /* Light only. The wireframes never defined a dark palette, and the
-     component tokens below are hard-coded light values — a dark
-     --background under them gave white-on-white text on dark OS themes. */
+/*
+  Stuff Locator design system — "Label Maker" (v0.1 draft).
+
+  Every value below is copied from the system's tokens.json, not
+  reinterpreted. Components use the utilities these tokens generate
+  (bg-surface, text-muted, rounded-panel, text-title, …) and never raw hex or
+  wireframe px sizes. If a token doesn't work in the real UI, flag it in the
+  PR and update the system first — don't quietly diverge here.
+*/
+
+/* ------------------------------------------------------------------ colors */
+
+/*
+  Light is the default. Dark follows the OS (prefers-color-scheme) unless an
+  ancestor pins a theme with data-theme — the pin exists so /~components can
+  show both themes side by side, and so tests can force one. The dark block
+  appears twice (media query + attribute) because CSS can't share a
+  declaration list between the two selectors.
+*/
+:root,
+[data-theme="light"] {
   color-scheme: light;
 
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f6f1e7;
+  --surface: #fffdf8;
+  --ink: #1f1b16;
+  --muted: #6b6257;
+  --faint: #a99f8e;
+  --hairline: #e3dacb;
+  --divider: #ece4d6;
+  --border-control: #d9cfbe;
+  --border-strong: #8a8072;
+  --signal: #b3261e;
+  --tape: #f4d77e;
+  --on-tape: #1f1b16;
+  --focus: #1f1b16;
 
-  /* Wireframe design tokens (stuff-locator-wireframes v1/v2) — power the
-     mock-data component set under src/components/. Lifted verbatim from
-     the wireframes' own CSS custom properties; not reinterpreted. There is
-     no dark-mode variant because the wireframes never defined one. */
-  --ink: #1a1a1a;
-  --mid: #6b6b6b;
-  --dim: #9a9a9a;
-  --line: #c8c8c8;
-  --wash: #f4f4f2;
-  --paper: #fff;
-
-  /* Scoped narrowly to location-path-picker's "+ New place" row. This is
-     the wireframe file's own annotation-callout orange, deliberately reused
-     for exactly that one row — not part of the general product palette. */
-  --note: #b8562f;
-  --note-bg: #fdf3ee;
+  --shadow-control: 0 1px 2px rgba(31, 27, 22, 0.04);
+  --shadow-float: 0 4px 16px rgba(31, 27, 22, 0.08);
+  --shadow-tape: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0.5px 0 rgba(31, 27, 22, 0.22);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
 
+    --paper: #17140f;
+    --surface: #221e18;
+    --ink: #ede6d8;
+    --muted: #a99f8e;
+    --faint: #6f665a;
+    --hairline: #3a332a;
+    --divider: #2e2821;
+    --border-control: #4a4237;
+    --border-strong: #8a8072;
+    --signal: #f28b7d;
+    --tape: #d9b95a;
+    --on-tape: #1f1b16;
+    --focus: #ede6d8;
+
+    --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-tape: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0.5px 0 rgba(0, 0, 0, 0.5);
+  }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #17140f;
+  --surface: #221e18;
+  --ink: #ede6d8;
+  --muted: #a99f8e;
+  --faint: #6f665a;
+  --hairline: #3a332a;
+  --divider: #2e2821;
+  --border-control: #4a4237;
+  --border-strong: #8a8072;
+  --signal: #f28b7d;
+  --tape: #d9b95a;
+  --on-tape: #1f1b16;
+  --focus: #ede6d8;
+
+  --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-tape: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0.5px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* --------------------------------------------------- wireframe aliases ---
+  TEMPORARY. The wireframe tokens (--ink/--mid/--dim/--line/--wash/--paper/
+  --note) still back screens that haven't been migrated, so they're pointed
+  at the new tokens instead of keeping their old grey values. --ink and
+  --paper keep their names, so the new definitions above already cover them.
+  Each alias below is deleted in Design 5/5, along with --font-wire*.
+*/
+:root {
+  /* Design 5/5 deletes this alias. */
+  --mid: var(--muted);
+  /* Design 5/5 deletes this alias. Was a pale grey used for placeholders and
+     faint labels; --faint is decoration-only, so it maps to --muted to stay
+     readable. */
+  --dim: var(--muted);
+  /* Design 5/5 deletes this alias. */
+  --line: var(--hairline);
+  /* Design 5/5 deletes this alias. */
+  --wash: var(--surface);
+  /* Design 5/5 deletes this alias. */
+  --note: var(--signal);
+  /* Design 5/5 deletes this alias. */
+  --note-bg: var(--surface);
+}
+
+/* ------------------------------------------------------------------- theme */
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
   --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-hairline: var(--hairline);
+  --color-divider: var(--divider);
+  /* Named after the tokens, so the utilities read border-border-control /
+     border-border-strong. Clunky, but --color-control would also have made
+     `shadow-control` a shadow-colour utility and collided with the shadow
+     token of the same name. */
+  --color-border-control: var(--border-control);
+  --color-border-strong: var(--border-strong);
+  --color-signal: var(--signal);
+  --color-tape: var(--tape);
+  --color-on-tape: var(--on-tape);
+  --color-focus: var(--focus);
+
+  /* Design 5/5 deletes these aliases (see the block above). */
   --color-mid: var(--mid);
   --color-dim: var(--dim);
   --color-line: var(--line);
   --color-wash: var(--wash);
-  --color-paper: var(--paper);
   --color-note: var(--note);
   --color-note-bg: var(--note-bg);
 
-  /* Named --font-wire* (not reusing --font-sans/--font-mono) so these never
-     collide with the Geist-backed tokens already wired in layout.tsx. */
+  --font-sans: var(--font-atkinson), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Design 5/5 deletes these. Named --font-wire* so they never collided with
+     the font tokens above. */
   --font-wire: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-wire-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+@theme {
+  /* space-1…space-8 are the same 4px steps as Tailwind's own p-1…p-8 scale
+     (4, 8, 12, 16, 20, 24, 32), so p-4 and p-space-4 are identical. Both
+     spellings exist so a design-system name can be grepped for. */
+  --spacing-space-1: 4px;
+  --spacing-space-2: 8px;
+  --spacing-space-3: 12px;
+  --spacing-space-4: 16px;
+  --spacing-space-5: 20px;
+  --spacing-space-6: 24px;
+  --spacing-space-8: 32px;
+
+  --radius-tape: 3px;
+  --radius-control: 12px;
+  --radius-panel: 14px;
+  --radius-capsule: 16px;
+
+  /* h-control-height, min-h-target-min, h-tape-height … */
+  --spacing-target-min: 44px;
+  --spacing-control-height: 50px;
+  --spacing-tape-height: 22px;
+}
+
+/*
+  Shadows differ per theme, so they're plain @utility rules reading the
+  per-theme custom properties above (a @theme entry can't point at a variable
+  of its own name).
+*/
+@utility shadow-control {
+  box-shadow: var(--shadow-control);
+}
+
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
+}
+
+@utility shadow-tape {
+  box-shadow: var(--shadow-tape);
+}
+
+/* ------------------------------------------------------------- type styles
+  Nine reusable styles. Sans: display, title, body, meta, nav. Mono, always
+  uppercase: path, section-label, marker, logo-tape. Color is separate —
+  compose with text-ink / text-muted / text-signal.
+*/
+@utility text-display {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+@utility text-title {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+@utility text-body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+@utility text-meta {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+
+@utility text-nav {
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+@utility text-path {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@utility text-section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility text-marker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@utility text-logo-tape {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------- base */
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/*
+  Motion is 150–200ms ease-out and is switched off entirely for people who
+  ask for less of it (brand book). One global switch rather than a variant on
+  every transition, so a new animation can't forget it.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    /* 0s, not 0.01ms: a non-zero duration still starts a transition, and a
+       change (e.g. the OS flipping theme) reads back its old value for a frame. */
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }

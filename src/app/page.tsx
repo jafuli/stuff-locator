@@ -8,7 +8,7 @@ import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
 
 const ADD_ITEM_LINK_CLASSES =
-  "inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[7px] text-[12px] font-semibold text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[7px] text-[12px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 // Wireframe screen 02, "Home — everything (default)": search box, the
 // "All (n)" / "By place" chips (the way into Browse; v1's "Recent" chip is

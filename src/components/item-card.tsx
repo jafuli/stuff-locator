@@ -51,7 +51,7 @@ export function ItemCard({ item, segments, href, linkLocationSegments = false }:
       <Link
         href={href}
         className={cn(
-          "flex items-start justify-between gap-2 border-b border-[#ececec] py-[9px] last:border-b-0",
+          "flex items-start justify-between gap-2 border-b border-divider py-[9px] last:border-b-0",
           linkClasses,
         )}
       >
@@ -65,7 +65,7 @@ export function ItemCard({ item, segments, href, linkLocationSegments = false }:
   }
 
   return (
-    <div className="border-b border-[#ececec] py-[9px] last:border-b-0">
+    <div className="border-b border-divider py-[9px] last:border-b-0">
       <Link href={href} className={cn("flex items-start justify-between gap-2", linkClasses)}>
         {nameAndDetail}
         {timeBadge}

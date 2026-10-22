@@ -29,14 +29,14 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
       <Link
         href="/"
         aria-current={active === "all" ? "page" : undefined}
-        className={cn(CHIP_BASE, active === "all" ? "border-ink bg-ink text-white" : "border-line text-mid")}
+        className={cn(CHIP_BASE, active === "all" ? "border-ink bg-ink text-paper" : "border-line text-mid")}
       >
         All ({total})
       </Link>
       <Link
         href="/browse"
         aria-current={active === "place" ? "page" : undefined}
-        className={cn(CHIP_BASE, active === "place" ? "border-ink bg-ink text-white" : "border-line text-mid")}
+        className={cn(CHIP_BASE, active === "place" ? "border-ink bg-ink text-paper" : "border-line text-mid")}
       >
         By place
       </Link>

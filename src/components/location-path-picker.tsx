@@ -57,13 +57,13 @@ export interface LocationPathPickerProps {
   onInputChange?: (value: string) => void;
 }
 
-const SECTION_CLASS = "border-b border-[#f0f0f0] last:border-b-0";
+const SECTION_CLASS = "border-b border-divider last:border-b-0";
 const HEADER_CLASS = "px-[9px] pt-[6px] pb-[2px] text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase";
 
 function MatchedPath({ path, query }: { path: string; query: string }): ReactNode {
   return splitMatchSegments(path, query).map((segment, index) =>
     segment.matched ? (
-      <b key={index} className="bg-[#ffe9a8] font-bold">
+      <b key={index} className="bg-divider font-bold">
         {segment.text}
       </b>
     ) : (
@@ -283,7 +283,7 @@ export function LocationPathPicker({
             onKeyDown: handleKeyDown,
           })}
           placeholder={value.length === 0 ? placeholder : undefined}
-          className="min-h-9 min-w-[7ch] flex-1 bg-transparent px-[3px] py-[3px] text-[12.5px] text-ink outline-none placeholder:text-[#b0b0b0] disabled:opacity-60"
+          className="min-h-9 min-w-[7ch] flex-1 bg-transparent px-[3px] py-[3px] text-[12.5px] text-ink outline-none placeholder:text-muted disabled:opacity-60"
         />
       </div>
 

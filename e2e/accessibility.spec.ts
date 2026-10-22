@@ -11,6 +11,36 @@ import {
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
+const COLOR_SCHEMES = ["light", "dark"] as const;
+
+// Scans the page that is already set up, once per theme. The Label Maker
+// design system ships light and dark palettes that follow the OS, so a
+// contrast failure can live in just one of them — emulating each scheme on
+// the same page is cheaper than re-seeding the whole test twice.
+async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
+  for (const colorScheme of COLOR_SCHEMES) {
+    // reducedMotion matters here: colours transition for 150ms, and axe would
+    // otherwise sample a half-way blend right after the scheme flips.
+    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+    // Two frames: lets the restyle (and the now-instant transitions) land.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          });
+        }),
+    );
+    const results = await new AxeBuilder({ page }).analyze();
+    const seriousOrWorse = results.violations.filter(
+      (violation) => violation.impact === "critical" || violation.impact === "serious",
+    );
+    expect(seriousOrWorse, `${colorScheme}: ${JSON.stringify(seriousOrWorse, null, 2)}`).toEqual([]);
+  }
+}
+
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-a11y-home-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
@@ -104,7 +134,9 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
 ];
 
 for (const route of ROUTES) {
-  test(`${route.name} (${route.path}) has no critical or serious axe violations`, async ({ page }) => {
+  test(`${route.name} (${route.path}) has no critical or serious axe violations in light and dark`, async ({
+    page,
+  }) => {
     if (route.setup) {
       await route.setup(page);
     }
@@ -112,12 +144,7 @@ for (const route of ROUTES) {
     await page.goto(route.path);
     await page.waitForLoadState("networkidle");
 
-    const results = await new AxeBuilder({ page }).analyze();
-    const seriousOrWorse = results.violations.filter(
-      (violation) => violation.impact === "critical" || violation.impact === "serious",
-    );
-
-    expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+    await expectNoSeriousAxeViolations(page);
   });
 }
 
@@ -126,26 +153,23 @@ for (const route of ROUTES) {
 // which the static ROUTES table above can't express, so this lives as its
 // own test rather than a table entry. A leaf with direct items would
 // exercise ItemCard instead, but that shape is already covered by "/" above.
-test("browse/[id] (a location with a nested child) has no critical or serious axe violations", async ({ page }) => {
+test("browse/[id] (a location with a nested child) has no critical or serious axe violations in light and dark", async ({
+  page,
+}) => {
   const email = await signUpFreshAccount(page);
   const [parentId] = await seedLocationChainAllIds(email, TEST_PASSWORD, ["Garage", "Closet"]);
 
   await page.goto(`/browse/${parentId}`);
   await page.waitForLoadState("networkidle");
 
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+  await expectNoSeriousAxeViolations(page);
 });
 
 // Item detail and Edit-item both need a real seeded item id (computed at
 // test time), which the static ROUTES table above can't express, so they
 // live as their own tests rather than table entries — same reason the
 // "nested child" Browse case does above.
-test("item detail (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+test("item detail (real seeded item) has no critical or serious axe violations in light and dark", async ({ page }) => {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
   const itemId = await seedItem(email, TEST_PASSWORD, {
@@ -157,14 +181,10 @@ test("item detail (real seeded item) has no critical or serious axe violations",
   await page.goto(`/items/${itemId}`);
   await page.waitForLoadState("networkidle");
 
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+  await expectNoSeriousAxeViolations(page);
 });
 
-test("item edit (real seeded item) has no critical or serious axe violations", async ({ page }) => {
+test("item edit (real seeded item) has no critical or serious axe violations in light and dark", async ({ page }) => {
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
   const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });
@@ -172,17 +192,13 @@ test("item edit (real seeded item) has no critical or serious axe violations", a
   await page.goto(`/items/${itemId}/edit`);
   await page.waitForLoadState("networkidle");
 
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+  await expectNoSeriousAxeViolations(page);
 });
 
 // The path picker in its busiest state: chips (solid and dashed), an open
 // listbox with a "Matches anywhere" group, an "already here" row and a create
 // row. The default scan above only sees the picker closed.
-test("add item with the path picker open and chips built has no critical or serious axe violations", async ({
+test("add item with the path picker open and chips built has no critical or serious axe violations in light and dark", async ({
   page,
 }) => {
   const email = await signUpFreshAccount(page);
@@ -199,11 +215,7 @@ test("add item with the path picker open and chips built has no critical or seri
   await page.getByRole("combobox").fill("cab");
   await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
 
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+  await expectNoSeriousAxeViolations(page);
 });
 
 // /join/[code] needs a real, redeemable invite code (computed at test
@@ -211,15 +223,13 @@ test("add item with the path picker open and chips built has no critical or seri
 // its own test — same reason the other dynamic-id cases above do.
 // Signed-out state, the route's default entry point (see join-invite.spec.ts
 // for the already-signed-in variant).
-test("join a household (/join/[code], signed out) has no critical or serious axe violations", async ({ page }) => {
+test("join a household (/join/[code], signed out) has no critical or serious axe violations in light and dark", async ({
+  page,
+}) => {
   const { code } = await seedInviteForNewHousehold("A11y test household");
 
   await page.goto(`/join/${code}`);
   await page.waitForLoadState("networkidle");
 
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
+  await expectNoSeriousAxeViolations(page);
 });

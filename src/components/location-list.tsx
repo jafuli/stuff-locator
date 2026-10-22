@@ -20,7 +20,7 @@ export function LocationList({ locations }: LocationListProps) {
   return (
     <ul className="flex flex-col">
       {locations.map((location) => (
-        <li key={location.id} className="border-b border-[#ececec] last:border-b-0">
+        <li key={location.id} className="border-b border-divider last:border-b-0">
           <Link
             href={`/browse/${location.id}`}
             className="block py-[9px] text-[13.5px] font-semibold text-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
