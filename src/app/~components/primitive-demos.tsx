@@ -107,7 +107,7 @@ export function HouseholdSheetDemo() {
         title="Shared home"
       >
         <ul className="flex flex-col divide-y divide-divider border-t border-divider">
-          {["Invite partner", "Settings"].map((label) => (
+          {["Invite partner"].map((label) => (
             <li key={label}>
               <button
                 type="button"
