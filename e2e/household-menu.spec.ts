@@ -31,14 +31,16 @@ test("the household sheet opens from the keyboard, traps focus, closes on Escape
   // Focus lands on the first row.
   await expect(sheet.getByRole("link", { name: "Invite partner" })).toBeFocused();
 
-  // Three rows: Tab cycles and never leaves the sheet.
-  const rows = ["Settings", "Sign out", "Invite partner"];
+  // Two rows: Tab cycles and never leaves the sheet.
+  const rows = ["Sign out", "Invite partner"];
   for (const name of rows) {
     await page.keyboard.press("Tab");
     await expect(sheet.getByRole(name === "Sign out" ? "button" : "link", { name })).toBeFocused();
   }
   await page.keyboard.press("Shift+Tab");
   await expect(sheet.getByRole("button", { name: "Sign out" })).toBeFocused();
+  // No Settings row until there is a settings page.
+  await expect(sheet.getByRole("link", { name: "Settings" })).toHaveCount(0);
 
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
