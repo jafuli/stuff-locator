@@ -44,10 +44,13 @@ function useHouseholdName(enabled: boolean): string | null {
 }
 
 /**
- * The household button and the sheet it opens: Invite partner, Settings and
- * Sign out. This is the primary way to reach all three, so the app shell no
- * longer carries a loose Invite link and a bare Sign out button under the
- * tabs. The button is deliberately secondary — a small outlined circle with
+ * The household button and the sheet it opens: Invite partner and Sign out.
+ * This is the primary way to reach both, so the app shell no longer carries
+ * a loose Invite link and a bare Sign out button under the tabs. There is
+ * deliberately no Settings row yet: the only settings page is
+ * /settings/invite, which Invite partner already reaches, so a second row
+ * would be a duplicate. Add it when a real settings page exists (tracked in
+ * Notion: "Settings page + household sheet Settings row"). The button is deliberately secondary — a small outlined circle with
  * muted initials — so it never reads as a create action.
  *
  * Renders nothing without a session, like the Sign out control it replaces.
@@ -90,11 +93,6 @@ export function HouseholdMenu() {
           <li>
             <Link href="/settings/invite" onClick={close} className={ROW_CLASSES}>
               Invite partner
-            </Link>
-          </li>
-          <li>
-            <Link href="/settings/invite" onClick={close} className={ROW_CLASSES}>
-              Settings
             </Link>
           </li>
           <li>

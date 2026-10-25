@@ -59,7 +59,7 @@ test("falls back to H when the household can't be read", async () => {
   expect((await screen.findByRole("button", { name: "Household menu" })).textContent).toBe("H");
 });
 
-test("opens a sheet with Invite partner, Settings and Sign out, and Escape returns focus to the button", async () => {
+test("opens a sheet with Invite partner and Sign out (no Settings row yet), and Escape returns focus to the button", async () => {
   withSession();
   const user = userEvent.setup();
   render(<HouseholdMenu />);
@@ -69,7 +69,7 @@ test("opens a sheet with Invite partner, Settings and Sign out, and Escape retur
   const sheet = screen.getByRole("dialog", { name: "Shared home" });
   expect(button.getAttribute("aria-expanded")).toBe("true");
   expect(screen.getByRole("link", { name: "Invite partner" }).getAttribute("href")).toBe("/settings/invite");
-  expect(screen.getByRole("link", { name: "Settings" })).toBeDefined();
+  expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
   expect(screen.getByRole("button", { name: "Sign out" })).toBeDefined();
   // Focus moved into the sheet, onto its first row.
   expect(sheet.contains(document.activeElement)).toBe(true);
