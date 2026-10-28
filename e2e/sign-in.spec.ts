@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { countHouseholdsForUser } from "./supabase-test-client";
+import { signOutViaMenu } from "./utils";
 
 // Runs against a real local Supabase stack — see sign-up.spec.ts's header
 // comment. Each test creates its own fresh account through the real
@@ -32,7 +33,7 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
   const email = await signUpFreshAccount(page);
   await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
 
@@ -56,7 +57,7 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
 
 test("wrong password on a real account shows Supabase's actual error message, not a generic one", async ({ page }) => {
   const email = await signUpFreshAccount(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
 
   await page.getByLabel("Email").fill(email);
@@ -90,7 +91,7 @@ test("the app's bottom nav (tabs and sign-out alike) doesn't appear on /sign-in 
   // and left its own loading state stuck on "Signing out…" forever.
   await page.goto("/sign-in");
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Household menu" })).toHaveCount(0);
 });
 
 test("the sign-in form is keyboard-reachable in a sensible order with real label associations", async ({ page }) => {

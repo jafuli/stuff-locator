@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { countHouseholdsForUser, householdIdsForUser, seedInviteForNewHousehold } from "./supabase-test-client";
+import { signOutViaMenu } from "./utils";
 
 // Redeem-invite landing (/join/[code]) — the other half of Invite-partner
 // UI's `${origin}/join/${code}` link. Every test seeds a real inviter
@@ -109,7 +110,7 @@ test("an invalid code shows a clear, specific error state, with no partial house
 
 test("toggling to sign-in and joining via an existing account also redeems correctly", async ({ page }) => {
   const email = await signUpFreshAccount(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
 
   const { code, householdId } = await seedInviteForNewHousehold("Shared home");

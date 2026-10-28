@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Dialog } from "@/components/ui/dialog";
@@ -79,4 +79,18 @@ test("a tap on the scrim closes it", async () => {
   await user.click(screen.getByRole("button", { name: "Close dialog" }));
 
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("the sheet variant keeps the same modal behaviour: labelled, focus inside, Escape closes", async () => {
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  render(
+    <Dialog open onClose={onClose} title="Household" variant="sheet">
+      <button type="button">Row</button>
+    </Dialog>,
+  );
+  expect(screen.getByRole("dialog", { name: "Household" })).toBeDefined();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Row" }));
+  await user.keyboard("{Escape}");
+  expect(onClose).toHaveBeenCalledOnce();
 });

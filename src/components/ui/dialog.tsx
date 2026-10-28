@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export interface DialogProps {
   open: boolean;
@@ -10,6 +11,12 @@ export interface DialogProps {
   children: ReactNode;
   /** Set to false for a destructive confirmation that must be answered with a button. */
   dismissOnBackdrop?: boolean;
+  /**
+   * "dialog" is the centred card; "sheet" docks to the bottom edge with
+   * capsule-rounded top corners (the household sheet). Same modal behaviour
+   * either way — only the placement and shape differ.
+   */
+  variant?: "dialog" | "sheet";
 }
 
 const FOCUSABLE =
@@ -23,7 +30,7 @@ const FOCUSABLE =
  *
  * Renders nothing while closed, so its contents mount fresh each time.
  */
-export function Dialog({ open, onClose, title, children, dismissOnBackdrop = true }: DialogProps) {
+export function Dialog({ open, onClose, title, children, dismissOnBackdrop = true, variant = "dialog" }: DialogProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   // The element focused when the dialog opened, to hand focus back on close.
@@ -89,8 +96,10 @@ export function Dialog({ open, onClose, title, children, dismissOnBackdrop = tru
     return null;
   }
 
+  const isSheet = variant === "sheet";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+    <div className={cn("fixed inset-0 z-50 flex items-end justify-center", !isSheet && "p-4 sm:items-center")}>
       {/* The scrim is a real (but untabbable) button, so a tap outside the
           panel closes the dialog without a non-semantic click handler. */}
       <button
@@ -109,9 +118,14 @@ export function Dialog({ open, onClose, title, children, dismissOnBackdrop = tru
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative flex max-h-full w-full max-w-sm flex-col gap-3 overflow-y-auto rounded-panel border border-hairline bg-surface p-5 text-body text-ink shadow-float outline-none"
+        className={cn(
+          "relative flex max-h-full w-full flex-col overflow-y-auto border border-hairline bg-surface text-body text-ink shadow-float outline-none",
+          isSheet
+            ? "max-w-md gap-1 rounded-t-capsule border-b-0 pt-5 pb-[env(safe-area-inset-bottom)]"
+            : "max-w-sm gap-3 rounded-panel p-5",
+        )}
       >
-        <h2 id={titleId} className="text-title text-ink">
+        <h2 id={titleId} className={cn("text-title text-ink", isSheet && "px-5 pb-3")}>
           {title}
         </h2>
         {children}

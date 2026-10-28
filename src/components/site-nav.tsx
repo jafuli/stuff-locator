@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BottomNav } from "@/components/bottom-nav";
-import { SignOutButton } from "@/components/sign-out-button";
+import { HouseholdMenu } from "@/components/household-menu";
+import { TabCapsule } from "@/components/tab-capsule";
 import { NAV_TABS } from "@/lib/nav-tabs";
 
 /**
@@ -17,33 +16,17 @@ import { NAV_TABS } from "@/lib/nav-tabs";
 const ROUTES_WITHOUT_NAV = ["/sign-up", "/sign-in", "/forgot-password", "/reset-password"];
 
 /**
- * The one place that reads the router. BottomNav itself is deliberately
+ * The one place that reads the router. TabCapsule itself is deliberately
  * prop-driven (see its own doc comment) so it stays a plain,
  * server-renderable, easily-testable component — Next.js doesn't support
  * reading the current URL from a Server Component, so something has to be a
- * Client Component to supply `activePath`. This is that something; it's a
- * pass-through and carries no logic of its own worth testing beyond what
- * BottomNav's own tests already cover, so it's exercised indirectly via
- * src/__tests__/site-nav.test.tsx (mocking next/navigation) rather than a
- * dedicated in-browser check.
+ * Client Component to supply `activePath`. This is that something.
  *
- * SignOutButton is rendered here (not inside BottomNav) so BottomNav's own
- * 2-tab contract stays untouched. It's already self-contained about
- * whether to show anything (renders null with no active session — see its
- * own doc comment), but that alone doesn't cover /sign-up/ /sign-in
- * themselves for an already-signed-in visitor who navigates back to them
- * manually — ROUTES_WITHOUT_NAV hides the whole nav there unconditionally,
- * regardless of session state, since those pages are meant to be
- * standalone either way.
- *
- * The "Invite partner" link (the Invite-partner-UI task's entry point,
- * AC #3) is a plain nav link in its own row, not a third BottomNav tab —
- * the 2-tab count is a settled, documented decision (see nav-tabs.ts's own
- * comment: the wireframe's 3rd "Home" tab was deliberately dropped), and
- * reopening it wasn't what this task asked for. Always rendered (unlike
- * SignOutButton) since it's ordinary navigation to a page that gates on
- * its own session check, the same way BottomNav's own tabs don't hide
- * themselves based on auth state either.
+ * The capsule floats: fixed to the bottom of the viewport, space-6 above the
+ * edge plus the device's safe area, with the household button (and its sheet
+ * for Invite partner / Settings / Sign out) right-aligned above it. The
+ * wrapper ignores pointer events so the gutters beside the capsule stay
+ * tappable page content; only the capsule and the button take them.
  */
 export function SiteNav() {
   const pathname = usePathname();
@@ -51,17 +34,29 @@ export function SiteNav() {
     return null;
   }
   return (
-    <>
-      <BottomNav tabs={NAV_TABS} activePath={pathname} />
-      <div className="flex justify-center border-t border-line bg-wash py-1.5">
-        <Link
-          href="/settings/invite"
-          className="px-2 py-1 text-[10px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          Invite partner
-        </Link>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(var(--spacing-space-6)+env(safe-area-inset-bottom))] min-[375px]:px-5">
+      <div className="mx-auto flex w-full max-w-sm flex-col items-end gap-3">
+        <div className="pointer-events-auto">
+          <HouseholdMenu />
+        </div>
+        <div className="pointer-events-auto w-full">
+          <TabCapsule tabs={NAV_TABS} activePath={pathname} />
+        </div>
       </div>
-      <SignOutButton />
-    </>
+    </div>
   );
+}
+
+/**
+ * Blank space at the end of the scrolling page content, as tall as the
+ * floating nav, so the capsule (and the household button above it) can never
+ * cover the last row. Rendered only where the nav is, so standalone auth
+ * pages don't grow a phantom scroll area.
+ */
+export function NavClearance() {
+  const pathname = usePathname();
+  if (ROUTES_WITHOUT_NAV.includes(pathname)) {
+    return null;
+  }
+  return <div aria-hidden="true" className="h-nav-clearance" />;
 }

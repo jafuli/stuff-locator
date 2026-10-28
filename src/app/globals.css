@@ -171,6 +171,12 @@
   --spacing-target-min: 44px;
   --spacing-control-height: 50px;
   --spacing-tape-height: 22px;
+
+  /* Room the floating nav takes at the bottom of a page: space-6 gap +
+     capsule (56) + space-3 + household button (44) + space-6 breathing room,
+     plus the device's safe area. NavClearance fills it so the last row can
+     always scroll clear of the capsule. */
+  --spacing-nav-clearance: calc(10rem + env(safe-area-inset-bottom));
 }
 
 /*

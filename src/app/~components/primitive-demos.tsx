@@ -76,3 +76,63 @@ export function DialogDemo({ label }: { label: string }) {
     </>
   );
 }
+
+/**
+ * The household button + sheet as the shell renders them, but with fixed
+ * initials and no session or router behind it — so the catalog can show the
+ * look in both themes. Rows are inert here.
+ */
+export function HouseholdSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        aria-label="Household menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen(true);
+        }}
+        className="flex size-11 items-center justify-center rounded-full border border-border-control bg-surface text-meta text-muted shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      >
+        SH
+      </button>
+      <Dialog
+        variant="sheet"
+        open={open}
+        onClose={() => {
+          setOpen(false);
+        }}
+        title="Shared home"
+      >
+        <ul className="flex flex-col divide-y divide-divider border-t border-divider">
+          {["Invite partner"].map((label) => (
+            <li key={label}>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                }}
+                className="flex min-h-14 w-full items-center px-5 text-left text-body text-ink outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+              >
+                {label}
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+              }}
+              className="flex min-h-14 w-full items-center px-5 text-left text-body text-signal outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+            >
+              Sign out
+            </button>
+          </li>
+        </ul>
+      </Dialog>
+    </div>
+  );
+}

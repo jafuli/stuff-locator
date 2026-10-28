@@ -6,9 +6,13 @@
 // underneath the fixed nav bar. min-h-full instead resolves against the
 // parent's actual (already-correct) height, filling exactly the visible
 // area with no slack. Verified at 320x568 and 1280x1024.
+//
+// The calc subtracts the height NavClearance (site-nav.tsx) reserves at the
+// end of the scroller for the floating nav; without it, min-h-full plus that
+// spacer would overflow by exactly the spacer's height.
 export default function OfflinePage() {
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-2 p-6 text-center">
+    <main className="flex min-h-[calc(100%-var(--spacing-nav-clearance))] flex-col items-center justify-center gap-2 p-6 text-center">
       <h1 className="text-2xl font-semibold">You&apos;re offline</h1>
       <p className="text-sm text-muted-foreground">
         Stuff Locator needs a connection for this page. Anything you&apos;ve already loaded is still available.
