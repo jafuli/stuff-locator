@@ -131,6 +131,14 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   { path: "/activity", name: "activity (populated)", setup: signUpAndGenerateActivity },
   { path: "/this-route-does-not-exist", name: "root not-found", setup: signUpOnly },
   { path: "/~offline", name: "offline fallback" },
+  // Design 5/5: the forms and flows. A brand-new account has zero items and
+  // hasn't finished onboarding, so "/" is the guided onboarding here.
+  { path: "/", name: "guided onboarding (fresh household)", setup: signUpOnly },
+  { path: "/items/new", name: "stash form", setup: signUpOnly },
+  { path: "/settings/invite", name: "invite panel", setup: signUpOnly },
+  { path: "/sign-in", name: "sign in" },
+  { path: "/sign-up", name: "sign up" },
+  { path: "/forgot-password", name: "forgot password" },
 ];
 
 for (const route of ROUTES) {

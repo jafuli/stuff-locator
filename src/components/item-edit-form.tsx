@@ -15,6 +15,7 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 // aren't Stash-specific despite the module's name.
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 export interface ItemEditFormProps {
   item: Item;
@@ -175,15 +176,12 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
 
   if (mode === "deleted") {
     return (
-      <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         <div>
-          <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Deleted</p>
-          <p className="text-[15px] font-semibold text-ink">{item.name}</p>
+          <p className="text-section-label text-muted">Deleted</p>
+          <p className="text-title text-ink">{item.name}</p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex w-fit items-center justify-center rounded-[8px] px-[10px] py-[10px] text-[13px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
+        <Link href="/" className={textLinkClassName()}>
           Back to home
         </Link>
       </div>
@@ -192,17 +190,14 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
 
   if (mode === "edited" && captured) {
     return (
-      <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         <div>
-          <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Updated</p>
-          <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
+          <p className="text-section-label text-muted">Updated</p>
+          <p className="text-title text-ink">{captured.name}</p>
         </div>
         <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
-        <Link
-          href={`/items/${item.id}`}
-          className="inline-flex w-fit items-center justify-center rounded-[8px] px-[10px] py-[10px] text-[13px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
+        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
+        <Link href={`/items/${item.id}`} className={textLinkClassName()}>
           Back to item
         </Link>
       </div>
@@ -211,16 +206,16 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
 
   if (mode === "confirming-delete") {
     return (
-      <div className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         {/* tabIndex={-1}: programmatically focusable (see the effect above)
             without joining the regular tab order — the heading itself
             isn't an action, the two buttons below it are. */}
-        <h2 ref={deleteHeadingRef} tabIndex={-1} className="text-[13px] font-semibold text-ink outline-none">
+        <h2 ref={deleteHeadingRef} tabIndex={-1} className="text-title text-ink outline-none">
           Delete this item?
         </h2>
-        <p className="text-[11px] text-mid">{item.name} will be removed. This can&apos;t be undone.</p>
+        <p className="text-meta text-muted">{item.name} will be removed. This can&apos;t be undone.</p>
         {deleteError ? (
-          <p role="alert" className="text-[11.5px] text-mid">
+          <p role="alert" className="text-meta text-signal">
             {deleteError}
           </p>
         ) : null}
@@ -268,7 +263,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
             disabled={isSubmitting}
           />
           {fieldErrors.location ? (
-            <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-[10.5px] text-mid">
+            <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
               {fieldErrors.location}
             </p>
           ) : null}
@@ -284,7 +279,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
         />
 
         {submitError ? (
-          <p role="alert" className="text-[11.5px] text-mid">
+          <p role="alert" className="text-meta text-signal">
             {submitError}
           </p>
         ) : null}

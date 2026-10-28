@@ -29,7 +29,7 @@ export function PathPickerDemo({ label, locations, pickOnly, excludeIds, placeho
         excludeIds={excludeIds}
         placeholder={placeholder}
       />
-      <p className="mt-2 text-[11px] text-mid">
+      <p className="mt-2 text-meta text-muted">
         {chips.length === 0
           ? "Nothing chosen yet."
           : `Chosen: ${chipsPath(chips)}${newCount > 0 ? ` (${String(newCount)} new)` : ""}`}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { validateEmail } from "@/lib/auth-validation";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 interface FieldErrors {
   email?: string;
@@ -64,13 +65,10 @@ export function ForgotPasswordForm() {
   if (submitted) {
     return (
       <div role="status" className="flex flex-col gap-3">
-        <p className="text-[12.5px] text-ink">
+        <p className="text-body text-ink">
           If an account exists for that email, we&apos;ve sent a link to reset the password.
         </p>
-        <Link
-          href="/sign-in"
-          className="w-fit text-[11.5px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
+        <Link href="/sign-in" className={textLinkClassName()}>
           Back to sign in
         </Link>
       </div>
@@ -92,8 +90,8 @@ export function ForgotPasswordForm() {
       <Button type="submit" variant="primary" isLoading={isSubmitting}>
         {isSubmitting ? "Sending…" : "Send reset link"}
       </Button>
-      <p className="text-center text-[11.5px] text-mid">
-        <Link href="/sign-in" className="font-semibold text-ink underline underline-offset-2">
+      <p className="text-center text-meta text-muted">
+        <Link href="/sign-in" className={textLinkClassName({ inline: true })}>
           Back to sign in
         </Link>
       </p>

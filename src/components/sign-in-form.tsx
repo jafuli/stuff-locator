@@ -11,6 +11,7 @@ import { validateEmail, validateSignInPassword } from "@/lib/auth-validation";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
 import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 interface FieldErrors {
   email?: string;
@@ -155,14 +156,11 @@ export function SignInForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignInFormP
         error={fieldErrors.password}
         disabled={isSubmitting}
       />
-      <Link
-        href="/forgot-password"
-        className="w-fit text-[11.5px] text-mid underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
+      <Link href="/forgot-password" className={textLinkClassName({ muted: true })}>
         Forgot your password?
       </Link>
       {submitError ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {submitError}
         </p>
       ) : null}
@@ -173,9 +171,9 @@ export function SignInForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignInFormP
       {/* Same reasoning as SignUpForm's own suppressed footer link — see
           that component's comment. */}
       {!invite ? (
-        <p className="text-center text-[11.5px] text-mid">
+        <p className="text-center text-meta text-muted">
           Don&apos;t have an account?{" "}
-          <Link href={withNextParam("/sign-up", next)} className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-up", next)} className={textLinkClassName({ inline: true })}>
             Sign up
           </Link>
         </p>

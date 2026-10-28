@@ -57,15 +57,15 @@ export function InvitePanel({ code }: InvitePanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
+    <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
       <div>
-        <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Invite code</p>
-        <p className="text-[15px] font-semibold text-ink">{code}</p>
+        <p className="text-section-label text-muted">Invite code</p>
+        <p className="text-title text-ink">{code}</p>
       </div>
 
       <div>
-        <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Shareable link</p>
-        <p className="break-all text-[12px] text-ink">{link}</p>
+        <p className="text-section-label text-muted">Shareable link</p>
+        <p className="break-all text-body text-ink">{link}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -74,12 +74,12 @@ export function InvitePanel({ code }: InvitePanelProps) {
         </Button>
         {/* aria-live so screen reader users get the confirmation too, not
             just a sighted label swap. */}
-        <p aria-live="polite" className="text-[11.5px] text-mid">
+        <p aria-live="polite" className="text-meta text-muted">
           {copied ? "Copied!" : ""}
         </p>
       </div>
       {copyError ? (
-        <p role="alert" className="text-[10.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {copyError}
         </p>
       ) : null}

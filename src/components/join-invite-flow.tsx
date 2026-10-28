@@ -6,6 +6,8 @@ import { SignInForm } from "@/components/sign-in-form";
 import { SignUpForm } from "@/components/sign-up-form";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
 import { createClient } from "@/server/db/client";
+import { buttonClassName } from "@/components/ui/button";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 export interface JoinInviteFlowProps {
   code: string;
@@ -21,8 +23,7 @@ type Stage =
   | { status: "success"; householdName: string | null }
   | { status: "error"; message: string };
 
-const LINK_CLASSES =
-  "inline-flex w-fit items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const LINK_CLASSES = buttonClassName("primary", "w-fit");
 
 /**
  * Owns the whole /join/[code] flow client-side, in one mounted component —
@@ -80,9 +81,9 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
 
   if (stage.status === "success") {
     return (
-      <div role="status" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
-        <p className="text-[13px] text-ink">
-          You&apos;ve joined <span className="font-semibold">{stage.householdName ?? "the household"}</span>&apos;s home
+      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
+        <p className="text-body text-ink">
+          You&apos;ve joined <span className="font-medium">{stage.householdName ?? "the household"}</span>&apos;s home
         </p>
         <Link href="/" className={LINK_CLASSES}>
           Go to Stuff Locator
@@ -93,9 +94,9 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
 
   if (stage.status === "error") {
     return (
-      <div role="alert" className="flex flex-col gap-3 rounded-[9px] border-[1.5px] border-line p-4">
-        <p className="text-[13px] font-semibold text-ink">Couldn&apos;t join this household</p>
-        <p className="text-[12px] text-mid">{stage.message}</p>
+      <div role="alert" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
+        <p className="text-title text-ink">Couldn&apos;t join this household</p>
+        <p className="text-meta text-muted">{stage.message}</p>
         <Link href="/" className={LINK_CLASSES}>
           Back to Stuff Locator
         </Link>
@@ -106,7 +107,10 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
   if (stage.status === "redeeming") {
     return (
       <div aria-busy="true" aria-live="polite" className="flex flex-col gap-2">
-        <div className="h-[34px] animate-pulse rounded-[9px] border-[1.5px] border-line bg-wash" aria-hidden="true" />
+        <div
+          className="h-control-height animate-pulse rounded-control border border-border-control bg-surface"
+          aria-hidden="true"
+        />
         <span className="sr-only">Joining the household…</span>
       </div>
     );
@@ -124,7 +128,7 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
         onClick={() => {
           setAuthMode(authMode === "sign-up" ? "sign-in" : "sign-up");
         }}
-        className="text-center text-[11.5px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className={textLinkClassName({ className: "justify-center" })}
       >
         {authMode === "sign-up" ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
       </button>

@@ -15,8 +15,8 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
   const { next } = await props.searchParams;
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <h1 className="text-[16px] font-semibold text-ink">Sign in</h1>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <h1 className="text-display text-ink">Sign in</h1>
       <SignInForm next={safeRedirectPath(typeof next === "string" ? next : undefined)} />
     </main>
   );

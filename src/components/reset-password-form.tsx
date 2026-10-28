@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState, type SubmitEvent } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { validatePasswordConfirmation, validateSignUpPassword } from "@/lib/auth-validation";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 interface FieldErrors {
   password?: string;
@@ -103,7 +104,7 @@ export function ResetPasswordForm() {
 
   if (status === "checking") {
     return (
-      <p aria-live="polite" className="text-[11.5px] text-mid">
+      <p aria-live="polite" className="text-meta text-muted">
         Checking your reset link…
       </p>
     );
@@ -122,10 +123,7 @@ export function ResetPasswordForm() {
           title="This reset link is invalid or has expired"
           description="Request a new one to keep going."
           action={
-            <Link
-              href="/forgot-password"
-              className="inline-flex items-center justify-center rounded-[8px] border-[1.5px] border-line bg-transparent px-[10px] py-[10px] text-[13px] [font-weight:640] text-mid outline-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
+            <Link href="/forgot-password" className={buttonClassName("secondary")}>
               Request a new link
             </Link>
           }
@@ -137,11 +135,8 @@ export function ResetPasswordForm() {
   if (status === "updated") {
     return (
       <div role="status" className="flex flex-col gap-3">
-        <p className="text-[12.5px] text-ink">Your password has been changed.</p>
-        <Link
-          href="/sign-in"
-          className="w-fit text-[11.5px] font-semibold text-ink underline underline-offset-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
+        <p className="text-body text-ink">Your password has been changed.</p>
+        <Link href="/sign-in" className={textLinkClassName()}>
           Back to sign in
         </Link>
       </div>
@@ -171,7 +166,7 @@ export function ResetPasswordForm() {
         disabled={isSubmitting}
       />
       {submitError ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {submitError}
         </p>
       ) : null}

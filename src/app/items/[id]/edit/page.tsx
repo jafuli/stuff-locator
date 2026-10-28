@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { BackLink } from "@/components/back-link";
 import { ItemEditForm } from "@/components/item-edit-form";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
@@ -69,14 +69,9 @@ export default async function Page(props: PageProps<"/items/[id]/edit">) {
   };
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <Link
-        href={`/items/${id}`}
-        className="w-fit text-[11.5px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
-        ‹ Back to item
-      </Link>
-      <h1 className="text-[16px] font-semibold text-ink">Edit item</h1>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <BackLink href={`/items/${id}`} label="item" />
+      <h1 className="text-display text-ink">Edit item</h1>
       <ItemEditForm item={item} locations={locations} />
     </main>
   );

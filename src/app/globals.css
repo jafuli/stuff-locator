@@ -88,30 +88,6 @@
   --shadow-tape: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0.5px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* --------------------------------------------------- wireframe aliases ---
-  TEMPORARY. The wireframe tokens (--ink/--mid/--dim/--line/--wash/--paper/
-  --note) still back screens that haven't been migrated, so they're pointed
-  at the new tokens instead of keeping their old grey values. --ink and
-  --paper keep their names, so the new definitions above already cover them.
-  Each alias below is deleted in Design 5/5, along with --font-wire*.
-*/
-:root {
-  /* Design 5/5 deletes this alias. */
-  --mid: var(--muted);
-  /* Design 5/5 deletes this alias. Was a pale grey used for placeholders and
-     faint labels; --faint is decoration-only, so it maps to --muted to stay
-     readable. */
-  --dim: var(--muted);
-  /* Design 5/5 deletes this alias. */
-  --line: var(--hairline);
-  /* Design 5/5 deletes this alias. */
-  --wash: var(--surface);
-  /* Design 5/5 deletes this alias. */
-  --note: var(--signal);
-  /* Design 5/5 deletes this alias. */
-  --note-bg: var(--surface);
-}
-
 /* ------------------------------------------------------------------- theme */
 
 @theme inline {
@@ -133,21 +109,8 @@
   --color-on-tape: var(--on-tape);
   --color-focus: var(--focus);
 
-  /* Design 5/5 deletes these aliases (see the block above). */
-  --color-mid: var(--mid);
-  --color-dim: var(--dim);
-  --color-line: var(--line);
-  --color-wash: var(--wash);
-  --color-note: var(--note);
-  --color-note-bg: var(--note-bg);
-
   --font-sans: var(--font-atkinson), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* Design 5/5 deletes these. Named --font-wire* so they never collided with
-     the font tokens above. */
-  --font-wire: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-wire-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @theme {

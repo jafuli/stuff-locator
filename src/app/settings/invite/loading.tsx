@@ -4,10 +4,10 @@
 // that resolves.
 export default function Loading() {
   return (
-    <main className="flex flex-col gap-3 p-4" aria-busy="true" aria-live="polite">
-      <div className="h-[18px] w-40 animate-pulse rounded bg-wash" aria-hidden="true" />
-      <div className="h-[14px] w-56 animate-pulse rounded bg-wash" aria-hidden="true" />
-      <div className="h-[110px] animate-pulse rounded-[9px] border-[1.5px] border-line bg-wash" aria-hidden="true" />
+    <main className="flex flex-col gap-4 px-gutter pt-6" aria-busy="true" aria-live="polite">
+      <div className="h-8 w-40 animate-pulse rounded-tape bg-divider" aria-hidden="true" />
+      <div className="h-4 w-56 animate-pulse rounded-tape bg-divider" aria-hidden="true" />
+      <div className="h-28 animate-pulse rounded-panel border border-hairline bg-surface" aria-hidden="true" />
       <span className="sr-only">Loading your invite…</span>
     </main>
   );

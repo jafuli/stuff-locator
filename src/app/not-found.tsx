@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
+import { buttonClassName } from "@/components/ui/button";
 
 // Next's root not-found.tsx convention: automatically rendered for any
 // unmatched path under the app, no notFound() call needed — distinct from
@@ -28,10 +29,7 @@ export default function NotFound() {
           // A real navigation, so a <Link>, not Button's <button> — styled
           // to match Button's secondary variant, same as the other
           // not-found routes.
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-[8px] border-[1.5px] border-line bg-transparent px-[10px] py-[10px] text-[13px] [font-weight:640] text-mid outline-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
+          <Link href="/" className={buttonClassName("secondary")}>
             Back to Stuff
           </Link>
         }

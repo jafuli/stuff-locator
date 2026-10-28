@@ -11,6 +11,7 @@ import { validateEmail, validateSignUpPassword } from "@/lib/auth-validation";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
 import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
+import { textLinkClassName } from "@/components/ui/text-link";
 
 interface FieldErrors {
   email?: string;
@@ -164,11 +165,11 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
 
   if (confirmationSent) {
     return (
-      <div role="status" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-4">
-        <p className="text-[13px] font-semibold text-ink">Check your email to confirm your account</p>
-        <p className="text-[12px] text-mid">
+      <div role="status" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4">
+        <p className="text-title text-ink">Check your email to confirm your account</p>
+        <p className="text-meta text-muted">
           We sent a confirmation link to {email}. Follow it to finish setting up your account, then{" "}
-          <Link href={withNextParam("/sign-in", next)} className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-in", next)} className={textLinkClassName({ inline: true })}>
             sign in
           </Link>
           .
@@ -200,7 +201,7 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
         disabled={isSubmitting}
       />
       {submitError ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {submitError}
         </p>
       ) : null}
@@ -213,9 +214,9 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
           switching between sign-up/sign-in is JoinInviteFlow's own local
           toggle instead (see that component). */}
       {!invite ? (
-        <p className="text-center text-[11.5px] text-mid">
+        <p className="text-center text-meta text-muted">
           Already have an account?{" "}
-          <Link href={withNextParam("/sign-in", next)} className="font-semibold text-ink underline underline-offset-2">
+          <Link href={withNextParam("/sign-in", next)} className={textLinkClassName({ inline: true })}>
             Sign in
           </Link>
         </p>
