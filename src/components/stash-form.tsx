@@ -175,7 +175,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/items/${captured.id}`}
-            className="inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="inline-flex items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             View item
           </Link>

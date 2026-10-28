@@ -13,12 +13,14 @@ export interface FormFieldProps {
 }
 
 /**
- * A real labelled input + inline error, matching LocationPathPicker's
- * label/input/error styling (src/components/location-path-picker.tsx) so
- * forms across the app don't invent a second visual language for the same
- * thing. `type="text"` exists alongside email/password for plain fields
- * (e.g. stash-form.tsx's Name/Detail) that need this same label+error
- * wiring but aren't auth inputs.
+ * A real labelled input + inline error. The field sits on `surface` with a
+ * visible label — the system's README flags the `border-control` token as below 3:1 on
+ * its own, so the resting edge is never the only cue; focus and error switch
+ * to the `border-strong` token, and an error also prints signal text (never a fill, and
+ * never colour alone). 16px text keeps iOS from zooming on focus.
+ * `type="text"` exists alongside email/password for plain fields (e.g.
+ * stash-form.tsx's Name/Detail) that need this same label+error wiring but
+ * aren't auth inputs.
  * `noValidate` lives on the parent <form> — this input keeps `type`/
  * `required`-adjacent semantics (mobile keyboard, autofill) but the forms
  * that use it decide what counts as valid and when to show it.
@@ -32,7 +34,7 @@ export function FormField({ id, label, type, value, onChange, error, disabled = 
 
   return (
     <div>
-      <label htmlFor={id} className="mb-[3px] block text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">
+      <label htmlFor={id} className="mb-1 block text-meta text-muted">
         {label}
       </label>
       <input
@@ -45,19 +47,14 @@ export function FormField({ id, label, type, value, onChange, error, disabled = 
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         className={cn(
-          "w-full rounded-[7px] border-[1.5px] px-[9px] py-[7px] text-[12.5px] text-ink outline-none",
-          "placeholder:text-[#b0b0b0] disabled:opacity-60",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
-          // No dedicated error/danger color exists in this token set yet
-          // (--note is explicitly scoped to the path picker's "+ New place"
-          // row, per its own comment in globals.css) — border-ink plus the
-          // visible role="alert" text below is the same "invalid" signal
-          // LocationPathPicker's own error state uses.
-          error ? "border-ink" : "border-line",
+          "min-h-control-height w-full rounded-control border bg-surface px-4 text-body text-ink shadow-control outline-none",
+          "placeholder:text-muted disabled:opacity-60",
+          "focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+          error ? "border-border-strong" : "border-border-control",
         )}
       />
       {error ? (
-        <p id={errorId} role="alert" className="mt-1 text-[10.5px] text-mid">
+        <p id={errorId} role="alert" className="mt-1 text-meta text-signal">
           {error}
         </p>
       ) : null}

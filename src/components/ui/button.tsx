@@ -16,15 +16,19 @@ export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
   ref?: Ref<HTMLButtonElement>;
 }
 
+// control-height 50px, radius-control, and a 2px focus outline with a 2px
+// offset on every state — the system's floor for an interactive element.
 const baseClasses =
-  "inline-flex items-center justify-center gap-2 rounded-[8px] px-[10px] py-[10px] " +
-  "text-[13px] [font-weight:640] outline-none transition-colors " +
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink " +
+  "inline-flex min-h-control-height min-w-target-min items-center justify-center gap-2 rounded-control px-5 " +
+  "text-body font-medium outline-none transition-colors duration-150 ease-out " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-ink text-white",
-  secondary: "border-[1.5px] border-line bg-transparent text-mid",
+  // Inverted: ink fill, paper text (the Stash button's treatment).
+  primary: "bg-ink text-paper",
+  // A control's only edge is the border-strong token, never border-control (<3:1).
+  secondary: "border border-border-strong bg-surface text-ink shadow-control",
 };
 
 export function Button({
@@ -49,7 +53,7 @@ export function Button({
       {isLoading ? (
         <span
           aria-hidden="true"
-          className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
       ) : null}
       {children}

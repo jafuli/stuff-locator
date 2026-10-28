@@ -119,7 +119,7 @@ function describe(entry: ActivityEntry): Description {
 function FeedEntry({ entry, now }: { entry: ActivityEntry; now: Date }) {
   const { headline, detail } = describe(entry);
   return (
-    <li className="border-b border-[#ececec] py-[9px] last:border-b-0">
+    <li className="border-b border-divider py-[9px] last:border-b-0">
       <p className="text-[13px] break-words text-ink">
         <Strong>{entry.actor}</Strong> {headline}
       </p>

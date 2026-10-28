@@ -22,7 +22,7 @@ type Stage =
   | { status: "error"; message: string };
 
 const LINK_CLASSES =
-  "inline-flex w-fit items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex w-fit items-center justify-center rounded-[8px] bg-ink px-[10px] py-[10px] text-[13px] font-semibold text-paper outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 /**
  * Owns the whole /join/[code] flow client-side, in one mounted component —
