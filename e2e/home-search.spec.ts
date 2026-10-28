@@ -43,20 +43,18 @@ test("searching the home item list filters, shows no-matches, and clears back to
   const search = page.getByRole("searchbox", { name: "Search your stuff" });
   await expect(search).toBeVisible();
 
-  // The "+ Add item" entry point into Stash (see stash.spec.ts) is the very
-  // first focusable element on the page, immediately followed by the search
-  // input — so it takes two Tabs from a fresh load to reach search, not one.
-  // Checked before any .fill() below, since Playwright's fill() focuses its
-  // target — a Tab afterwards would move focus past it, not onto it. Not
-  // using tabUntilFocused for the search input itself: that helper matches
-  // by aria-label or textContent, and this input is labelled via an
-  // associated <label htmlFor>, which contributes neither.
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "+ Add item" })).toBeFocused();
-
+  // Search comes first in the tab order, then the Stash button beside it —
+  // reading order. Checked before any .fill() below, since Playwright's
+  // fill() focuses its target — a Tab afterwards would move focus past it,
+  // not onto it. Not using tabUntilFocused for the search input itself: that
+  // helper matches by aria-label or textContent, and this input is labelled
+  // via an associated <label htmlFor>, which contributes neither.
   await page.keyboard.press("Tab");
   const focusedId = await page.evaluate(() => document.activeElement?.id ?? null);
   expect(focusedId).toBe("stuff-search");
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Stash", exact: true })).toBeFocused();
 
   // A query matching exactly one real item narrows the list to it.
   await search.fill("passport");

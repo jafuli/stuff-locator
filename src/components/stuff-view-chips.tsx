@@ -10,9 +10,15 @@ export interface StuffViewChipsProps {
   active: StuffView;
 }
 
+// Chips press down 1px on tap (brand book); the transform is dropped under
+// prefers-reduced-motion by the global switch in globals.css.
 const CHIP_BASE =
-  "inline-flex min-h-11 items-center justify-center rounded-full border-[1.5px] px-[14px] py-[6px] text-[12px] font-semibold outline-none " +
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex min-h-target-min items-center justify-center rounded-full border px-4 text-nav outline-none " +
+  "transition-[transform,background-color] duration-150 ease-out active:translate-y-px " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const CHIP_ACTIVE = "border-ink bg-ink text-paper";
+// A chip's only edge is its border, so it's border-strong, not border-control.
+const CHIP_INACTIVE = "border-border-strong bg-surface text-muted [font-weight:400]";
 
 /**
  * The "All (n)" / "By place" toggle under the Stuff search (wireframes 02 and
@@ -29,14 +35,14 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
       <Link
         href="/"
         aria-current={active === "all" ? "page" : undefined}
-        className={cn(CHIP_BASE, active === "all" ? "border-ink bg-ink text-paper" : "border-line text-mid")}
+        className={cn(CHIP_BASE, active === "all" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
         All ({total})
       </Link>
       <Link
         href="/browse"
         aria-current={active === "place" ? "page" : undefined}
-        className={cn(CHIP_BASE, active === "place" ? "border-ink bg-ink text-paper" : "border-line text-mid")}
+        className={cn(CHIP_BASE, active === "place" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
         By place
       </Link>

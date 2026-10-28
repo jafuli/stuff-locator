@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
-import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { PathTrail } from "@/components/path-trail";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -156,7 +156,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
       <div role="status" className="flex flex-col gap-2 rounded-[9px] border-[1.5px] border-line p-3">
         <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
         <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
-        <LocationBreadcrumb segments={captured.segments} />
+        <PathTrail segments={captured.segments} printIn />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
       </div>
     );
@@ -169,7 +169,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
           <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Added</p>
           <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
         </div>
-        <LocationBreadcrumb segments={captured.segments} />
+        <PathTrail segments={captured.segments} printIn />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
         <p className="text-[10.5px] text-mid">Saved. It shows up on Home and in Browse right away.</p>
         <div className="flex flex-wrap gap-2">

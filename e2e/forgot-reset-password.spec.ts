@@ -106,7 +106,7 @@ test("the full recovery flow: request a link, follow the real emailed link, set 
   await page.getByLabel("Password").fill(newPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

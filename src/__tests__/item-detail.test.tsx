@@ -29,7 +29,7 @@ test("renders the item name as the page heading", () => {
   expect(screen.getByRole("heading", { level: 1, name: "Spare house keys" })).toBeDefined();
 });
 
-test("renders the full location breadcrumb", () => {
+test("renders the full location path", () => {
   render(
     <ItemDetail
       item={fullItem}
@@ -41,7 +41,7 @@ test("renders the full location breadcrumb", () => {
       ]}
     />,
   );
-  expect(screen.getByText("Garage › Closet › Toolbox › Red box")).toBeDefined();
+  expect(document.body.textContent).toContain("Garage › Closet › Toolbox › Red box");
 });
 
 test("renders every optional field when present", () => {

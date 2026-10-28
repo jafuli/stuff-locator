@@ -31,7 +31,7 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
   });
 
   const email = await signUpFreshAccount(page);
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
@@ -42,7 +42,7 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
-import { LocationBreadcrumb } from "@/components/location-breadcrumb";
+import { PathTrail } from "@/components/path-trail";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -197,7 +197,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
           <p className="text-[9.5px] font-semibold tracking-[.06em] text-mid uppercase">Updated</p>
           <p className="text-[15px] font-semibold text-ink">{captured.name}</p>
         </div>
-        <LocationBreadcrumb segments={captured.segments} />
+        <PathTrail segments={captured.segments} printIn />
         {captured.detail ? <p className="text-[12px] text-mid">{captured.detail}</p> : null}
         <Link
           href={`/items/${item.id}`}

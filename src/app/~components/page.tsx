@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LocationBreadcrumb } from "@/components/location-breadcrumb";
-import { ItemCard } from "@/components/item-card";
+import { PathTrail } from "@/components/path-trail";
+import { StuffList } from "@/components/stuff-list";
+import { StuffViewChips } from "@/components/stuff-view-chips";
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
 import { TabCapsule } from "@/components/tab-capsule";
 import { PathPickerDemo } from "./path-picker-demo";
-import { DialogDemo, FormFieldDemo, HouseholdSheetDemo } from "./primitive-demos";
+import { DialogDemo, FormFieldDemo, HouseholdSheetDemo, StuffSearchDemo } from "./primitive-demos";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -214,16 +215,16 @@ export default function ComponentsDemoPage() {
         </p>
       </div>
 
-      <Section id="breadcrumb-heading" title="Location breadcrumb">
-        <LocationBreadcrumb
-          segments={[
-            { id: "bedroom", name: "Bedroom" },
-            { id: "bedroom-filing-box", name: "Filing box" },
-          ]}
-        />
-        <div className="max-w-xs rounded-control bg-surface p-3">
-          <p className="mb-1 text-meta text-muted">Wraps at 320px, never truncates</p>
-          <LocationBreadcrumb
+      <Section id="path-trail-heading" title="Path trail">
+        <ThemePair>
+          <PathTrail
+            segments={[
+              { id: "bedroom", name: "Bedroom" },
+              { id: "desk", name: "Desk" },
+              { id: "top-drawer", name: "Top drawer" },
+            ]}
+          />
+          <PathTrail
             segments={[
               { id: "garage", name: "Garage" },
               { id: "garage-closet", name: "Closet" },
@@ -232,23 +233,43 @@ export default function ComponentsDemoPage() {
               { id: "garage-closet-toolbox-locked-cabinet-top-shelf", name: "Top shelf" },
               { id: "garage-closet-toolbox-locked-cabinet-top-shelf-red-box", name: "Red box" },
             ]}
+            linked
           />
-        </div>
+          <PathTrail segments={[{ id: "kitchen", name: "Kitchen" }]} />
+          <PathTrail
+            segments={[
+              { id: "bedroom", name: "Bedroom" },
+              { id: "filing-box", name: "Filing box" },
+            ]}
+            printIn
+          />
+        </ThemePair>
       </Section>
 
-      <Section id="item-card-heading" title="Item card — states">
-        <div>
-          <p className="mb-1 text-meta text-muted">Success</p>
-          {ITEMS.slice(0, 4).map((item) => (
-            <ItemCard key={item.id} item={item} segments={segmentsFor(item.locationId)} href={`/items/${item.id}`} />
-          ))}
-        </div>
-        <div>
-          <p className="mb-1 text-meta text-muted">Loading</p>
-          <ItemCardSkeleton />
-          <ItemCardSkeleton />
-          <ItemCardSkeleton />
-        </div>
+      <Section id="search-heading" title="Search field and view chips">
+        <ThemePair>
+          <StuffSearchDemo />
+          <StuffViewChips total={5} active="all" />
+          <StuffViewChips total={5} active="place" />
+        </ThemePair>
+      </Section>
+
+      <Section id="result-list-heading" title="Result list">
+        <ThemePair>
+          <StuffList
+            entries={ITEMS.slice(0, 3).map((item, index) => ({
+              item,
+              segments: segmentsFor(item.locationId),
+              byName: index === 0 ? "Noa" : undefined,
+            }))}
+            linkLocationSegments
+            markClosest
+          />
+          <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+            <ItemCardSkeleton />
+            <ItemCardSkeleton />
+          </div>
+        </ThemePair>
       </Section>
 
       <Section id="path-picker-heading" title="Location path picker — states">

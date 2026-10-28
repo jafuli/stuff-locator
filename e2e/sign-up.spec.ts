@@ -45,7 +45,7 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await page.getByRole("button", { name: "Create account" }).click();
 
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   // / is a real app route (not one of ROUTES_WITHOUT_NAV) and signUp()
   // actually returned a session, so the nav — tabs and sign-out alike —
@@ -100,7 +100,7 @@ test("a household-bootstrap failure still reaches / with a visible, keyboard-rea
   // Non-blocking: even with no interaction, the auto-continue timer takes
   // this to / on its own — never traps the user on the auth page.
   await page.waitForURL("/", { timeout: 10_000 });
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   // The failure is genuinely observable, not silently swallowed.
   expect(consoleErrors.some((message) => /household-bootstrap/i.test(message))).toBe(true);

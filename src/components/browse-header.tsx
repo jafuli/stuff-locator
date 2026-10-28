@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { StuffSearchInput } from "@/components/stuff-search-input";
 import { StuffViewChips } from "@/components/stuff-view-chips";
+import { STUFF_HEADING } from "@/lib/stuff-heading";
 
 export interface BrowseHeaderProps {
   /** The household's total item count, for the "All (n)" chip. */
@@ -24,7 +25,7 @@ export function BrowseHeader({ total }: BrowseHeaderProps) {
 
   return (
     <>
-      <h1 className="text-[16px] font-semibold text-ink">Our stuff</h1>
+      <h1 className="text-display text-ink">{STUFF_HEADING}</h1>
       <StuffSearchInput
         value={query}
         onChange={(value) => {

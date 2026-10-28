@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { StuffSearchInput } from "@/components/stuff-search-input";
 import { Dialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
 
@@ -135,4 +136,9 @@ export function HouseholdSheetDemo() {
       </Dialog>
     </div>
   );
+}
+
+export function StuffSearchDemo() {
+  const [query, setQuery] = useState("");
+  return <StuffSearchInput value={query} onChange={setQuery} />;
 }

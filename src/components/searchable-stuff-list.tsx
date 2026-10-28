@@ -19,6 +19,8 @@ export interface SearchableStuffListProps {
    * person can keep typing where they left off.
    */
   initialQuery?: string;
+  /** Sits beside the search field — the Stuff screen puts its Stash button here. */
+  searchAction?: ReactNode;
 }
 
 /**
@@ -32,7 +34,12 @@ export interface SearchableStuffListProps {
  * (entries) is still resolved server-side in page.tsx and passed down —
  * this component only filters an already-computed list, it doesn't fetch.
  */
-export function SearchableStuffList({ entries, emptyStateAction, initialQuery = "" }: SearchableStuffListProps) {
+export function SearchableStuffList({
+  entries,
+  emptyStateAction,
+  initialQuery = "",
+  searchAction,
+}: SearchableStuffListProps) {
   const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +66,12 @@ export function SearchableStuffList({ entries, emptyStateAction, initialQuery = 
 
   return (
     <>
-      <StuffSearchInput ref={inputRef} value={query} onChange={setQuery} />
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <StuffSearchInput ref={inputRef} value={query} onChange={setQuery} />
+        </div>
+        {searchAction}
+      </div>
 
       {/* The household's total, not the filtered count: the chip names the
           whole view, the live region below reports the search. */}
@@ -80,7 +92,18 @@ export function SearchableStuffList({ entries, emptyStateAction, initialQuery = 
       {isSearching && visibleEntries.length === 0 ? (
         <EmptyState title="No matches" description="Nothing matches that search. Try another word." />
       ) : (
-        <StuffList entries={visibleEntries} linkLocationSegments emptyStateAction={emptyStateAction} />
+        <>
+          {/* Results are a ranked list, never a single answer: the section
+              label says so and the first row carries the CLOSEST marker. No
+              score is ever shown. */}
+          {isSearching ? <h2 className="text-section-label text-muted">Best matches</h2> : null}
+          <StuffList
+            entries={visibleEntries}
+            linkLocationSegments
+            emptyStateAction={emptyStateAction}
+            markClosest={isSearching}
+          />
+        </>
       )}
     </>
   );

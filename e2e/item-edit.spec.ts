@@ -199,7 +199,7 @@ test("delete requires confirmation: cancel leaves the item unchanged, confirm pe
 
   await status.getByRole("link", { name: "Back to home" }).click();
   await page.waitForURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Our stuff" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   // Real deletion, not a UI-only echo — revisiting the item's own url now
   // 404s instead of resolving.

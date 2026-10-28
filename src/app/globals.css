@@ -274,6 +274,38 @@
   text-transform: uppercase;
 }
 
+/* ----------------------------------------------------------------- layout */
+
+/* Page gutters: space-4 at 320px, space-5 from 375px (brand book). */
+@utility px-gutter {
+  padding-inline: var(--spacing-space-4);
+
+  @media (min-width: 375px) {
+    padding-inline: var(--spacing-space-5);
+  }
+}
+
+/* ------------------------------------------------------------------ motion */
+
+/*
+  The tape "prints in" left to right when a path is saved. The clip-path
+  insets by -2px on the open sides so tape-shadow isn't cut off when the
+  animation ends. Reduced motion zeroes the duration (see below), so people
+  who opt out just see the finished tape.
+*/
+@keyframes tape-print {
+  from {
+    clip-path: inset(-2px 100% -2px -2px);
+  }
+  to {
+    clip-path: inset(-2px -2px -2px -2px);
+  }
+}
+
+@utility animate-tape-print {
+  animation: tape-print 200ms ease-out both;
+}
+
 /* ------------------------------------------------------------------- base */
 
 body {
