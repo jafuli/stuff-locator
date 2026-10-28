@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { ActivityFeed } from "@/components/activity-feed";
+import { ACTIVITY_HEADING } from "@/lib/activity-heading";
 import { createClient } from "@/server/db/server";
 import { fetchActivityEntries } from "@/server/services/activity";
 
@@ -19,8 +20,8 @@ export default async function ActivityPage() {
   const entries = await fetchActivityEntries(supabase, user.id);
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <h1 className="text-[16px] font-semibold text-ink">Activity</h1>
+    <main className="flex flex-col gap-4 px-gutter pt-6">
+      <h1 className="text-display text-ink">{ACTIVITY_HEADING}</h1>
       <ActivityFeed entries={entries} />
     </main>
   );

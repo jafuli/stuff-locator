@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ActivityFeed } from "@/components/activity-feed";
+import { ItemDetail } from "@/components/item-detail";
+import { LocationList } from "@/components/location-list";
 import { PathTrail } from "@/components/path-trail";
+import type { ActivityEntry } from "@/lib/activity";
 import { StuffList } from "@/components/stuff-list";
 import { StuffViewChips } from "@/components/stuff-view-chips";
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
@@ -13,6 +17,33 @@ import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import { NAV_TABS } from "@/lib/nav-tabs";
+
+const ACTIVITY_NOW = new Date("2026-10-22T12:00:00Z");
+
+const ACTIVITY_SAMPLE: ActivityEntry[] = [
+  {
+    id: "a1",
+    kind: "item_moved",
+    actor: "Noa",
+    subjectId: "passport",
+    subjectName: "Passport",
+    fromText: "Bedroom › Desk › Top drawer",
+    toText: "Bedroom › Filing box",
+    detailText: null,
+    at: new Date("2026-10-20T12:00:00Z"),
+  },
+  {
+    id: "a2",
+    kind: "item_added",
+    actor: "Dan",
+    subjectId: "stove",
+    subjectName: "Camping stove",
+    fromText: null,
+    toText: "Kitchen",
+    detailText: null,
+    at: new Date("2026-10-22T09:00:00Z"),
+  },
+];
 
 const segmentsFor = (locationId: string) => getBreadcrumbSegments(locationId, LOCATIONS);
 
@@ -159,6 +190,7 @@ export default function ComponentsDemoPage() {
           <div className="flex flex-wrap gap-3">
             <Button variant="primary">Save and continue</Button>
             <Button variant="secondary">I don&apos;t have one</Button>
+            <Button variant="danger">Delete</Button>
             <Button variant="primary" disabled>
               Save and continue
             </Button>
@@ -243,6 +275,37 @@ export default function ComponentsDemoPage() {
             ]}
             printIn
           />
+        </ThemePair>
+      </Section>
+
+      <Section id="location-list-heading" title="Place list and detail rows">
+        <ThemePair>
+          <LocationList
+            locations={[
+              { id: "garage", parentId: null, name: "Garage" },
+              { id: "bedroom", parentId: null, name: "Bedroom" },
+            ]}
+          />
+          <ItemDetail
+            item={{
+              id: "passport",
+              locationId: "bedroom-filing-box",
+              name: "Passport",
+              detail: "with the birth certificates",
+              addedBy: "Noa",
+              addedAt: new Date("2026-10-01T12:00:00Z"),
+            }}
+            segments={[
+              { id: "bedroom", name: "Bedroom" },
+              { id: "bedroom-filing-box", name: "Filing box" },
+            ]}
+          />
+        </ThemePair>
+      </Section>
+
+      <Section id="activity-heading" title="Activity rows">
+        <ThemePair>
+          <ActivityFeed entries={ACTIVITY_SAMPLE} now={ACTIVITY_NOW} />
         </ThemePair>
       </Section>
 

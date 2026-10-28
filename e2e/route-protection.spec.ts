@@ -71,7 +71,7 @@ test("signed in, every protected route reaches its real page", async ({ page }) 
     { path: `/items/${itemId}`, heading: /Spare keys/ },
     { path: `/items/${itemId}/edit`, heading: /Edit item/ },
     { path: "/items/new", heading: /Add an item/ },
-    { path: "/activity", heading: /Activity/ },
+    { path: "/activity", heading: /What did you miss\?/ },
   ];
 
   for (const route of routes) {

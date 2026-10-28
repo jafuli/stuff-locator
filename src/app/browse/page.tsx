@@ -61,7 +61,7 @@ export default async function Page() {
   const roots: Location[] = rootRows.map((row) => ({ id: row.id, parentId: row.parent_id, name: row.name }));
 
   return (
-    <main className="flex flex-col gap-3 p-4">
+    <main className="flex flex-col gap-4 px-gutter pt-6">
       <BrowseHeader total={totalItems} />
 
       {roots.length === 0 ? (

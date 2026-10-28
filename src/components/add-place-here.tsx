@@ -105,7 +105,7 @@ export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
         onClick={() => {
           setIsOpen(true);
         }}
-        className="min-h-11 w-full rounded-[8px] border-[1.5px] border-dashed border-line px-[10px] py-[8px] text-left text-[12px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="min-h-14 w-full rounded-panel border border-dashed border-border-strong bg-surface px-4 text-left text-body text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         + Add a place here
       </button>
@@ -116,7 +116,7 @@ export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
     <form
       noValidate
       onSubmit={(event) => void handleSubmit(event)}
-      className="flex flex-col gap-2 rounded-[8px] border-[1.5px] border-dashed border-line p-[10px]"
+      className="flex flex-col gap-3 rounded-panel border border-dashed border-border-strong bg-surface p-4"
     >
       <FormField
         id="add-place-name"

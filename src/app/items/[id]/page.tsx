@@ -5,6 +5,8 @@ import { displayNameFor } from "@/lib/display-name";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/server";
+import { BackLink } from "@/components/back-link";
+import { buttonClassName } from "@/components/ui/button";
 import { fetchDisplayNames } from "@/server/services/profiles";
 
 // A malformed id (not a valid uuid at all — e.g. an old fixture slug, or a
@@ -100,18 +102,10 @@ export default async function Page(props: PageProps<"/items/[id]">) {
   const segments = getBreadcrumbSegments(item.locationId, locations);
 
   return (
-    <main className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <Link
-          href="/"
-          className="w-fit text-[11.5px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          ‹ Back to Stuff
-        </Link>
-        <Link
-          href={`/items/${id}/edit`}
-          className="inline-flex items-center justify-center rounded-[8px] border-[1.5px] border-line bg-transparent px-[10px] py-[7px] text-[12px] font-semibold text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
+    <main className="flex flex-col gap-4 px-gutter pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <BackLink href="/" label="Stuff" />
+        <Link href={`/items/${id}/edit`} className={buttonClassName("secondary", "min-h-target-min px-4")}>
           Edit
         </Link>
       </div>

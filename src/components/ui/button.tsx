@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, Ref } from "react";
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "secondary";
+export type ButtonVariant = "primary" | "secondary" | "danger";
 
 export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
   variant?: ButtonVariant;
@@ -29,6 +29,9 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-ink text-paper",
   // A control's only edge is the border-strong token, never border-control (<3:1).
   secondary: "border border-border-strong bg-surface text-ink shadow-control",
+  // Destructive: signal as text and edge on a surface fill — never a large
+  // signal fill (brand book).
+  danger: "border border-signal bg-surface text-signal shadow-control",
 };
 
 /**

@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type SubmitEvent } from "react";
+import { MoreIcon } from "@/components/icons";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { cn } from "@/lib/cn";
 import type { Location } from "@/lib/fixtures/types";
 import { lastExistingId, type PathChip } from "@/lib/location-path-picker";
 import { validatePlaceName } from "@/lib/location-validation";
@@ -211,7 +213,7 @@ export function PlaceManager({
             onSubmit={(event) => void submitRename(event)}
             className="flex min-w-0 flex-1 flex-col gap-2"
           >
-            <h1 className="text-[16px] font-semibold text-ink">
+            <h1 className="text-title text-ink">
               <label htmlFor="rename-place" className="sr-only">
                 Place name
               </label>
@@ -225,14 +227,14 @@ export function PlaceManager({
                 disabled={isRenaming}
                 aria-invalid={renameError ? true : undefined}
                 aria-describedby="rename-place-hint"
-                className="w-full rounded-[7px] border-[1.5px] border-ink px-[9px] py-[6px] text-[16px] font-semibold text-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                className="min-h-control-height w-full rounded-control border border-border-strong bg-surface px-4 text-body text-ink shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               />
             </h1>
-            <p id="rename-place-hint" className="text-[10.5px] text-mid">
+            <p id="rename-place-hint" className="text-meta text-muted">
               Enter to save · Esc to cancel
             </p>
             {renameError ? (
-              <p role="alert" className="text-[10.5px] text-mid">
+              <p role="alert" className="text-meta text-signal">
                 {renameError}
               </p>
             ) : null}
@@ -246,7 +248,7 @@ export function PlaceManager({
             </div>
           </form>
         ) : (
-          <h1 className="min-w-0 text-[16px] font-semibold break-words text-ink">{place.name}</h1>
+          <h1 className="min-w-0 text-display break-words text-ink">{place.name}</h1>
         )}
 
         {renaming ? null : (
@@ -261,9 +263,9 @@ export function PlaceManager({
               onClick={() => {
                 setMenuOpen((open) => !open);
               }}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[8px] border-[1.5px] border-line text-[16px] leading-none text-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-control border border-border-strong bg-surface text-ink shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
-              <span aria-hidden="true">⋯</span>
+              <MoreIcon />
             </button>
             {menuOpen ? (
               <div
@@ -273,7 +275,7 @@ export function PlaceManager({
                 tabIndex={-1}
                 aria-label={`${place.name} actions`}
                 onKeyDown={handleMenuKeyDown}
-                className="absolute top-full right-0 z-20 mt-1 flex w-56 flex-col rounded-[8px] border-[1.5px] border-ink bg-paper p-1"
+                className="absolute top-full right-0 z-20 mt-2 flex w-64 flex-col rounded-panel border border-hairline bg-surface p-1 shadow-float"
               >
                 <MenuItem onSelect={startRename}>Rename</MenuItem>
                 <MenuItem
@@ -286,6 +288,7 @@ export function PlaceManager({
                   Move into…
                 </MenuItem>
                 <MenuItem
+                  destructive
                   onSelect={() => {
                     setMenuOpen(false);
                     setDialog("delete");
@@ -326,17 +329,32 @@ export function PlaceManager({
   );
 }
 
-function MenuItem({ children, hint, onSelect }: { children: string; hint?: string; onSelect: () => void }) {
+function MenuItem({
+  children,
+  hint,
+  destructive = false,
+  onSelect,
+}: {
+  children: string;
+  hint?: string;
+  /** Delete: its label is `signal`. Colour is never the only cue — the word says what it does. */
+  destructive?: boolean;
+  onSelect: () => void;
+}) {
   return (
     <button
       type="button"
       role="menuitem"
       tabIndex={-1}
       onClick={onSelect}
-      className="flex min-h-11 flex-col items-start justify-center rounded-[6px] px-[10px] py-[6px] text-left text-[13px] text-ink outline-none hover:bg-wash focus-visible:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink"
+      className={cn(
+        "flex min-h-12 flex-col items-start justify-center rounded-control px-3 py-2 text-left text-body outline-none",
+        "hover:bg-divider focus-visible:bg-divider focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus",
+        destructive ? "text-signal" : "text-ink",
+      )}
     >
-      <span className="font-semibold">{children}</span>
-      {hint ? <span className="text-[10.5px] text-mid">{hint}</span> : null}
+      <span>{children}</span>
+      {hint ? <span className="text-meta text-muted">{hint}</span> : null}
     </button>
   );
 }
@@ -400,11 +418,11 @@ function MoveDialog({
         disabled={isMoving}
         pickOnly
       />
-      <p className="text-[10.5px] text-mid">
+      <p className="text-meta text-muted">
         “{place.name}” and the places inside it aren&apos;t offered. Everything inside moves with it.
       </p>
       {error ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {error}
         </p>
       ) : null}
@@ -478,7 +496,7 @@ function DeleteDialog({
   if (!isEmpty) {
     return (
       <Dialog open={open} onClose={onClose} title={`“${place.name}” isn't empty`}>
-        <p className="text-[12px] text-mid">
+        <p className="text-body text-muted">
           It still holds {describeContents(itemCount, placeCount)}. Move or delete them first.
         </p>
         <div className="flex justify-end">
@@ -492,9 +510,9 @@ function DeleteDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title={`Delete “${place.name}”?`}>
-      <p className="text-[12px] text-mid">It&apos;s empty. This can&apos;t be undone.</p>
+      <p className="text-body text-muted">It&apos;s empty. This can&apos;t be undone.</p>
       {error ? (
-        <p role="alert" className="text-[11.5px] text-mid">
+        <p role="alert" className="text-meta text-signal">
           {error}
         </p>
       ) : null}
@@ -504,7 +522,7 @@ function DeleteDialog({
         </Button>
         <Button
           type="button"
-          variant="primary"
+          variant="danger"
           isLoading={isDeleting}
           onClick={() => {
             void confirmDelete();

@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AddPlaceHere } from "@/components/add-place-here";
+import { BackLink } from "@/components/back-link";
 import { ItemCard } from "@/components/item-card";
 import { PathTrail } from "@/components/path-trail";
 import { LocationList } from "@/components/location-list";
@@ -201,7 +201,7 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
   // the exact same row.
   const parentSegment = segments.length > 1 ? segments[segments.length - 2] : null;
   const upHref = parentSegment ? `/browse/${parentSegment.id}` : "/browse";
-  const upLabel = parentSegment ? `‹ Back to ${parentSegment.name}` : "‹ Back to Browse";
+  const upLabel = parentSegment ? parentSegment.name : "Browse";
 
   // One breadcrumb walk per *distinct* item location, not per item — a
   // household this small (~20-50 locations/items, per CLAUDE.md) makes the
@@ -219,15 +219,10 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
   }
 
   return (
-    <main className="flex flex-col gap-3 p-4">
+    <main className="flex flex-col gap-4 px-gutter pt-4">
       {/* A real <Link>, so this is keyboard-operable (Tab + Enter) in
           addition to browser back — AC #5. */}
-      <Link
-        href={upHref}
-        className="w-fit text-[11.5px] text-mid outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
-        {upLabel}
-      </Link>
+      <BackLink href={upHref} label={upLabel} />
 
       <div>
         <PlaceManager
@@ -238,25 +233,35 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
           itemCount={items.length}
           placeCount={childLocations.length}
         />
-        <PathTrail segments={segments} />
+        <div className="mt-3">
+          <PathTrail segments={segments} />
+        </div>
       </div>
 
       {isEmpty ? (
         <EmptyState title="Nothing stored here yet" description="No items or places in here." />
       ) : (
         <>
-          {childLocations.length > 0 ? <LocationList locations={childLocations} /> : null}
+          {childLocations.length > 0 ? (
+            <section aria-label="Places" className="flex flex-col gap-2">
+              <h2 className="text-section-label text-muted">Places</h2>
+              <LocationList locations={childLocations} />
+            </section>
+          ) : null}
           {items.length > 0 ? (
-            <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
-              {items.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  segments={itemSegments.get(item.locationId) ?? []}
-                  href={`/items/${item.id}`}
-                />
-              ))}
-            </div>
+            <section aria-label="Items" className="flex flex-col gap-2">
+              <h2 className="text-section-label text-muted">Items</h2>
+              <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+                {items.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    segments={itemSegments.get(item.locationId) ?? []}
+                    href={`/items/${item.id}`}
+                  />
+                ))}
+              </div>
+            </section>
           ) : null}
         </>
       )}

@@ -12,6 +12,9 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("/");
+  // Hydrated before any keyboard driving: Tab presses during hydration can
+  // land on a page that's about to re-render.
+  await page.waitForLoadState("networkidle");
 }
 
 test("the household sheet opens from the keyboard, traps focus, closes on Escape and hands focus back", async ({
