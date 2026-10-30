@@ -1,9 +1,8 @@
-// MOCK DATA helper — see types.ts. This is the smaller, first increment of
-// "Find" split out of the full client-side semantic/embeddings search
-// described in CLAUDE.md: a plain case-insensitive substring filter over
-// the existing fixtures, no model load, no network call. The embeddings
-// version is a future swap of this function behind the same (items, query)
-// -> items signature, not a rewrite of the caller.
+// The lexical half of Find: a plain case-insensitive substring filter, no
+// model, no network. It is what serves results while the embedding model is
+// loading or skipped, and permanently if the model fails (see
+// src/lib/search/ and docs/adr/0012-client-side-embedding-search.md), and its
+// hits are pinned to the top of the ranked list once the model is ready.
 import type { Item } from "./types";
 
 /**

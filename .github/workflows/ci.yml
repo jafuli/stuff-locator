@@ -82,6 +82,17 @@ jobs:
       # read off a failed assertion than off a failed page interaction.
       - name: RLS and Postgres function tests
         run: npm run test:rls
+      # Find's e2e serves the real embedding model from a read-through disk
+      # cache (e2e/fixtures.ts) so CI doesn't download ~29 MB from third-party
+      # hosts on every run. The first run on a new key fetches and fills it.
+      # Keyed on the lockfile because the onnxruntime wasm version comes from
+      # it; a cache miss only costs a download, never a failure (the spec
+      # skips itself if the hosts are unreachable).
+      - name: Cache embedding model files
+        uses: actions/cache@v6
+        with:
+          path: e2e/.model-cache
+          key: find-model-${{ hashFiles('package-lock.json') }}
       - name: UI smoke test
         run: npm run test:e2e
       - name: Stop Supabase

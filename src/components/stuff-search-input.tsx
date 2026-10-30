@@ -4,6 +4,8 @@ import { SearchIcon } from "@/components/icons";
 export interface StuffSearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  /** Fired when the field gains focus — Find uses it as the first sign of intent to search. */
+  onFocus?: () => void;
   ref?: Ref<HTMLInputElement>;
 }
 
@@ -20,7 +22,7 @@ export interface StuffSearchInputProps {
  * caused a real hydration mismatch against the server-rendered HTML. This
  * sidesteps that while keeping the same accessible role and visual result.
  */
-export function StuffSearchInput({ value, onChange, ref }: StuffSearchInputProps) {
+export function StuffSearchInput({ value, onChange, onFocus, ref }: StuffSearchInputProps) {
   return (
     <div role="search" className="relative">
       <label htmlFor="stuff-search" className="sr-only">
@@ -38,6 +40,7 @@ export function StuffSearchInput({ value, onChange, ref }: StuffSearchInputProps
         onChange={(event) => {
           onChange(event.target.value);
         }}
+        onFocus={onFocus}
         className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control outline-none placeholder:text-muted focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       />
     </div>

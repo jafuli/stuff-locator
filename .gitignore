@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Find e2e: read-through cache of the embedding model files (see e2e/fixtures.ts)
+/e2e/.model-cache/
