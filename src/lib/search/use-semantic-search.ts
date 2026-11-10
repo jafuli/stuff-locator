@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { EmbeddingClient, EmbeddingStatus } from "./embedding-client";
+import { MIN_SEMANTIC_QUERY_LENGTH, QUERY_DEBOUNCE_MS } from "./query";
 import { getSharedEmbeddingClient } from "./shared-client";
 import { semanticRanking, type ItemTexts, type ItemVectors } from "./rank";
 
@@ -36,13 +37,7 @@ export interface SemanticSearchResult {
   onIntent: () => void;
 }
 
-/** Wait this long after the last keystroke before spending an embedding on it. */
-export const QUERY_DEBOUNCE_MS = 150;
-/**
- * Below this a query is a fragment ("pa", "pas"), and the embedding of a
- * fragment is noise. Those queries are ranked lexically only.
- */
-export const MIN_SEMANTIC_QUERY_LENGTH = 3;
+export { MIN_SEMANTIC_QUERY_LENGTH, QUERY_DEBOUNCE_MS };
 
 const SERVER_STATUS: EmbeddingStatus = "idle";
 

@@ -9,6 +9,7 @@ import { StuffViewChips } from "@/components/stuff-view-chips";
 import { EmptyState } from "@/components/ui/empty-state";
 import { lexicalRank } from "@/lib/search/lexical";
 import { enrichedText, fuseRankings } from "@/lib/search/rank";
+import { emptyStateFor, meaningOnlyIds, showClosest } from "@/lib/search/result-states";
 import { useIdlePrefetch } from "@/lib/search/use-idle-prefetch";
 import { useSemanticSearch, type SearchDocument } from "@/lib/search/use-semantic-search";
 
@@ -108,6 +109,18 @@ export function SearchableStuffList({
   const visibleEntries = visibleIds.flatMap((id) => byId.get(id) ?? []);
   const resultCount = visibleEntries.length;
   const isRanked = isSearching && semantic !== null;
+  const emptyState = emptyStateFor({ resultCount, status, query, hasSemanticAnswer: semantic !== null });
+  const closestId =
+    isSearching && showClosest(results.at(0), semantic?.agreedTop ?? null) ? results.at(0)?.id : undefined;
+
+  // One message per state, so a polite live region only speaks when it
+  // changes: while "still looking" the text stays put across keystrokes.
+  let statusMessage = "";
+  if (emptyState === "still-looking") {
+    statusMessage = "Still looking by meaning";
+  } else if (isSearching) {
+    statusMessage = `${resultCount.toString()} ${resultCount === 1 ? "result" : "results"} found`;
+  }
 
   return (
     <>
@@ -139,30 +152,38 @@ export function SearchableStuffList({
         both set (some assistive tech only picks up one or the other).
       */}
       <p aria-live="polite" role="status" className="sr-only">
-        {isSearching ? `${resultCount.toString()} ${resultCount === 1 ? "result" : "results"} found` : ""}
+        {statusMessage}
       </p>
       {/* The model takes a moment to arrive on first use; say so once, quietly
           and only to assistive tech, so the list getting smarter isn't a
-          silent surprise. No role: it must not read as a second status. A
-          skipped or failed model is deliberately not announced — falling back
-          is the design, not an error. */}
+          silent surprise. Only alongside letter matches: with none, the
+          status above already says "Still looking". No role: it must not read
+          as a second status. A background download nobody is searching
+          during stays silent, and a skipped or failed model is deliberately
+          not announced (falling back is the design, not an error). */}
       <p aria-live="polite" className="sr-only">
-        {isSearching && status === "loading" ? "Loading smarter search. Showing basic matches for now." : ""}
+        {isSearching && status === "loading" && resultCount > 0
+          ? "Loading smarter search. Showing basic matches for now."
+          : ""}
       </p>
 
-      {isSearching && visibleEntries.length === 0 ? (
+      {emptyState === "still-looking" ? (
+        <EmptyState title="Still looking" description="Checking by meaning — this takes a moment the first time." />
+      ) : emptyState === "no-matches" ? (
         <EmptyState title="No matches" description="Nothing matches that search. Try another word." />
       ) : (
         <>
           {/* Results are a ranked list, never a single answer: the section
-              label says so and the first row carries the CLOSEST marker. No
-              score is ever shown. */}
+              label says so. The first row is marked CLOSEST only when it has
+              earned it (showClosest), and rows found by meaning alone say so.
+              No score is ever shown. */}
           {isSearching ? <h2 className="text-section-label text-muted">Best matches</h2> : null}
           <StuffList
             entries={visibleEntries}
             linkLocationSegments
             emptyStateAction={emptyStateAction}
-            markClosest={isSearching}
+            closestId={closestId}
+            meaningOnlyIds={isSearching ? meaningOnlyIds(results) : undefined}
           />
           {/* With the model ready the list never comes up empty, so this is
               what "that's all there is" looks like: the wireframe's closing

@@ -326,7 +326,8 @@ export default function ComponentsDemoPage() {
               byName: index === 0 ? "Noa" : undefined,
             }))}
             linkLocationSegments
-            markClosest
+            closestId={ITEMS[0]?.id}
+            meaningOnlyIds={new Set(ITEMS.slice(1, 3).map((item) => item.id))}
           />
           <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
             <ItemCardSkeleton />

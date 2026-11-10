@@ -75,15 +75,51 @@ test("focusing the field, and typing, signal intent so the model can start", asy
   expect(search.onIntent).toHaveBeenCalledTimes(2);
 });
 
-test("without a semantic order the substring filter serves, including No matches", async () => {
+test("while the model loads and nothing matches by letters, it says it's still looking, not No matches", async () => {
   const user = userEvent.setup();
   search.status = "loading";
   render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
-  expect(screen.getByText("No matches")).toBeDefined();
+  expect(screen.getByText("Still looking")).toBeDefined();
+  expect(screen.getByText(/Checking by meaning/)).toBeDefined();
+  expect(screen.queryByText("No matches")).toBeNull();
   expect(screen.queryByText(/Nothing else close/)).toBeNull();
+  // Announced through the one status region, and only once: the text is the
+  // same for every keystroke in this state.
+  expect(screen.getByRole("status").textContent).toBe("Still looking by meaning");
+  expect(screen.queryByText(/Loading smarter search/)).toBeNull();
+});
+
+test.each(["idle", "skipped", "failed"] as const)(
+  "with the model %s and nothing matching by letters, it's No matches",
+  async (status) => {
+    const user = userEvent.setup();
+    search.status = status;
+    render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+    await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+    expect(screen.getByText("No matches")).toBeDefined();
+    expect(screen.queryByText("Still looking")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("0 results found");
+  },
+);
+
+test("rows found by meaning alone say so; rows that match by letters don't", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["tent", "passport", "router"], agreedTop: "tent" };
+  render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
+
+  // "birth" matches Passport's detail; the tent and router are there by meaning only.
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "birth");
+
+  const labelled = screen
+    .getAllByText("matched on meaning")
+    .map((label) => label.closest("a")?.querySelector(".text-title")?.textContent);
+  expect(labelled.sort()).toEqual(["Camping tent", "Spare router"]);
 });
 
 test("with a semantic order, a query sharing no words with the item still finds it", async () => {
@@ -101,7 +137,7 @@ test("with a semantic order, a query sharing no words with the item still finds 
 test("the CLOSEST marker sits on the real top rank, not on the page's first item", async () => {
   const user = userEvent.setup();
   search.status = "ready";
-  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  search.semantic = { order: ["passport", "tent"], agreedTop: "passport" };
   render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
@@ -162,6 +198,31 @@ test("without the model, every lexical hit is kept, best match first and typos f
   await user.clear(screen.getByRole("searchbox", { name: "Search your stuff" }));
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pasport");
   expect(rowNames()).toEqual(["Passport"]);
+});
+
+test("no CLOSEST marker when the top row matched by meaning only and the two representations disagree", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
+
+  expect(rowNames()).toEqual(["Passport", "Camping tent"]);
+  expect(screen.queryByText("Closest")).toBeNull();
+});
+
+test("a lexical top row is CLOSEST even without semantic agreement", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
+
+  const closest = screen.getAllByText("Closest");
+  expect(closest).toHaveLength(1);
+  expect(within(closest[0]?.closest("a") ?? document.body).getByText("Camping tent")).toBeDefined();
 });
 
 test("the closing line points to Browse instead of a No matches screen", async () => {

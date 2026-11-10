@@ -94,6 +94,10 @@ test.describe("with the real model", () => {
       });
 
       expect(await topTitles(page, 3)).toContain("Passport");
+      // Nothing in Passport's name or detail matches those words, so the row
+      // says how it got there.
+      const passportRow = page.locator("main div.border-b", { has: page.getByText("Passport", { exact: true }) });
+      await expect(passportRow.getByText("matched on meaning")).toBeVisible();
       await expect(page.getByText("Nothing else close.")).toBeVisible();
       await expect(page.getByText("No matches")).toHaveCount(0);
 
@@ -178,14 +182,15 @@ test.describe("with the real model", () => {
     await page.getByRole("searchbox", { name: "Search your stuff" }).fill("pass");
 
     // Too short for the model, but the substring hit is immediate and needs
-    // no model at all.
+    // no model at all. A letter match never carries the meaning label.
     await expect(resultRows(page).first().locator(".text-title")).toHaveText("Passport");
+    await expect(page.getByText("matched on meaning")).toHaveCount(0);
     expect(modelRoutes.upstreamFailed()).toBe(false);
   });
 });
 
 test.describe("when the model is unavailable", () => {
-  test("Find stays on the substring filter and nothing breaks", async ({ page, modelRoutes }) => {
+  test("Find stays on the typo-tolerant lexical ranking and nothing breaks", async ({ page, modelRoutes }) => {
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
     await page.goto("/");
@@ -193,6 +198,11 @@ test.describe("when the model is unavailable", () => {
 
     const search = page.getByRole("searchbox", { name: "Search your stuff" });
     await search.fill("pass");
+    await expect(resultRows(page)).toHaveCount(1);
+    await expect(resultRows(page).first().locator(".text-title")).toHaveText("Passport");
+
+    // A typo still finds it: the lexical ranking is typo-tolerant on its own.
+    await search.fill("pasport");
     await expect(resultRows(page)).toHaveCount(1);
     await expect(resultRows(page).first().locator(".text-title")).toHaveText("Passport");
 

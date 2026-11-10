@@ -23,6 +23,13 @@ export interface ItemCardProps {
   byName?: string;
   /** Marks this row as the top search result with the CLOSEST marker. Never a score. */
   closest?: boolean;
+  /**
+   * Labels the row "≈ matched on meaning": it is in the results because the
+   * embedding model ranked it, while nothing in its name or detail matches
+   * the query's letters. It's said so the result doesn't feel like magic that
+   * might not work next time (wireframe 03).
+   */
+  matchedOnMeaning?: boolean;
 }
 
 // Rows sit in a panel with overflow hidden, so the focus ring is drawn
@@ -32,8 +39,9 @@ const LINK_CLASSES = "outline-none focus-visible:outline-2 focus-visible:-outlin
 /**
  * A single ResultList row: title, optional detail, the full path (last
  * segment on tape) and a meta line — "Noa, 3 days ago". At least 56px tall.
- * No similarity score and no match-source tag; the only search furniture is
- * the CLOSEST marker on the first result.
+ * No similarity score, ever. The only search furniture is the CLOSEST marker
+ * (top row, when it has earned it) and the "matched on meaning" label on rows
+ * found by meaning alone.
  */
 export function ItemCard({
   item,
@@ -42,6 +50,7 @@ export function ItemCard({
   linkLocationSegments = false,
   byName,
   closest = false,
+  matchedOnMeaning = false,
 }: ItemCardProps) {
   const lastTouched = item.lastMovedAt ?? item.addedAt;
   const meta = lastTouched
@@ -55,6 +64,13 @@ export function ItemCard({
         {closest ? <span className="shrink-0 text-marker text-signal">Closest</span> : null}
       </span>
       {item.detail ? <span className="block text-meta text-muted">{item.detail}</span> : null}
+      {/* Text only: tape is for location segments and signal is CLOSEST's.
+          The ≈ is decoration; the words carry the meaning. */}
+      {matchedOnMeaning ? (
+        <span className="block text-marker text-muted">
+          <span aria-hidden="true">≈ </span>matched on meaning
+        </span>
+      ) : null}
     </>
   );
   const metaLine = meta ? <p className="text-meta text-muted">{meta}</p> : null;

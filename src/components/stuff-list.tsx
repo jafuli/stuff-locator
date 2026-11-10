@@ -25,8 +25,14 @@ export interface StuffListProps {
    * unchanged.
    */
   emptyStateAction?: ReactNode;
-  /** Marks the first row CLOSEST — only while a search is showing results. */
-  markClosest?: boolean;
+  /**
+   * The row to mark CLOSEST, by item id, only while a search is showing
+   * results and the top row has earned it (see showClosest in
+   * src/lib/search/result-states.ts). Undefined marks nothing.
+   */
+  closestId?: string;
+  /** Item ids to label "≈ matched on meaning" (found by the model alone). */
+  meaningOnlyIds?: ReadonlySet<string>;
 }
 
 /**
@@ -45,7 +51,8 @@ export function StuffList({
   entries,
   linkLocationSegments = false,
   emptyStateAction,
-  markClosest = false,
+  closestId,
+  meaningOnlyIds,
 }: StuffListProps) {
   if (entries.length === 0) {
     return (
@@ -58,7 +65,7 @@ export function StuffList({
     // between rows. overflow-hidden keeps the first/last rows inside the
     // rounded corners.
     <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
-      {entries.map(({ item, segments, byName }, index) => (
+      {entries.map(({ item, segments, byName }) => (
         <ItemCard
           key={item.id}
           item={item}
@@ -66,7 +73,8 @@ export function StuffList({
           byName={byName}
           href={`/items/${item.id}`}
           linkLocationSegments={linkLocationSegments}
-          closest={markClosest && index === 0}
+          closest={closestId !== undefined && item.id === closestId}
+          matchedOnMeaning={meaningOnlyIds?.has(item.id) ?? false}
         />
       ))}
     </div>
