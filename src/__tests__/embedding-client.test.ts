@@ -170,3 +170,30 @@ describe("embed()", () => {
     expect(client.getStatus()).toBe("ready");
   });
 });
+
+describe("persistent storage", () => {
+  test("asks for it once, the first time the model is ready, and never before", () => {
+    const persistStorage = vi.fn();
+    const worker = new FakeEmbeddingWorker();
+    const client = new EmbeddingClient({ createWorker: () => worker, connectionSource: {}, persistStorage });
+    client.start();
+    expect(persistStorage).not.toHaveBeenCalled();
+    worker.ready();
+    worker.ready();
+    expect(persistStorage).toHaveBeenCalledTimes(1);
+  });
+
+  test("a persist() that throws doesn't stop the model from being ready", () => {
+    const worker = new FakeEmbeddingWorker();
+    const client = new EmbeddingClient({
+      createWorker: () => worker,
+      connectionSource: {},
+      persistStorage: () => {
+        throw new Error("not allowed");
+      },
+    });
+    client.start();
+    worker.ready();
+    expect(client.getStatus()).toBe("ready");
+  });
+});

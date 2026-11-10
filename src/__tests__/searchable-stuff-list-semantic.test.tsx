@@ -20,6 +20,14 @@ vi.mock("@/lib/search/use-semantic-search", () => ({
   },
 }));
 
+// The background warm-up has its own tests; here it must not touch the real Cache API or Worker.
+const prefetch = vi.hoisted(() => ({ calls: [] as { enabled?: boolean }[] }));
+vi.mock("@/lib/search/use-idle-prefetch", () => ({
+  useIdlePrefetch: (_client: unknown, options: { enabled?: boolean } = {}) => {
+    prefetch.calls.push(options);
+  },
+}));
+
 function item(id: string, name: string, detail?: string): Item {
   return { id, locationId: `${id}-loc`, name, detail };
 }
@@ -190,4 +198,13 @@ test("a failed or skipped model is silent: falling back is not an error", async 
     expect(screen.getByText("Passport")).toBeDefined();
     unmount();
   }
+});
+
+test("warms the model in the background only when there is something to search", () => {
+  prefetch.calls.length = 0;
+  const { unmount } = render(<SearchableStuffList entries={entriesOf(passport)} />);
+  expect(prefetch.calls.at(-1)?.enabled).toBe(true);
+  unmount();
+  render(<SearchableStuffList entries={[]} />);
+  expect(prefetch.calls.at(-1)?.enabled).toBe(false);
 });

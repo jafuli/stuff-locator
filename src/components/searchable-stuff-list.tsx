@@ -9,6 +9,7 @@ import { StuffViewChips } from "@/components/stuff-view-chips";
 import { EmptyState } from "@/components/ui/empty-state";
 import { filterItems } from "@/lib/fixtures/search";
 import { enrichedText, mergeLexicalFirst } from "@/lib/search/rank";
+import { useIdlePrefetch } from "@/lib/search/use-idle-prefetch";
 import { useSemanticSearch, type SearchDocument } from "@/lib/search/use-semantic-search";
 
 /**
@@ -38,8 +39,10 @@ export interface SearchableStuffListProps {
  * Owns the home page's search input state and ranks `entries` against it
  * client-side — no network call for the query, no URL param.
  *
- * Find degrades, it never blocks. Until the embedding model is ready (it is
- * only started on first focus, and not at all on Save-Data / 2g), or if it
+ * Find degrades, it never blocks. The embedding model is warmed in the
+ * background once this screen is idle, if it is already cached or the
+ * connection reports 4g (useIdlePrefetch). Otherwise it starts on first focus
+ * or keystroke, and never on Save-Data / 2g. Until it is ready, or if it
  * fails, the list is the plain case-insensitive substring filter. Once it is
  * ready the list is a ranked shortlist: substring hits first, then the
  * closest by meaning. See docs/adr/0012-client-side-embedding-search.md.
@@ -70,6 +73,11 @@ export function SearchableStuffList({
     [entries],
   );
   const { semanticOrder, status, onIntent } = useSemanticSearch(documents, query);
+  // Warm the model only when there is something to search: an empty household
+  // (onboarding, or one that finished onboarding and deleted everything) has
+  // nothing to rank, so a background download there would be pure cost.
+  const hasItems = entries.length > 0;
+  useIdlePrefetch(undefined, { enabled: hasItems });
 
   // Arriving with a query means the person was typing: put them back in the
   // field, caret at the end, instead of leaving them on a page they must

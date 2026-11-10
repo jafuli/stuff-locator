@@ -24,11 +24,33 @@ export interface EmbeddingClientOptions {
   createWorker?: () => WorkerLike;
   /** Defaults to the global navigator. */
   connectionSource?: ConnectionSource;
+  /**
+   * Called once, the first time the model is ready. Defaults to asking the
+   * browser to keep this origin's storage (navigator.storage.persist()), so
+   * the ~23 MB of cached weights are less likely to be evicted under storage
+   * pressure. The answer is ignored: a refusal just means best-effort storage,
+   * which is what we had anyway.
+   */
+  persistStorage?: () => unknown;
 }
 
 export interface Progress {
   loaded: number;
   total: number;
+}
+
+function requestPersistentStorage(): void {
+  // Typed as always present, but missing in older browsers and insecure contexts.
+  if (
+    typeof navigator === "undefined" ||
+    !("storage" in navigator) ||
+    typeof navigator.storage.persist !== "function"
+  ) {
+    return;
+  }
+  navigator.storage.persist().catch(() => {
+    // Ignored: persistence is a hint, not a requirement.
+  });
 }
 
 function createDefaultWorker(): WorkerLike {
@@ -53,9 +75,12 @@ export class EmbeddingClient {
   private progress: Progress | undefined;
   private readonly createWorker: () => WorkerLike;
   private readonly connectionSource: ConnectionSource | undefined;
+  private readonly persistStorage: () => unknown;
+  private persistRequested = false;
 
   constructor(options: EmbeddingClientOptions = {}) {
     this.createWorker = options.createWorker ?? createDefaultWorker;
+    this.persistStorage = options.persistStorage ?? requestPersistentStorage;
     this.connectionSource =
       options.connectionSource ?? (typeof navigator === "undefined" ? undefined : (navigator as ConnectionSource));
   }
@@ -137,6 +162,7 @@ export class EmbeddingClient {
       case "ready":
         if (this.status === "loading") {
           this.setStatus("ready");
+          this.requestPersistenceOnce();
         }
         return;
       case "progress":
@@ -164,6 +190,18 @@ export class EmbeddingClient {
         }
         this.fail(new Error(message.message));
       }
+    }
+  }
+
+  private requestPersistenceOnce(): void {
+    if (this.persistRequested) {
+      return;
+    }
+    this.persistRequested = true;
+    try {
+      this.persistStorage();
+    } catch {
+      // A hint only; never let it break the ready transition.
     }
   }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { EmbeddingClient, type EmbeddingStatus } from "./embedding-client";
+import type { EmbeddingClient, EmbeddingStatus } from "./embedding-client";
+import { getSharedEmbeddingClient } from "./shared-client";
 import { type ItemTexts, type ItemVectors } from "./rank";
 import { rankItems } from "./rank";
 
@@ -18,7 +19,10 @@ export interface SemanticSearchResult {
    */
   semanticOrder: readonly string[] | null;
   status: EmbeddingStatus;
-  /** Call on first real intent (search focus, first keystroke) to start the model. */
+  /**
+   * Call on real search intent (focus, a keystroke). Starts the model if the
+   * idle prefetch didn't, and is the only path to the one retry after a failure.
+   */
   onIntent: () => void;
 }
 
@@ -29,15 +33,6 @@ export const QUERY_DEBOUNCE_MS = 150;
  * fragment is noise. Those queries stay on the substring filter alone.
  */
 export const MIN_SEMANTIC_QUERY_LENGTH = 3;
-
-// One client for the page's lifetime: the model is expensive to start, and
-// navigating Home -> Browse -> Home shouldn't throw it away. Created on first
-// use, never at import time (constructing it does nothing until start()).
-let sharedClient: EmbeddingClient | undefined;
-function getSharedClient(): EmbeddingClient {
-  sharedClient ??= new EmbeddingClient();
-  return sharedClient;
-}
 
 const SERVER_STATUS: EmbeddingStatus = "idle";
 
@@ -57,7 +52,7 @@ function corpusKeyOf(documents: readonly SearchDocument[]): string {
 export function useSemanticSearch(
   documents: readonly SearchDocument[],
   query: string,
-  client: EmbeddingClient = getSharedClient(),
+  client: EmbeddingClient = getSharedEmbeddingClient(),
 ): SemanticSearchResult {
   const status = useSyncExternalStore(
     client.subscribe,

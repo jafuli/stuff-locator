@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { MODEL_ID, type WorkerRequest, type WorkerResponse } from "./embedding-protocol";
+import { MODEL_ID, MODEL_REVISION, type WorkerRequest, type WorkerResponse } from "./embedding-protocol";
 
 // Runs off the main thread so loading the model and embedding the corpus never
 // blocks typing. transformers.js is imported dynamically, inside init, so that
@@ -29,6 +29,8 @@ function loadExtractor(): Promise<Extractor> {
     // Per-file progress folded into one running total.
     const files = new Map<string, { loaded: number; total: number }>();
     const extractor = await pipeline("feature-extraction", MODEL_ID, {
+      // A commit, not `main`: the weights and the cache key never move under us.
+      revision: MODEL_REVISION,
       // Pinned: the ~23 MB quantised weights the spike measured, not whatever
       // the library's default dtype becomes in a later release.
       dtype: "q8",

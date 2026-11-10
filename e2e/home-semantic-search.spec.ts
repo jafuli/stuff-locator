@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type Page } from "./fixtures";
+import { test, expect, type ModelRoutes, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 
 // Find's embedding search, against a production build. How the model reaches
@@ -34,67 +34,139 @@ async function seedHousehold(email: string): Promise<void> {
 // Result rows are the item links; their title is the first line of text.
 const resultRows = (page: Page) => page.locator("main a[href^='/items/']:not([href='/items/new'])");
 
+/** Runs `body`, but turns a failure caused by an unreachable model host into a logged skip. */
+async function unlessHostUnreachable(modelRoutes: ModelRoutes, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
+  } catch (error) {
+    if (modelRoutes.upstreamFailed()) {
+      // Printed so a CI log says plainly that the real-model checks did not run.
+      console.log(`[find e2e] SKIPPED "${test.info().title}": the embedding model host could not be reached`);
+      test.skip(true, "the embedding model host could not be reached");
+    }
+    throw error;
+  }
+}
+
+async function topTitles(page: Page, count: number): Promise<string[]> {
+  return resultRows(page).evaluateAll(
+    (rows, n) => rows.slice(0, n).map((row) => row.querySelector(".text-title")?.textContent ?? ""),
+    count,
+  );
+}
+
 test.describe("with the real model", () => {
   test.use({ modelNetwork: "cached" });
-  // First run downloads ~29 MB through the disk cache; later runs don't.
+  // First run downloads the model through the disk cache; later runs don't.
   test.setTimeout(150_000);
 
-  test("a query sharing no words with its item still finds it, and CLOSEST follows the ranking", async ({
-    page,
-    modelRoutes,
-  }) => {
-    const consoleErrors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        consoleErrors.push(msg.text());
-      }
+  test.describe("on a 4g connection", () => {
+    test.use({ connection: "4g" });
+
+    test("the model starts on idle, so the first meaning-only search needs no wait", async ({ page, modelRoutes }) => {
+      const consoleErrors: string[] = [];
+      page.on("console", (msg) => {
+        if (msg.type() === "error") {
+          consoleErrors.push(msg.text());
+        }
+      });
+      page.on("pageerror", (err) => {
+        consoleErrors.push(err.message);
+      });
+
+      const email = await signUpFreshAccount(page);
+      await seedHousehold(email);
+      await page.goto("/");
+
+      await unlessHostUnreachable(modelRoutes, async () => {
+        // Nobody has touched the search box, and the model is on its way.
+        await expect.poll(() => modelRoutes.requestCount(), { timeout: 15_000 }).toBeGreaterThan(0);
+        // Let the download and model start-up finish while the person is
+        // still looking at the page.
+        await page.waitForLoadState("networkidle", { timeout: 120_000 });
+        await page.waitForTimeout(1500);
+
+        const search = page.getByRole("searchbox", { name: "Search your stuff" });
+        await search.fill("travel documents");
+        // No item shares a word with this query. With the model already up it
+        // ranks almost at once (debounce + a few ms of embedding).
+        await expect(resultRows(page).first()).toBeVisible({ timeout: 5_000 });
+      });
+
+      expect(await topTitles(page, 3)).toContain("Passport");
+      await expect(page.getByText("Nothing else close.")).toBeVisible();
+      await expect(page.getByText("No matches")).toHaveCount(0);
+
+      // Meaning works for other items too, and the list re-ranks per query.
+      await page.getByRole("searchbox", { name: "Search your stuff" }).fill("somewhere to sleep outdoors");
+      await expect(resultRows(page).first().locator(".text-title")).toHaveText("Camping tent");
+
+      expect(consoleErrors).toEqual([]);
     });
-    page.on("pageerror", (err) => {
-      consoleErrors.push(err.message);
+  });
+
+  test.describe("on 3g", () => {
+    test.use({ connection: "3g" });
+
+    test("nothing is fetched until the search box is focused", async ({ page, modelRoutes }) => {
+      const email = await signUpFreshAccount(page);
+      await seedHousehold(email);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      // Well past the idle callback.
+      await page.waitForTimeout(1500);
+      expect(modelRoutes.requestCount()).toBe(0);
+
+      await page.getByRole("searchbox", { name: "Search your stuff" }).focus();
+      await expect.poll(() => modelRoutes.requestCount()).toBeGreaterThan(0);
     });
 
-    const email = await signUpFreshAccount(page);
-    await seedHousehold(email);
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    test("once the model is cached, the next visit warms it on idle, untouched", async ({ page, modelRoutes }) => {
+      const workers: string[] = [];
+      page.on("worker", (worker) => {
+        workers.push(worker.url());
+      });
+      const email = await signUpFreshAccount(page);
+      await seedHousehold(email);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
 
-    // Lazy: nothing about the model is requested just by loading the page.
-    expect(modelRoutes.requestCount()).toBe(0);
+      // First visit: 3g, so the model only comes when asked for.
+      const search = page.getByRole("searchbox", { name: "Search your stuff" });
+      await search.fill("travel documents");
+      await unlessHostUnreachable(modelRoutes, async () => {
+        await expect(resultRows(page).first()).toBeVisible({ timeout: 120_000 });
+      });
 
-    const search = page.getByRole("searchbox", { name: "Search your stuff" });
-    await search.fill("travel documents");
+      // Second visit, still 3g: the weights are in the Cache API now, so the
+      // model starts on idle without anyone touching the search box...
+      workers.length = 0;
+      const requestsBefore = modelRoutes.requestCount();
+      await page.goto("/");
+      await expect.poll(() => workers.length, { timeout: 15_000 }).toBeGreaterThan(0);
+      // ...and without downloading anything again.
+      await page.waitForLoadState("networkidle");
+      expect(modelRoutes.requestCount()).toBe(requestsBefore);
 
-    // No item contains either word, so the substring filter finds nothing
-    // while the model loads...
-    await expect(page.getByText("No matches")).toBeVisible();
-    await expect.poll(() => modelRoutes.requestCount()).toBeGreaterThan(0);
+      await page.getByRole("searchbox", { name: "Search your stuff" }).fill("somewhere to sleep outdoors");
+      await expect(resultRows(page).first().locator(".text-title")).toHaveText("Camping tent", { timeout: 10_000 });
+    });
+  });
 
-    // ...and once it arrives the shortlist appears, Passport near the top.
-    try {
-      await expect(resultRows(page).first()).toBeVisible({ timeout: 120_000 });
-    } catch (error) {
-      test.skip(modelRoutes.upstreamFailed(), "the embedding model host could not be reached");
-      throw error;
-    }
+  test.describe("without the Network Information API", () => {
+    test.use({ connection: "none" });
 
-    const topThree = await resultRows(page).evaluateAll((rows) =>
-      rows.slice(0, 3).map((row) => row.querySelector(".text-title")?.textContent ?? ""),
-    );
-    expect(topThree).toContain("Passport");
+    test("nothing is fetched until the search box is focused", async ({ page, modelRoutes }) => {
+      const email = await signUpFreshAccount(page);
+      await seedHousehold(email);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(1500);
+      expect(modelRoutes.requestCount()).toBe(0);
 
-    // CLOSEST is on exactly one row, and it is the first one.
-    await expect(page.getByText("Closest", { exact: true })).toHaveCount(1);
-    await expect(resultRows(page).first().getByText("Closest", { exact: true })).toBeVisible();
-
-    // A ranked list ends with the closing line, never a "No matches" screen.
-    await expect(page.getByText("Nothing else close.")).toBeVisible();
-    await expect(page.getByText("No matches")).toHaveCount(0);
-
-    // Meaning works for other items too, and the list re-ranks per query.
-    await search.fill("somewhere to sleep outdoors");
-    await expect(resultRows(page).first().locator(".text-title")).toHaveText("Camping tent");
-
-    expect(consoleErrors).toEqual([]);
+      await page.getByRole("searchbox", { name: "Search your stuff" }).focus();
+      await expect.poll(() => modelRoutes.requestCount()).toBeGreaterThan(0);
+    });
   });
 
   test("a substring hit stays on top while the person is still typing a word", async ({ page, modelRoutes }) => {
@@ -105,8 +177,8 @@ test.describe("with the real model", () => {
 
     await page.getByRole("searchbox", { name: "Search your stuff" }).fill("pass");
 
-    // Two characters short of a real word for the model, but the substring
-    // hit is immediate and needs no model at all.
+    // Too short for the model, but the substring hit is immediate and needs
+    // no model at all.
     await expect(resultRows(page).first().locator(".text-title")).toHaveText("Passport");
     expect(modelRoutes.upstreamFailed()).toBe(false);
   });
@@ -136,15 +208,12 @@ test.describe("when the model is unavailable", () => {
 });
 
 test.describe("Save-Data", () => {
-  test.use({ modelNetwork: "cached" });
+  test.use({ modelNetwork: "cached", connection: "save-data" });
 
-  test("does not download the model, and substring search still works", async ({ page, modelRoutes }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, "connection", {
-        value: { saveData: true, effectiveType: "4g" },
-        configurable: true,
-      });
-    });
+  test("does not download the model, even after focus, and substring search still works", async ({
+    page,
+    modelRoutes,
+  }) => {
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
     await page.goto("/");

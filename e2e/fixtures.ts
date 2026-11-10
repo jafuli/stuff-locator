@@ -26,6 +26,41 @@ const CACHE_DIR = path.join(process.cwd(), "e2e", ".model-cache");
 
 export type ModelNetwork = "blocked" | "cached";
 
+/**
+ * What navigator.connection reports, set by an init script so the idle
+ * prefetch rule (src/lib/search/connection.ts) sees the same thing on every
+ * machine. Headless Chromium otherwise reports whatever the runner's network
+ * looks like.
+ *   "3g" (default) - no background download; the model starts on focus. Keeps
+ *       every spec that isn't about Find from fetching the model on load.
+ *   "4g" - the model starts once the page is idle.
+ *   "none" - no Network Information API (Safari, Firefox).
+ *   "save-data" - Save-Data on a 4g connection; the model never starts.
+ */
+export type ConnectionProfile = "3g" | "4g" | "none" | "save-data";
+
+async function installConnection(context: BrowserContext, profile: ConnectionProfile): Promise<void> {
+  await context.addInitScript((value) => {
+    Object.defineProperty(Navigator.prototype, "connection", {
+      get: () => value ?? undefined,
+      configurable: true,
+    });
+  }, connectionValueOf(profile));
+}
+
+function connectionValueOf(profile: ConnectionProfile): { effectiveType: string; saveData: boolean } | null {
+  switch (profile) {
+    case "3g":
+      return { effectiveType: "3g", saveData: false };
+    case "4g":
+      return { effectiveType: "4g", saveData: false };
+    case "save-data":
+      return { effectiveType: "4g", saveData: true };
+    case "none":
+      return null;
+  }
+}
+
 export interface ModelRoutes {
   /** How many requests to a model host the page made (in either mode). */
   requestCount(): number;
@@ -97,8 +132,21 @@ async function installModelRoutes(context: BrowserContext, mode: ModelNetwork): 
   return { requestCount: () => requests, upstreamFailed: () => upstreamFailed };
 }
 
-export const test = base.extend<{ modelNetwork: ModelNetwork; modelRoutes: ModelRoutes }>({
+export const test = base.extend<{
+  modelNetwork: ModelNetwork;
+  modelRoutes: ModelRoutes;
+  connection: ConnectionProfile;
+  connectionInstalled: undefined;
+}>({
   modelNetwork: ["blocked", { option: true }],
+  connection: ["3g", { option: true }],
+  connectionInstalled: [
+    async ({ context, connection }, use) => {
+      await installConnection(context, connection);
+      await use(undefined);
+    },
+    { auto: true },
+  ],
   modelRoutes: [
     async ({ context, modelNetwork }, use) => {
       await use(await installModelRoutes(context, modelNetwork));
