@@ -142,17 +142,17 @@ export default async function Page(props: PageProps<"/">) {
         <GuidedOnboarding householdId={membership.household_id} locations={locations} />
       ) : (
         /*
-          SearchableStuffList owns the search input's state and filters
-          `entries` client-side (src/lib/fixtures/search.ts) — a real,
-          working filter now, not the earlier visual-only placeholder.
-          Entries themselves are still resolved server-side here, not
-          fetched by the client component. The Stash button is hidden while
-          onboarding runs (above): it's a second, unguided way into the same
-          flow, and a tap on it silently abandons the sequence.
-          emptyStateAction only ever shows for the true "this household has
-          zero items" case (StuffList's own empty state) — a "no search
-          matches" query shows a different, unrelated empty state that isn't
-          a candidate for this CTA.
+          SearchableStuffList owns the search input's state and ranks
+          `entries` client-side: substring matches while the embedding
+          model loads (or if it never does), a by-meaning ranking once it
+          is ready (src/lib/search/). Entries themselves are still resolved
+          server-side here, not fetched by the client component. The Stash
+          button is hidden while onboarding runs (above): it's a second,
+          unguided way into the same flow, and a tap on it silently
+          abandons the sequence. emptyStateAction only ever shows for the
+          true "this household has zero items" case (StuffList's own empty
+          state) — a "no search matches" query shows a different, unrelated
+          empty state that isn't a candidate for this CTA.
         */
         <SearchableStuffList
           entries={entries}

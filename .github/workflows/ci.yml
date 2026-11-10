@@ -82,6 +82,19 @@ jobs:
       # read off a failed assertion than off a failed page interaction.
       - name: RLS and Postgres function tests
         run: npm run test:rls
+      # Find's e2e serves the real embedding model from a read-through disk
+      # cache (e2e/fixtures.ts) so CI doesn't download ~23 MB from Hugging Face
+      # on every run. The wasm runtime isn't in it: the app serves that itself
+      # from public/ort/ (scripts/copy-ort.mjs, run by prebuild). The model
+      # revision is pinned in src/lib/search/embedding-protocol.ts, hence the
+      # key. A cache miss only costs a download, never a failure: the specs
+      # skip themselves if Hugging Face is unreachable, and print a
+      # "[find e2e] SKIPPED" line so this log shows it.
+      - name: Cache embedding model files
+        uses: actions/cache@v6
+        with:
+          path: e2e/.model-cache
+          key: find-model-${{ hashFiles('src/lib/search/embedding-protocol.ts', 'package-lock.json') }}
       - name: UI smoke test
         run: npm run test:e2e
       - name: Stop Supabase

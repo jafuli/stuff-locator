@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
-import { MODEL_ID, type WorkerRequest, type WorkerResponse } from "./embedding-protocol";
+import { MODEL_ID, MODEL_REVISION, type WorkerRequest, type WorkerResponse } from "./embedding-protocol";
+import { ortWasmPaths } from "./ort-paths";
 
 // Runs off the main thread so loading the model and embedding the corpus never
 // blocks typing. transformers.js is imported dynamically, inside init, so that
@@ -23,28 +24,41 @@ function loadExtractor(): Promise<Extractor> {
   extractorPromise ??= (async () => {
     const { env, pipeline } = await import("@huggingface/transformers");
     // Weights come from the Hugging Face Hub and are kept by transformers.js in
-    // the browser Cache API; nothing is looked up under this app's own origin.
+    // the browser Cache API; no model is looked up under this app's own origin.
     env.allowLocalModels = false;
 
-    // Per-file progress folded into one running total.
-    const files = new Map<string, { loaded: number; total: number }>();
+    // Pin the Hub path itself, not only the `revision` option. transformers.js
+    // 4.3.2 has code paths that build Hub URLs without passing `revision`, so
+    // they default to `main`: pipeline()'s file discovery, and
+    // AutoTokenizer's probe for tokenizer_config.json, on every load. With the
+    // commit in the template, every URL it builds names the pinned commit.
+    // Those probes then find their answer in the Cache API, where the pinned
+    // files are stored under exactly these URLs, instead of going to the
+    // network: no unpinned request, and no network needed to start a cached model.
+    env.remotePathTemplate = `{model}/resolve/${MODEL_REVISION}/`;
+
+    // The wasm runtime does come from this origin (public/ort/<version>/, see
+    // scripts/copy-ort.mjs), not jsDelivr. The library set its own paths when
+    // it was imported; they're read only when a session is created, so
+    // replacing them here, before the model loads, is what takes effect.
+    // useWasmCache stays on: transformers.js keeps these files in the Cache API too.
+    const onnx = env.backends.onnx;
+    const version = onnx.versions?.web;
+    if (version === undefined || onnx.wasm === undefined) {
+      throw new Error("onnxruntime-web did not report its version; can't locate its wasm runtime");
+    }
+    onnx.wasm.wasmPaths = ortWasmPaths(version, self.navigator);
+
+    // No progress_callback: nothing in the UI shows download progress, and
+    // passing one adds a metadata request per file before the load.
     const extractor = await pipeline("feature-extraction", MODEL_ID, {
-      // Pinned: the ~23 MB quantised weights the spike measured, not whatever
-      // the library's default dtype becomes in a later release.
+      // The same commit as the template above. Also used by the cache check
+      // and the vector memo keys (embedding-protocol.ts).
+      revision: MODEL_REVISION,
+      // Pinned: the ~23 MB quantised weights the spike measured
+      // (onnx/model_quantized.onnx), not whatever the library's default dtype
+      // becomes in a later release.
       dtype: "q8",
-      progress_callback: (info: { status: string; file?: string; loaded?: number; total?: number }) => {
-        if (info.status !== "progress" || info.file === undefined) {
-          return;
-        }
-        files.set(info.file, { loaded: info.loaded ?? 0, total: info.total ?? 0 });
-        let loaded = 0;
-        let total = 0;
-        for (const file of files.values()) {
-          loaded += file.loaded;
-          total += file.total;
-        }
-        post({ type: "progress", loaded, total });
-      },
     });
     return extractor;
   })();

@@ -31,3 +31,27 @@ export function shouldAutoDownload(source: ConnectionSource | undefined): boolea
   }
   return !(connection.effectiveType !== undefined && SLOW_CONNECTION_TYPES.has(connection.effectiveType));
 }
+
+/**
+ * Whether to start the model in the background, before anyone touches the
+ * search box. Stricter than shouldAutoDownload: a download nobody asked for
+ * has to be either free or clearly cheap.
+ *
+ * 1. Save-Data / 2g / slow-2g: never, not even with the model cached. Those
+ *    stay "skipped" on focus too, and a background start must not undo that.
+ * 2. Model already in the cache: yes. Starting costs CPU, not data.
+ * 3. A connection that reports "4g" (and no Save-Data): yes.
+ * 4. Anything else, including a browser with no Network Information API
+ *    (Safari, Firefox) or a 3g connection: no. Those wait for focus or a
+ *    keystroke, which still starts the model as before.
+ */
+export function shouldPrefetch(source: ConnectionSource | undefined, { cached }: { cached: boolean }): boolean {
+  if (!shouldAutoDownload(source)) {
+    return false;
+  }
+  if (cached) {
+    return true;
+  }
+  const connection = source?.connection;
+  return connection?.effectiveType === "4g" && connection.saveData !== true;
+}

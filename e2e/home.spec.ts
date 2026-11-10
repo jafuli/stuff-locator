@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 

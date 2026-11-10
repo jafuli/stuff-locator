@@ -31,3 +31,16 @@ test("matching is case-insensitive", () => {
   expect(filterItems(items, "PASSPORT")).toEqual([items[0]]);
   expect(filterItems(items, "BIRTH")).toEqual([items[0]]);
 });
+
+test("tolerates a typo in a name ('pasport' finds Passport)", () => {
+  expect(filterItems(items, "pasport")).toEqual([items[0]]);
+});
+
+test("returns matches best first, not in input order", () => {
+  const ranked: Item[] = [
+    { id: "box", locationId: "x", name: "Toolbox", detail: "has the passport photos" },
+    { id: "passport", locationId: "y", name: "Passport" },
+  ];
+  // Exact name beats a match in someone else's detail.
+  expect(filterItems(ranked, "passport").map((item) => item.id)).toEqual(["passport", "box"]);
+});

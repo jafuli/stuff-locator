@@ -6,8 +6,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "predev": "node scripts/free-port.mjs",
+    "predev": "node scripts/free-port.mjs && node scripts/copy-ort.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-ort.mjs",
     "build": "next build",
     "prestart": "node scripts/free-port.mjs",
     "start": "next start",

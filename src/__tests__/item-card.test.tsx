@@ -94,3 +94,14 @@ test("only the closest row carries the CLOSEST marker, and no score is ever show
   expect(screen.getByText("Closest")).toBeDefined();
   expect(document.body.textContent).not.toMatch(/\d+(\.\d+)?\s?%|score|similarity/i);
 });
+
+test("a row found by meaning alone says so in words, with the ≈ hidden from assistive tech", () => {
+  const { container, rerender } = render(<ItemCard item={baseItem} segments={segments} href="/items/x" />);
+  expect(screen.queryByText("matched on meaning")).toBeNull();
+
+  rerender(<ItemCard item={baseItem} segments={segments} href="/items/x" matchedOnMeaning />);
+  const label = screen.getByText("matched on meaning");
+  expect(label.className).toContain("text-marker");
+  expect(label.className).not.toMatch(/tape|signal/);
+  expect(container.querySelector("[aria-hidden='true']")?.textContent).toBe("≈ ");
+});

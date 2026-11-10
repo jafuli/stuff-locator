@@ -1,0 +1,287 @@
+import { beforeEach, expect, test, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { SearchableStuffList, SHORTLIST_SIZE } from "@/components/searchable-stuff-list";
+import type { StuffListEntry } from "@/components/stuff-list";
+import type { Item } from "@/lib/fixtures/types";
+
+// The hook is mocked so each test can decide what the model "says"; the hook
+// itself, and the client under it, have their own tests.
+const search = vi.hoisted(() => ({
+  semantic: null as { order: string[]; agreedTop: string | null } | null,
+  status: "idle",
+  onIntent: vi.fn(),
+  lastDocuments: [] as { id: string; name: string; enriched: string }[],
+}));
+vi.mock("@/lib/search/use-semantic-search", () => ({
+  useSemanticSearch: (documents: { id: string; name: string; enriched: string }[]) => {
+    search.lastDocuments = documents;
+    return { semantic: search.semantic, status: search.status, onIntent: search.onIntent };
+  },
+}));
+
+// The background warm-up has its own tests; here it must not touch the real Cache API or Worker.
+const prefetch = vi.hoisted(() => ({ calls: [] as { enabled?: boolean }[] }));
+vi.mock("@/lib/search/use-idle-prefetch", () => ({
+  useIdlePrefetch: (_client: unknown, options: { enabled?: boolean } = {}) => {
+    prefetch.calls.push(options);
+  },
+}));
+
+function item(id: string, name: string, detail?: string): Item {
+  return { id, locationId: `${id}-loc`, name, detail };
+}
+
+const passport = item("passport", "Passport", "with the birth certificates");
+const tent = item("tent", "Camping tent");
+const router = item("router", "Spare router");
+const keys = item("keys", "Allen keys");
+
+function entriesOf(...items: Item[]): StuffListEntry[] {
+  return items.map((i) => ({ item: i, segments: [{ id: `${i.id}-room`, name: "Garage" }] }));
+}
+
+function rowNames(): string[] {
+  // Each row's title is the text-title span inside its link.
+  return screen.getAllByRole("link", { name: /.+/ }).flatMap((link) => {
+    const title = link.querySelector(".text-title");
+    return title?.textContent ? [title.textContent] : [];
+  });
+}
+
+beforeEach(() => {
+  search.semantic = null;
+  search.status = "idle";
+  search.onIntent.mockClear();
+});
+
+test("builds each document from the item and its location path", () => {
+  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  expect(search.lastDocuments).toEqual([
+    { id: "passport", name: "Passport", enriched: "Passport · Garage · with the birth certificates" },
+    { id: "tent", name: "Camping tent", enriched: "Camping tent · Garage" },
+  ]);
+});
+
+test("focusing the field, and typing, signal intent so the model can start", async () => {
+  const user = userEvent.setup();
+  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  expect(search.onIntent).not.toHaveBeenCalled();
+
+  await user.click(screen.getByRole("searchbox", { name: "Search your stuff" }));
+  expect(search.onIntent).toHaveBeenCalledTimes(1);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "a");
+  expect(search.onIntent).toHaveBeenCalledTimes(2);
+});
+
+test("while the model loads and nothing matches by letters, it says it's still looking, not No matches", async () => {
+  const user = userEvent.setup();
+  search.status = "loading";
+  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+  expect(screen.getByText("Still looking")).toBeDefined();
+  expect(screen.getByText(/Checking by meaning/)).toBeDefined();
+  expect(screen.queryByText("No matches")).toBeNull();
+  expect(screen.queryByText(/Nothing else close/)).toBeNull();
+  // Announced through the one status region, and only once: the text is the
+  // same for every keystroke in this state.
+  expect(screen.getByRole("status").textContent).toBe("Still looking by meaning");
+  expect(screen.queryByText(/Loading smarter search/)).toBeNull();
+});
+
+test.each(["idle", "skipped", "failed"] as const)(
+  "with the model %s and nothing matching by letters, it's No matches",
+  async (status) => {
+    const user = userEvent.setup();
+    search.status = status;
+    render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+    await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+    expect(screen.getByText("No matches")).toBeDefined();
+    expect(screen.queryByText("Still looking")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("0 results found");
+  },
+);
+
+test("rows found by meaning alone say so; rows that match by letters don't", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["tent", "passport", "router"], agreedTop: "tent" };
+  render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
+
+  // "birth" matches Passport's detail; the tent and router are there by meaning only.
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "birth");
+
+  const labelled = screen
+    .getAllByText("matched on meaning")
+    .map((label) => label.closest("a")?.querySelector(".text-title")?.textContent);
+  expect(labelled.sort()).toEqual(["Camping tent", "Spare router"]);
+});
+
+test("with a semantic order, a query sharing no words with the item still finds it", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "router", "tent", "keys"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(tent, router, passport, keys)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+  expect(rowNames()).toEqual(["Passport", "Spare router", "Camping tent", "Allen keys"]);
+  expect(screen.queryByText("No matches")).toBeNull();
+});
+
+test("the CLOSEST marker sits on the real top rank, not on the page's first item", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: "passport" };
+  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+  const closest = screen.getAllByText("Closest");
+  expect(closest).toHaveLength(1);
+  expect(within(closest[0]?.closest("a") ?? document.body).getByText("Passport")).toBeDefined();
+});
+
+test("a lexical hit is fused with the semantic ranking, not pinned regardless of it", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  // By meaning the router is closest to "tent"; by letters only the tent matches.
+  search.semantic = { order: ["router", "tent", "passport"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
+
+  // Two votes (letters + meaning #2) beat one (meaning #1).
+  expect(rowNames()).toEqual(["Camping tent", "Spare router", "Passport"]);
+});
+
+test(`the ranked list is a shortlist of ${SHORTLIST_SIZE.toString()}, cut by rank and not by score`, async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  const many = Array.from({ length: 9 }, (_, i) => item(`i${i.toString()}`, `Thing ${i.toString()}`));
+  search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(...many)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "zzz");
+
+  expect(rowNames()).toEqual(["Thing 8", "Thing 7", "Thing 6", "Thing 5", "Thing 4"]);
+  expect(screen.getByRole("status").textContent).toBe("5 results found");
+});
+
+test("the shortlist cap applies to lexical hits too", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
+  search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(...many)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
+
+  // All eight match equally by letters, so meaning orders them, and five are kept.
+  expect(rowNames()).toEqual(["Box 7", "Box 6", "Box 5", "Box 4", "Box 3"]);
+});
+
+test("without the model, every lexical hit is kept, best match first and typos forgiven", async () => {
+  const user = userEvent.setup();
+  search.status = "failed";
+  const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
+  render(<SearchableStuffList entries={entriesOf(...many, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
+  expect(rowNames()).toHaveLength(8);
+
+  await user.clear(screen.getByRole("searchbox", { name: "Search your stuff" }));
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pasport");
+  expect(rowNames()).toEqual(["Passport"]);
+});
+
+test("no CLOSEST marker when the top row matched by meaning only and the two representations disagree", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
+
+  expect(rowNames()).toEqual(["Passport", "Camping tent"]);
+  expect(screen.queryByText("Closest")).toBeNull();
+});
+
+test("a lexical top row is CLOSEST even without semantic agreement", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
+
+  const closest = screen.getAllByText("Closest");
+  expect(closest).toHaveLength(1);
+  expect(within(closest[0]?.closest("a") ?? document.body).getByText("Camping tent")).toBeDefined();
+});
+
+test("the closing line points to Browse instead of a No matches screen", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
+
+  expect(screen.getByText(/Nothing else close/)).toBeDefined();
+  expect(screen.getByRole("link", { name: "browse by place" }).getAttribute("href")).toBe("/browse");
+  expect(screen.queryByText("No matches")).toBeNull();
+});
+
+test("a ranked result never shows a score", async () => {
+  const user = userEvent.setup();
+  search.status = "ready";
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
+  const { container } = render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
+
+  expect(container.textContent).not.toMatch(/\d\.\d{2}|%|score/i);
+});
+
+test("while the model loads, a quiet note goes to assistive tech only", async () => {
+  const user = userEvent.setup();
+  search.status = "loading";
+  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+
+  expect(screen.queryByText(/Loading smarter search/)).toBeNull();
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pass");
+
+  const note = screen.getByText(/Loading smarter search/);
+  expect(note.className).toContain("sr-only");
+  expect(note.getAttribute("role")).toBeNull();
+  // The result-count status stays the only role="status".
+  expect(screen.getAllByRole("status")).toHaveLength(1);
+});
+
+test("a failed or skipped model is silent: falling back is not an error", async () => {
+  const user = userEvent.setup();
+  for (const status of ["failed", "skipped"] as const) {
+    search.status = status;
+    const { unmount } = render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+    await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pass");
+    expect(screen.queryByText(/smarter search/i)).toBeNull();
+    expect(screen.getByText("Passport")).toBeDefined();
+    unmount();
+  }
+});
+
+test("warms the model in the background only when there is something to search", () => {
+  prefetch.calls.length = 0;
+  const { unmount } = render(<SearchableStuffList entries={entriesOf(passport)} />);
+  expect(prefetch.calls.at(-1)?.enabled).toBe(true);
+  unmount();
+  render(<SearchableStuffList entries={[]} />);
+  expect(prefetch.calls.at(-1)?.enabled).toBe(false);
+});
