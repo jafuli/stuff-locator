@@ -63,7 +63,27 @@ test.describe("with the real model", () => {
   test.describe("on a 4g connection", () => {
     test.use({ connection: "4g" });
 
-    test("the model starts on idle, so the first meaning-only search needs no wait", async ({ page, modelRoutes }) => {
+    test("the model starts on idle, so the first meaning-only search needs no wait", async ({
+      page,
+      context,
+      modelRoutes,
+    }) => {
+      // Every request the page and its workers make, to check where the wasm
+      // runtime came from.
+      const requestUrls: string[] = [];
+      const wasmResponses: { url: string; status: number; encoding: string | undefined }[] = [];
+      context.on("request", (request) => {
+        requestUrls.push(request.url());
+      });
+      context.on("response", (response) => {
+        if (response.url().endsWith(".wasm")) {
+          wasmResponses.push({
+            url: response.url(),
+            status: response.status(),
+            encoding: response.headers()["content-encoding"],
+          });
+        }
+      });
       const consoleErrors: string[] = [];
       page.on("console", (msg) => {
         if (msg.type() === "error") {
@@ -104,6 +124,15 @@ test.describe("with the real model", () => {
       // Meaning works for other items too, and the list re-ranks per query.
       await page.getByRole("searchbox", { name: "Search your stuff" }).fill("somewhere to sleep outdoors");
       await expect(resultRows(page).first().locator(".text-title")).toHaveText("Camping tent");
+
+      // The wasm runtime came from this app (public/ort/<version>/), compressed,
+      // and nothing went to jsDelivr.
+      const runtime = new RegExp(`^${new URL(page.url()).origin}/ort/[^/]+/ort-wasm-simd-threaded\\.asyncify\\.wasm$`);
+      const fromOrt = wasmResponses.filter((response) => runtime.test(response.url));
+      expect(fromOrt.length).toBeGreaterThan(0);
+      expect(fromOrt.every((response) => response.status === 200)).toBe(true);
+      expect(wasmResponses.every((response) => response.encoding !== undefined)).toBe(true);
+      expect(requestUrls.filter((url) => url.includes("cdn.jsdelivr.net"))).toEqual([]);
 
       expect(consoleErrors).toEqual([]);
     });
@@ -150,7 +179,7 @@ test.describe("with the real model", () => {
       await expect.poll(() => workers.length, { timeout: 15_000 }).toBeGreaterThan(0);
       // ...and without downloading anything again.
       await page.waitForLoadState("networkidle");
-      expect(modelRoutes.requestCount()).toBe(requestsBefore);
+      expect(modelRoutes.requestUrls().slice(requestsBefore)).toEqual([]);
 
       await page.getByRole("searchbox", { name: "Search your stuff" }).fill("somewhere to sleep outdoors");
       await expect(resultRows(page).first().locator(".text-title")).toHaveText("Camping tent", { timeout: 10_000 });
@@ -242,6 +271,17 @@ test.describe("Save-Data", () => {
 });
 
 test.describe("with the service worker active", () => {
+  test("the self-hosted wasm runtime is never precached", async ({ page }) => {
+    const response = await page.request.get("/serwist/sw.js");
+    expect(response.ok()).toBe(true);
+    const source = await response.text();
+    // The precache manifest is inlined into the built service worker. ("/ort/"
+    // itself appears in its code, as the prefix it leaves alone, so look for
+    // the file names.)
+    expect(source).toContain("~offline");
+    expect(source).not.toContain("ort-wasm-simd-threaded");
+  });
+
   // Turbopack puts a worker's bootstrap config in its URL fragment, which a
   // service-worker response loses; src/app/sw.ts keeps worker entry requests
   // away from the service worker for that reason. Without that, the worker

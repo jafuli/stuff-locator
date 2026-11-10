@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Find e2e: read-through cache of the embedding model files (see e2e/fixtures.ts)
 /e2e/.model-cache/
+
+# onnxruntime-web wasm, copied from node_modules by scripts/copy-ort.mjs
+/public/ort/

@@ -60,6 +60,9 @@ const eslintConfig = defineConfig([
     // like an edge-runtime stub function that isn't part of this app's
     // TypeScript project and shouldn't be linted.
     "supabase/.temp/**",
+    // onnxruntime-web's wasm runtime, copied from node_modules by
+    // scripts/copy-ort.mjs (gitignored) — vendor output, not our code.
+    "public/ort/**",
   ]),
 ]);
 

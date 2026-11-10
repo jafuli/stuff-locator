@@ -9,6 +9,13 @@ import { MODEL_ID, MODEL_REVISION, type WorkerRequest, type WorkerResponse } fro
  */
 export const VECTOR_MEMO_LIMIT = 2000;
 
+/**
+ * How many times the model may try to load in one page session: the first
+ * start, and one retry on the next search intent after a failure (a flaky
+ * network shouldn't cost the whole session). A second failure is final.
+ */
+export const MAX_LOAD_ATTEMPTS = 2;
+
 /** The memo key: model and revision, so vectors from a different model can never be mixed in. */
 export function vectorMemoKey(text: string): string {
   return `${MODEL_ID}@${MODEL_REVISION}\u0000${text}`;
@@ -47,11 +54,6 @@ export interface EmbeddingClientOptions {
   persistStorage?: () => unknown;
 }
 
-export interface Progress {
-  loaded: number;
-  total: number;
-}
-
 function requestPersistentStorage(): void {
   // Typed as always present, but missing in older browsers and insecure contexts.
   if (
@@ -85,7 +87,6 @@ export class EmbeddingClient {
     { resolve: (vectors: Float32Array[]) => void; reject: (error: Error) => void }
   >();
   private readonly statusListeners = new Set<() => void>();
-  private progress: Progress | undefined;
   private readonly createWorker: () => WorkerLike;
   private readonly connectionSource: ConnectionSource | undefined;
   private readonly persistStorage: () => unknown;
@@ -94,6 +95,7 @@ export class EmbeddingClient {
   /** Texts already sent to the worker and not yet answered, so a second ask waits instead of re-sending. */
   private readonly inFlight = new Map<string, Promise<Float32Array>>();
   private persistRequested = false;
+  private attempts = 0;
 
   constructor(options: EmbeddingClientOptions = {}) {
     this.createWorker = options.createWorker ?? createDefaultWorker;
@@ -106,10 +108,6 @@ export class EmbeddingClient {
     return this.status;
   }
 
-  getProgress(): Progress | undefined {
-    return this.progress;
-  }
-
   /** useSyncExternalStore-compatible. */
   subscribe = (listener: () => void): (() => void) => {
     this.statusListeners.add(listener);
@@ -118,9 +116,16 @@ export class EmbeddingClient {
     };
   };
 
-  /** Begin loading the model. Idempotent; a no-op once started, skipped or failed. */
+  /**
+   * Begin loading the model. Idempotent while loading or ready, and a no-op
+   * once skipped. After a failure it builds a fresh worker exactly once more
+   * (MAX_LOAD_ATTEMPTS); after a second failure it is a no-op for the rest of
+   * the page session. Callers decide when a retry is wanted: the search box
+   * calls this on every intent, the idle prefetch only for an idle client.
+   */
   start(): void {
-    if (this.status !== "idle") {
+    const retrying = this.status === "failed" && this.attempts < MAX_LOAD_ATTEMPTS;
+    if (this.status !== "idle" && !retrying) {
       return;
     }
     if (!shouldAutoDownload(this.connectionSource)) {
@@ -128,6 +133,7 @@ export class EmbeddingClient {
       return;
     }
 
+    this.attempts += 1;
     let worker: WorkerLike;
     try {
       worker = this.createWorker();
@@ -249,10 +255,6 @@ export class EmbeddingClient {
           this.setStatus("ready");
           this.requestPersistenceOnce();
         }
-        return;
-      case "progress":
-        this.progress = { loaded: message.loaded, total: message.total };
-        this.notify();
         return;
       case "result": {
         // A reply for a request that was already rejected or never existed is

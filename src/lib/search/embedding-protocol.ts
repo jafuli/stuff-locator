@@ -19,6 +19,5 @@ export type WorkerRequest = { type: "init" } | { type: "embed"; requestId: numbe
 
 export type WorkerResponse =
   | { type: "ready" }
-  | { type: "progress"; loaded: number; total: number }
   | { type: "result"; requestId: number; vectors: Float32Array[] }
   | { type: "error"; requestId?: number; message: string };

@@ -11,6 +11,8 @@ src/lib/database.types.ts
 # Generated service worker output
 public/sw.js
 public/sw.js.map
+# onnxruntime-web's wasm runtime, copied by scripts/copy-ort.mjs
+public/ort
 .claude
 .idea
 supabase/.temp

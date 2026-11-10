@@ -8,6 +8,11 @@ const revision = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
   additionalPrecacheEntries: [{ url: "/~offline", revision }],
+  // The default globPatterns include "public/**/*", which would precache the
+  // ~40 MB onnxruntime wasm that scripts/copy-ort.mjs puts in public/ort/.
+  // transformers.js caches it itself, and only once someone searches. The
+  // first entry is Serwist's own default, kept.
+  globIgnores: ["**/node_modules/**/*", "public/ort/**/*"],
   swSrc: "src/app/sw.ts",
   useNativeEsbuild: true,
 });

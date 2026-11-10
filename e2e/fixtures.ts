@@ -2,21 +2,22 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { test as base, expect, type BrowserContext } from "@playwright/test";
-import { isModelRequest } from "../src/lib/search/model-hosts";
+import { isHuggingFaceRequest } from "../src/lib/search/model-hosts";
 
-// Find downloads a ~23 MB embedding model (plus a ~5.5 MB wasm runtime) from
-// third-party hosts the first time someone focuses the search box. A real
-// download in every CI run would be slow and would tie the gate to those hosts
-// being up, so specs never reach them by default:
+// Find downloads a ~23 MB embedding model from Hugging Face, the only
+// third-party host involved: the wasm runtime is served by the app itself,
+// from public/ort/ (scripts/copy-ort.mjs), so it needs no routing. A real
+// model download in every CI run would be slow and would tie the gate to
+// Hugging Face being up, so specs never reach it by default:
 //
-//   "blocked" (default) - the model hosts are unreachable, so Find stays on
-//       the substring filter. Every existing spec that types in the search
-//       box is exactly as hermetic as before.
+//   "blocked" (default) - Hugging Face is unreachable, so the model fails and
+//       Find stays on the lexical ranking. Every existing spec that types in
+//       the search box is exactly as hermetic as before.
 //   "cached" - the real model, served from a read-through disk cache
 //       (e2e/.model-cache, gitignored, restored by actions/cache in CI). The
-//       first run fetches from the real hosts and writes the cache; later runs
-//       are offline. The real worker, the real model and the real Cache API
-//       are all exercised either way.
+//       first run fetches from Hugging Face and writes the cache; later runs
+//       are offline. The real worker, the real model, the real wasm and the
+//       real Cache API are all exercised either way.
 //
 // The service worker stays active, as in production. It deliberately doesn't
 // answer model requests (src/app/sw.ts), so the browser performs them itself
@@ -62,9 +63,11 @@ function connectionValueOf(profile: ConnectionProfile): { effectiveType: string;
 }
 
 export interface ModelRoutes {
-  /** How many requests to a model host the page made (in either mode). */
+  /** How many requests to Hugging Face the page made (in either mode). */
   requestCount(): number;
-  /** True if "cached" mode needed a real download and the host couldn't be reached. */
+  /** Their URLs, in order — for a failure message that says what was fetched. */
+  requestUrls(): readonly string[];
+  /** True if "cached" mode needed a real download and Hugging Face couldn't be reached. */
   upstreamFailed(): boolean;
 }
 
@@ -80,13 +83,13 @@ interface StoredResponse {
 }
 
 async function installModelRoutes(context: BrowserContext, mode: ModelNetwork): Promise<ModelRoutes> {
-  let requests = 0;
+  const urls: string[] = [];
   let upstreamFailed = false;
 
   await context.route(
-    (url) => isModelRequest(url),
+    (url) => isHuggingFaceRequest(url),
     async (route) => {
-      requests += 1;
+      urls.push(route.request().url());
       if (mode === "blocked") {
         await route.abort("blockedbyclient");
         return;
@@ -129,7 +132,7 @@ async function installModelRoutes(context: BrowserContext, mode: ModelNetwork): 
     },
   );
 
-  return { requestCount: () => requests, upstreamFailed: () => upstreamFailed };
+  return { requestCount: () => urls.length, requestUrls: () => urls, upstreamFailed: () => upstreamFailed };
 }
 
 export const test = base.extend<{

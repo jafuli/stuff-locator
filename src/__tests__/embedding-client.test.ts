@@ -35,13 +35,6 @@ describe("lazy start", () => {
     expect(client.getStatus()).toBe("ready");
     expect(listener).toHaveBeenCalled();
   });
-
-  test("reports download progress while loading", () => {
-    const { worker, client } = setup();
-    client.start();
-    worker.emit({ type: "progress", loaded: 5, total: 20 });
-    expect(client.getProgress()).toEqual({ loaded: 5, total: 20 });
-  });
 });
 
 describe("connection awareness", () => {
@@ -72,7 +65,7 @@ describe("connection awareness", () => {
   });
 });
 
-describe("failure falls back, permanently", () => {
+describe("failure falls back", () => {
   test("a worker that can't be constructed ends in failed without throwing", () => {
     const client = new EmbeddingClient({
       createWorker: () => {
@@ -110,13 +103,72 @@ describe("failure falls back, permanently", () => {
     await expect(pending).rejects.toThrow();
   });
 
-  test("a failed client does not retry on a later start()", () => {
+  test("after a failed load, the next start() retries once, with a fresh worker", () => {
+    const workers = [new FakeEmbeddingWorker(), new FakeEmbeddingWorker()];
+    const createWorker = vi.fn(() => workers[createWorker.mock.calls.length - 1] ?? new FakeEmbeddingWorker());
+    const client = new EmbeddingClient({ createWorker, connectionSource: {} });
+
+    client.start();
+    workers[0]?.emit({ type: "error", message: "network hiccup" });
+    expect(client.getStatus()).toBe("failed");
+
+    client.start();
+    expect(createWorker).toHaveBeenCalledTimes(2);
+    expect(client.getStatus()).toBe("loading");
+    expect(workers[1]?.received).toEqual([{ type: "init" }]);
+    workers[1]?.ready();
+    expect(client.getStatus()).toBe("ready");
+  });
+
+  test("a second failure is final for the page session", () => {
     const { worker, createWorker, client } = setup();
     client.start();
     worker.emit({ type: "error", message: "nope" });
     client.start();
-    expect(createWorker).toHaveBeenCalledTimes(1);
+    worker.emit({ type: "error", message: "still nope" });
     expect(client.getStatus()).toBe("failed");
+
+    client.start();
+    client.start();
+    expect(createWorker).toHaveBeenCalledTimes(2);
+    expect(client.getStatus()).toBe("failed");
+  });
+
+  test("a worker that can't be constructed also gets exactly one retry", () => {
+    const createWorker = vi.fn((): FakeEmbeddingWorker => {
+      throw new Error("blocked by CSP");
+    });
+    const client = new EmbeddingClient({ createWorker, connectionSource: {} });
+    client.start();
+    client.start();
+    client.start();
+    expect(createWorker).toHaveBeenCalledTimes(2);
+    expect(client.getStatus()).toBe("failed");
+  });
+
+  test("skipped never retries", () => {
+    const { createWorker, client } = setup({ connection: { saveData: true } });
+    client.start();
+    client.start();
+    expect(client.getStatus()).toBe("skipped");
+    expect(createWorker).not.toHaveBeenCalled();
+  });
+
+  test("vectors embedded before a crash are still served after the retry", async () => {
+    const workers = [new FakeEmbeddingWorker((t) => [t.length, 1]), new FakeEmbeddingWorker((t) => [t.length, 1])];
+    const createWorker = vi.fn(() => workers[createWorker.mock.calls.length - 1] ?? new FakeEmbeddingWorker());
+    const client = new EmbeddingClient({ createWorker, connectionSource: {} });
+    client.start();
+    workers[0]?.ready();
+    const first = client.embed(["a"]);
+    workers[0]?.answer(0);
+    await first;
+    workers[0]?.crash();
+
+    client.start();
+    workers[1]?.ready();
+    await expect(client.embed(["a"])).resolves.toHaveLength(1);
+    expect(workers[1]?.embedRequests).toHaveLength(0);
   });
 
   test("a per-request error rejects only that request and leaves the client ready", async () => {
