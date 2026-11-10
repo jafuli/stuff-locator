@@ -3,21 +3,31 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { EmbeddingClient, EmbeddingStatus } from "./embedding-client";
 import { getSharedEmbeddingClient } from "./shared-client";
-import { type ItemTexts, type ItemVectors } from "./rank";
-import { rankItems } from "./rank";
+import { semanticRanking, type ItemTexts, type ItemVectors } from "./rank";
 
 /** One searchable item: its id plus the two strings that get embedded. */
 export interface SearchDocument extends ItemTexts {
   id: string;
 }
 
+/** What the model says about the current query. */
+export interface SemanticAnswer {
+  /** Item ids best-first by meaning. */
+  order: readonly string[];
+  /**
+   * The item both representations (bare name and enriched string) rank
+   * first, or null when they disagree. An agreement signal, not a score.
+   */
+  agreedTop: string | null;
+}
+
 export interface SemanticSearchResult {
   /**
-   * Item ids best-first by meaning, or null while there's nothing to say yet
-   * (model not ready, query too short, nothing embedded). null means "use the
-   * substring filter" - the UI never waits on this.
+   * The model's answer, or null while there's nothing to say yet (model not
+   * ready, query too short, nothing embedded). null means "rank lexically
+   * only"; the UI never waits on this.
    */
-  semanticOrder: readonly string[] | null;
+  semantic: SemanticAnswer | null;
   status: EmbeddingStatus;
   /**
    * Call on real search intent (focus, a keystroke). Starts the model if the
@@ -30,7 +40,7 @@ export interface SemanticSearchResult {
 export const QUERY_DEBOUNCE_MS = 150;
 /**
  * Below this a query is a fragment ("pa", "pas"), and the embedding of a
- * fragment is noise. Those queries stay on the substring filter alone.
+ * fragment is noise. Those queries are ranked lexically only.
  */
 export const MIN_SEMANTIC_QUERY_LENGTH = 3;
 
@@ -98,7 +108,7 @@ export function useSemanticSearch(
       },
       () => {
         // The client already moved itself to "failed" if the worker died;
-        // a single failed batch just leaves us on the substring filter.
+        // a single failed batch just leaves us on the lexical ranking.
       },
     );
     return () => {
@@ -117,7 +127,7 @@ export function useSemanticSearch(
     };
   }, [trimmed]);
 
-  const [ranked, setRanked] = useState<{ corpusKey: string; order: string[] } | undefined>();
+  const [ranked, setRanked] = useState<{ corpusKey: string; answer: SemanticAnswer } | undefined>();
   const usableCorpus = corpus?.key === corpusKey ? corpus : undefined;
 
   useEffect(() => {
@@ -133,10 +143,17 @@ export function useSemanticSearch(
         if (cancelled || queryVector === undefined) {
           return;
         }
-        setRanked({ corpusKey: usableCorpus.key, order: rankItems(queryVector, usableCorpus.vectors) });
+        const ranking = semanticRanking(queryVector, usableCorpus.vectors);
+        setRanked({
+          corpusKey: usableCorpus.key,
+          answer: {
+            order: ranking.order,
+            agreedTop: ranking.nameTop !== null && ranking.nameTop === ranking.enrichedTop ? ranking.nameTop : null,
+          },
+        });
       },
       () => {
-        // Substring filter keeps serving.
+        // The lexical ranking keeps serving.
       },
     );
     return () => {
@@ -149,8 +166,8 @@ export function useSemanticSearch(
   }, [client]);
 
   // A query that has since become too short, or an order computed for an older
-  // corpus, is not used. An order for the *previous* query is kept until the
-  // new one lands (less flicker than dropping to substring-only on every key).
+  // corpus, is not used. An answer for the *previous* query is kept until the
+  // new one lands (less flicker than dropping to lexical-only on every key).
   const usable = status === "ready" && trimmed.length >= MIN_SEMANTIC_QUERY_LENGTH && ranked?.corpusKey === corpusKey;
-  return { semanticOrder: usable ? ranked.order : null, status, onIntent };
+  return { semantic: usable ? ranked.answer : null, status, onIntent };
 }

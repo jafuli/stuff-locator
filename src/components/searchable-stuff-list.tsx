@@ -7,16 +7,17 @@ import { StuffList, type StuffListEntry } from "@/components/stuff-list";
 import { StuffSearchInput } from "@/components/stuff-search-input";
 import { StuffViewChips } from "@/components/stuff-view-chips";
 import { EmptyState } from "@/components/ui/empty-state";
-import { filterItems } from "@/lib/fixtures/search";
-import { enrichedText, mergeLexicalFirst } from "@/lib/search/rank";
+import { lexicalRank } from "@/lib/search/lexical";
+import { enrichedText, fuseRankings } from "@/lib/search/rank";
 import { useIdlePrefetch } from "@/lib/search/use-idle-prefetch";
 import { useSemanticSearch, type SearchDocument } from "@/lib/search/use-semantic-search";
 
 /**
- * How many results the ranked list shows once the model is ready. A rank
+ * How many results the fused list shows once the model is ready. A rank
  * cut-off, never a score one: the household is ~20-50 items, so the best
- * handful is what the person can recognise at a glance, and every substring
- * hit is kept even when there are more than this.
+ * handful is what the person can recognise at a glance. It applies to the
+ * fused list as a whole; lexical hits get no exemption. Without the model the
+ * lexical list is shown whole, since every row in it has a visible reason.
  */
 export const SHORTLIST_SIZE = 5;
 
@@ -72,7 +73,7 @@ export function SearchableStuffList({
       })),
     [entries],
   );
-  const { semanticOrder, status, onIntent } = useSemanticSearch(documents, query);
+  const { semantic, status, onIntent } = useSemanticSearch(documents, query);
   // Warm the model only when there is something to search: an empty household
   // (onboarding, or one that finished onboarding and deleted everything) has
   // nothing to rank, so a background download there would be pure cost.
@@ -92,26 +93,21 @@ export function SearchableStuffList({
 
   const isSearching = query.trim() !== "";
   const items = entries.map((entry) => entry.item);
-  const lexicalIds = filterItems(items, query).map((item) => item.id);
+  const allIds = items.map((item) => item.id);
 
-  let visibleIds: readonly string[];
-  if (!isSearching) {
-    visibleIds = items.map((item) => item.id);
-  } else if (semanticOrder === null) {
-    visibleIds = lexicalIds;
-  } else {
-    const ranked = mergeLexicalFirst(
-      items.map((item) => item.id),
-      lexicalIds,
-      semanticOrder,
-    );
-    visibleIds = ranked.slice(0, Math.max(SHORTLIST_SIZE, lexicalIds.length));
-  }
+  // Fused: reciprocal rank fusion of the lexical and semantic rankings, and
+  // just the lexical ranking (typo-tolerant) until the model answers.
+  const results = isSearching
+    ? fuseRankings(allIds, lexicalRank(items, query), semantic?.order ?? null, {
+        limit: semantic === null ? undefined : SHORTLIST_SIZE,
+      })
+    : [];
+  const visibleIds: readonly string[] = isSearching ? results.map((result) => result.id) : allIds;
 
   const byId = new Map(entries.map((entry) => [entry.item.id, entry]));
   const visibleEntries = visibleIds.flatMap((id) => byId.get(id) ?? []);
   const resultCount = visibleEntries.length;
-  const isRanked = isSearching && semanticOrder !== null;
+  const isRanked = isSearching && semantic !== null;
 
   return (
     <>

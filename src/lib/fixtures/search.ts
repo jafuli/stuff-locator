@@ -1,25 +1,22 @@
-// The lexical half of Find: a plain case-insensitive substring filter, no
-// model, no network. It is what serves results while the embedding model is
-// loading or skipped, and permanently if the model fails (see
-// src/lib/search/ and docs/adr/0012-client-side-embedding-search.md), and its
-// hits are pinned to the top of the ranked list once the model is ready.
+// Find's no-model list: the lexical ranking from src/lib/search/lexical.ts
+// (exact > prefix > word start > substring > detail > typo-tolerant), as
+// items. It is what serves while the embedding model is loading or skipped,
+// and permanently if the model fails. See
+// docs/adr/0012-client-side-embedding-search.md.
+import { lexicalRank } from "@/lib/search/lexical";
 import type { Item } from "./types";
 
 /**
- * Filters items by a case-insensitive substring match against the item's
- * name or its free-text detail — a query that only matches in the detail
- * field must still surface the item, not just name matches. An empty or
- * whitespace-only query returns every item unfiltered.
+ * Items matching `query` by their name or free-text detail, best match first.
+ * Case-insensitive and lightly typo-tolerant ("pasport" finds Passport). A
+ * query that only matches in the detail field must still surface the item,
+ * not just name matches. An empty or whitespace-only query returns every
+ * item unfiltered, in its original order.
  */
 export function filterItems(items: readonly Item[], query: string): Item[] {
-  const trimmed = query.trim().toLowerCase();
-  if (trimmed === "") {
+  if (query.trim() === "") {
     return [...items];
   }
-
-  return items.filter((item) => {
-    const nameMatch = item.name.toLowerCase().includes(trimmed);
-    const detailMatch = item.detail?.toLowerCase().includes(trimmed) ?? false;
-    return nameMatch || detailMatch;
-  });
+  const byId = new Map(items.map((item) => [item.id, item]));
+  return lexicalRank(items, query).flatMap((match) => byId.get(match.id) ?? []);
 }

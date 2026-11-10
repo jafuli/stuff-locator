@@ -15,11 +15,11 @@ export function vectorMemoKey(text: string): string {
 }
 
 /**
- * idle    - nothing started; Find is the substring filter.
- * skipped - connection says don't download (Save-Data, 2g); stays the substring filter.
- * loading - worker is fetching / initialising the model; substring filter serves meanwhile.
+ * idle    - nothing started; Find is the lexical ranking.
+ * skipped - connection says don't download (Save-Data, 2g); stays the lexical ranking.
+ * loading - worker is fetching / initialising the model; the lexical ranking serves meanwhile.
  * ready   - embeddings available.
- * failed  - the model or worker broke; the substring filter is permanent for this page load.
+ * failed  - the model or worker broke; the lexical ranking serves (see start() for the one retry).
  */
 export type EmbeddingStatus = "idle" | "skipped" | "loading" | "ready" | "failed";
 

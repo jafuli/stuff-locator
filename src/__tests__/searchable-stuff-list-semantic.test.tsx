@@ -8,7 +8,7 @@ import type { Item } from "@/lib/fixtures/types";
 // The hook is mocked so each test can decide what the model "says"; the hook
 // itself, and the client under it, have their own tests.
 const search = vi.hoisted(() => ({
-  semanticOrder: null as string[] | null,
+  semantic: null as { order: string[]; agreedTop: string | null } | null,
   status: "idle",
   onIntent: vi.fn(),
   lastDocuments: [] as { id: string; name: string; enriched: string }[],
@@ -16,7 +16,7 @@ const search = vi.hoisted(() => ({
 vi.mock("@/lib/search/use-semantic-search", () => ({
   useSemanticSearch: (documents: { id: string; name: string; enriched: string }[]) => {
     search.lastDocuments = documents;
-    return { semanticOrder: search.semanticOrder, status: search.status, onIntent: search.onIntent };
+    return { semantic: search.semantic, status: search.status, onIntent: search.onIntent };
   },
 }));
 
@@ -50,7 +50,7 @@ function rowNames(): string[] {
 }
 
 beforeEach(() => {
-  search.semanticOrder = null;
+  search.semantic = null;
   search.status = "idle";
   search.onIntent.mockClear();
 });
@@ -89,7 +89,7 @@ test("without a semantic order the substring filter serves, including No matches
 test("with a semantic order, a query sharing no words with the item still finds it", async () => {
   const user = userEvent.setup();
   search.status = "ready";
-  search.semanticOrder = ["passport", "router", "tent", "keys"];
+  search.semantic = { order: ["passport", "router", "tent", "keys"], agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(tent, router, passport, keys)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
@@ -101,7 +101,7 @@ test("with a semantic order, a query sharing no words with the item still finds 
 test("the CLOSEST marker sits on the real top rank, not on the page's first item", async () => {
   const user = userEvent.setup();
   search.status = "ready";
-  search.semanticOrder = ["passport", "tent"];
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
@@ -111,15 +111,16 @@ test("the CLOSEST marker sits on the real top rank, not on the page's first item
   expect(within(closest[0]?.closest("a") ?? document.body).getByText("Passport")).toBeDefined();
 });
 
-test("substring hits are pinned above better semantic matches", async () => {
+test("a lexical hit is fused with the semantic ranking, not pinned regardless of it", async () => {
   const user = userEvent.setup();
   search.status = "ready";
   // By meaning the router is closest to "tent"; by letters only the tent matches.
-  search.semanticOrder = ["router", "tent", "passport"];
+  search.semantic = { order: ["router", "tent", "passport"], agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
 
+  // Two votes (letters + meaning #2) beat one (meaning #1).
   expect(rowNames()).toEqual(["Camping tent", "Spare router", "Passport"]);
 });
 
@@ -127,7 +128,7 @@ test(`the ranked list is a shortlist of ${SHORTLIST_SIZE.toString()}, cut by ran
   const user = userEvent.setup();
   search.status = "ready";
   const many = Array.from({ length: 9 }, (_, i) => item(`i${i.toString()}`, `Thing ${i.toString()}`));
-  search.semanticOrder = [...many].reverse().map((i) => i.id);
+  search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(...many)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "zzz");
@@ -136,22 +137,37 @@ test(`the ranked list is a shortlist of ${SHORTLIST_SIZE.toString()}, cut by ran
   expect(screen.getByRole("status").textContent).toBe("5 results found");
 });
 
-test("every substring hit is kept even when there are more than the shortlist", async () => {
+test("the shortlist cap applies to lexical hits too", async () => {
   const user = userEvent.setup();
   search.status = "ready";
   const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
-  search.semanticOrder = many.map((i) => i.id);
+  search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(...many)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
 
+  // All eight match equally by letters, so meaning orders them, and five are kept.
+  expect(rowNames()).toEqual(["Box 7", "Box 6", "Box 5", "Box 4", "Box 3"]);
+});
+
+test("without the model, every lexical hit is kept, best match first and typos forgiven", async () => {
+  const user = userEvent.setup();
+  search.status = "failed";
+  const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
+  render(<SearchableStuffList entries={entriesOf(...many, passport)} />);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
   expect(rowNames()).toHaveLength(8);
+
+  await user.clear(screen.getByRole("searchbox", { name: "Search your stuff" }));
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pasport");
+  expect(rowNames()).toEqual(["Passport"]);
 });
 
 test("the closing line points to Browse instead of a No matches screen", async () => {
   const user = userEvent.setup();
   search.status = "ready";
-  search.semanticOrder = ["passport", "tent"];
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
   render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
@@ -164,7 +180,7 @@ test("the closing line points to Browse instead of a No matches screen", async (
 test("a ranked result never shows a score", async () => {
   const user = userEvent.setup();
   search.status = "ready";
-  search.semanticOrder = ["passport", "tent"];
+  search.semantic = { order: ["passport", "tent"], agreedTop: null };
   const { container } = render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");

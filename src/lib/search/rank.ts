@@ -1,4 +1,5 @@
 import type { Item } from "@/lib/fixtures/types";
+import type { LexicalMatch, LexicalTier } from "./lexical";
 
 // The pure half of Find: no worker, no DOM, no model. Everything that decides
 // *what order* results come in lives here so it can be tested with plain
@@ -76,39 +77,135 @@ export function enrichedText(item: Pick<Item, "name" | "detail">, pathNames: rea
   return parts.filter((part) => part !== "").join(" · ");
 }
 
-/**
- * Lexical hits first, then everything else by semantic rank.
- *
- * Someone who typed "pass" and has a "Passport" should see it first even if
- * the embedding of a four-letter fragment is noise. Among the pinned hits the
- * semantic order is kept where we have one (it is the better tie-break than
- * insertion order); lexical hits the semantic order doesn't know about
- * (corpus changed since it was computed) keep their own order after those.
- * Every id in `allIds` appears exactly once; ids in either list that aren't
- * in `allIds` are dropped, so a stale semantic result can't resurrect a
- * deleted item.
- */
-export function mergeLexicalFirst(
-  allIds: readonly string[],
-  lexicalIds: readonly string[],
-  semanticOrder: readonly string[],
-): string[] {
-  const known = new Set(allIds);
-  const lexical = new Set(lexicalIds.filter((id) => known.has(id)));
-  const semanticRank = new Map(semanticOrder.map((id, index) => [id, index]));
-
-  const pinned = [...lexical].sort(
-    (a, b) =>
-      (semanticRank.get(a) ?? Infinity) - (semanticRank.get(b) ?? Infinity) ||
-      indexIn(lexicalIds, a) - indexIn(lexicalIds, b),
-  );
-  const rest = semanticOrder.filter((id) => known.has(id) && !lexical.has(id));
-  const seen = new Set([...pinned, ...rest]);
-  const unranked = allIds.filter((id) => !seen.has(id));
-
-  return [...pinned, ...rest, ...unranked];
+export interface SemanticRanking {
+  /** Item ids best-first by max(name, enriched) similarity: rankItems. */
+  order: string[];
+  /** The item ranked first by the bare-name vectors alone, or null for an empty corpus. */
+  nameTop: string | null;
+  /** The item ranked first by the enriched vectors alone, or null for an empty corpus. */
+  enrichedTop: string | null;
 }
 
-function indexIn(ids: readonly string[], id: string): number {
-  return ids.indexOf(id);
+function argmax(query: ArrayLike<number>, corpus: readonly ItemVectors[], side: "name" | "enriched"): string | null {
+  let best: { id: string; score: number } | null = null;
+  for (const entry of corpus) {
+    const score = cosine(query, entry[side]);
+    // Strictly greater: on a tie the earlier item keeps the lead, as in rankItems.
+    if (best === null || score > best.score) {
+      best = { id: entry.id, score };
+    }
+  }
+  return best?.id ?? null;
+}
+
+/**
+ * The semantic ranking, plus each representation's own favourite. When both
+ * representations put the same item first, that is two independent views of
+ * the item agreeing, which is the signal the CLOSEST marker uses instead of a
+ * score threshold (see result-states.ts).
+ */
+export function semanticRanking(query: ArrayLike<number>, corpus: readonly ItemVectors[]): SemanticRanking {
+  return {
+    order: rankItems(query, corpus),
+    nameTop: argmax(query, corpus, "name"),
+    enrichedTop: argmax(query, corpus, "enriched"),
+  };
+}
+
+/**
+ * Reciprocal rank fusion's k. 60 is the value from the original RRF paper
+ * (Cormack et al., 2009) and the common default. It flattens the gap between
+ * neighbouring ranks, so neither list's top spot alone dominates. With a
+ * lexical list that is usually short, it also means a lexical hit
+ * (two contributions) nearly always outranks an item only the model found
+ * (one), without that being a hard rule.
+ */
+export const RRF_K = 60;
+
+/** One row of the fused list and why it is there. */
+export interface FusedResult {
+  id: string;
+  /** How the letters matched, or null if they didn't (the row is there by meaning only). */
+  lexicalTier: LexicalTier | null;
+  /** True if the semantic ranking placed this item (it contributed to the row's rank). */
+  semantic: boolean;
+}
+
+export interface FuseOptions {
+  k?: number;
+  /** Keep only this many rows, a rank cut-off, never a score one. Omitted keeps every row. */
+  limit?: number;
+}
+
+/**
+ * Reciprocal rank fusion of the lexical and the semantic rankings:
+ * score(id) = sum over the lists that contain it of 1 / (k + rank), with rank
+ * starting at 1. Rank-based only: no similarity score and no threshold is
+ * involved anywhere.
+ *
+ * - Lexical rank is by tier, and ties share a rank (competition ranking), so
+ *   among, say, eight "Box …" prefix hits it's the model that orders them,
+ *   not the insertion order.
+ * - Ids not in `allIds` are ignored (a stale semantic answer can't resurrect
+ *   a deleted item), and duplicates count once.
+ * - Ties on score go to the earlier id in `allIds`, so the order is total and
+ *   deterministic.
+ * - With `semanticOrder` null (no model), this is the lexical ranking.
+ */
+export function fuseRankings(
+  allIds: readonly string[],
+  lexical: readonly LexicalMatch[],
+  semanticOrder: readonly string[] | null,
+  { k = RRF_K, limit }: FuseOptions = {},
+): FusedResult[] {
+  const position = new Map(allIds.map((id, index) => [id, index]));
+  const rows = new Map<string, FusedResult & { score: number }>();
+  const rowFor = (id: string) => {
+    let row = rows.get(id);
+    if (!row) {
+      row = { id, lexicalTier: null, semantic: false, score: 0 };
+      rows.set(id, row);
+    }
+    return row;
+  };
+
+  let rank = 0;
+  let previousTier: LexicalTier | null = null;
+  let seen = 0;
+  for (const match of lexical) {
+    if (!position.has(match.id)) {
+      continue;
+    }
+    const row = rowFor(match.id);
+    if (row.lexicalTier !== null) {
+      continue;
+    }
+    seen += 1;
+    if (match.tier !== previousTier) {
+      rank = seen;
+      previousTier = match.tier;
+    }
+    row.lexicalTier = match.tier;
+    row.score += 1 / (k + rank);
+  }
+
+  let semanticRank = 0;
+  for (const id of semanticOrder ?? []) {
+    if (!position.has(id)) {
+      continue;
+    }
+    const row = rowFor(id);
+    if (row.semantic) {
+      continue;
+    }
+    semanticRank += 1;
+    row.semantic = true;
+    row.score += 1 / (k + semanticRank);
+  }
+
+  const fused = [...rows.values()].sort(
+    (a, b) => b.score - a.score || (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0),
+  );
+  const kept = limit === undefined ? fused : fused.slice(0, Math.max(0, limit));
+  return kept.map(({ id, lexicalTier, semantic }) => ({ id, lexicalTier, semantic }));
 }
