@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { EmbeddingClient } from "@/lib/search/embedding-client";
+import { EmbeddingClient, VECTOR_MEMO_LIMIT, vectorMemoKey } from "@/lib/search/embedding-client";
+import { MODEL_ID, MODEL_REVISION } from "@/lib/search/embedding-protocol";
 import { FakeEmbeddingWorker } from "./fake-embedding-worker";
 
 function setup(options: { connection?: { saveData?: boolean; effectiveType?: string } } = {}) {
@@ -195,5 +196,94 @@ describe("persistent storage", () => {
     client.start();
     worker.ready();
     expect(client.getStatus()).toBe("ready");
+  });
+});
+
+describe("vector memo", () => {
+  function ready() {
+    const { worker, client } = setup();
+    client.start();
+    worker.ready();
+    return { worker, client };
+  }
+
+  test("sends only the texts it hasn't embedded yet, as one batch, and keeps the caller's order", async () => {
+    const { worker, client } = ready();
+    const first = client.embed(["a", "bb"]);
+    worker.answer(0);
+    await first;
+
+    const second = client.embed(["ccc", "a", "dddd", "bb"]);
+    expect(worker.embedRequests[1]?.texts).toEqual(["ccc", "dddd"]);
+    worker.answer(1);
+    const vectors = await second;
+    expect(vectors.map((v) => Array.from(v))).toEqual([
+      [3, 1],
+      [1, 1],
+      [4, 1],
+      [2, 1],
+    ]);
+  });
+
+  test("all hits: answers without a worker round-trip", async () => {
+    const { worker, client } = ready();
+    const first = client.embed(["a"]);
+    worker.answer(0);
+    await first;
+    await expect(client.embed(["a", "a"])).resolves.toHaveLength(2);
+    expect(worker.embedRequests).toHaveLength(1);
+  });
+
+  test("a text repeated in one call, or already in flight, is sent once", async () => {
+    const { worker, client } = ready();
+    const first = client.embed(["a", "a"]);
+    const second = client.embed(["a", "b"]);
+    expect(worker.embedRequests.map((r) => r.texts)).toEqual([["a"], ["b"]]);
+    worker.answer(0);
+    worker.answer(1);
+    expect((await first).map((v) => Array.from(v))).toEqual([
+      [1, 1],
+      [1, 1],
+    ]);
+    expect((await second).map((v) => Array.from(v))).toEqual([
+      [1, 1],
+      [1, 1],
+    ]);
+  });
+
+  test("a failed batch isn't remembered: asking again sends it again", async () => {
+    const { worker, client } = ready();
+    const first = client.embed(["a"]);
+    const request = worker.embedRequests.at(0);
+    worker.emit({ type: "error", requestId: request?.requestId ?? -1, message: "oom" });
+    await expect(first).rejects.toThrow("oom");
+
+    const second = client.embed(["a"]);
+    expect(worker.embedRequests).toHaveLength(2);
+    worker.answer(1);
+    await expect(second).resolves.toHaveLength(1);
+  });
+
+  test(`keeps at most ${VECTOR_MEMO_LIMIT.toString()} vectors, dropping the least recently used`, async () => {
+    const { worker, client } = ready();
+    const texts = Array.from({ length: VECTOR_MEMO_LIMIT }, (_, i) => `t${i.toString()}`);
+    const fill = client.embed(texts);
+    worker.answer(0);
+    await fill;
+
+    // Touch t0 so t1 is now the oldest, then push one more in.
+    await client.embed(["t0"]);
+    const extra = client.embed(["new"]);
+    worker.answer(1);
+    await extra;
+
+    const again = client.embed(["t0", "t1", "t2"]);
+    expect(worker.embedRequests[2]?.texts).toEqual(["t1"]);
+    worker.answer(2);
+    await again;
+  });
+
+  test("keys include the model and its pinned revision", () => {
+    expect(vectorMemoKey("passport")).toBe(`${MODEL_ID}@${MODEL_REVISION}\u0000passport`);
   });
 });

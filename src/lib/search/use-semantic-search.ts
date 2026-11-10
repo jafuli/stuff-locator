@@ -43,8 +43,10 @@ function corpusKeyOf(documents: readonly SearchDocument[]): string {
 /**
  * Semantic ranking for `documents` against `query`, computed in a worker.
  *
- * - The corpus (20-50 items at ~6 ms each) is fully re-embedded whenever its
- *   text changes; no diffing, nothing persisted.
+ * - The corpus is embedded whenever its text changes, but the client memoises
+ *   vectors by text, so only strings it has never seen reach the worker (an
+ *   edit costs the changed strings, a remount costs nothing). In memory only;
+ *   nothing is persisted.
  * - Queries are debounced, and each answer is tagged with the request that
  *   asked for it, so a slow old answer can never overwrite a newer one.
  * - Every failure path resolves to `semanticOrder: null`.
@@ -71,7 +73,8 @@ export function useSemanticSearch(
   }
   const [corpus, setCorpus] = useState<{ key: string; vectors: ItemVectors[] } | undefined>();
 
-  // Embed the corpus once the model is ready, and again whenever it changes.
+  // Embed the corpus once the model is ready, and again whenever it changes
+  // (the client's memo turns unchanged strings into instant hits).
   useEffect(() => {
     const { key, documents: docs } = stable;
     if (status !== "ready" || docs.length === 0) {

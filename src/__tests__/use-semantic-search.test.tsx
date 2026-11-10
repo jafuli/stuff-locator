@@ -191,7 +191,7 @@ describe("stale answers", () => {
 });
 
 describe("corpus changes", () => {
-  test("re-embeds the whole corpus when an item is added, and ranks the new one", async () => {
+  test("embeds only the new item's strings when one is added, and ranks it", async () => {
     const { worker, client } = setup();
     const { result, rerender } = renderHook(({ docs }) => useSemanticSearch(docs, "travel documents", client), {
       initialProps: { docs: [passport, tent] },
@@ -214,22 +214,18 @@ describe("corpus changes", () => {
     await waitFor(() => {
       expect(worker.embedRequests.length).toBe(3);
     });
-    expect(worker.embedRequests[2]?.texts).toHaveLength(6);
+    // Passport and the tent are memoised: only the router's two strings go out.
+    expect(worker.embedRequests[2]?.texts).toEqual(["Spare router", "Spare router · Office"]);
     act(() => {
       worker.answer(2);
     });
-    await waitFor(() => {
-      expect(worker.embedRequests.length).toBe(4);
-    });
-    act(() => {
-      worker.answer(3);
-    });
+    // The query vector is memoised too, so ranking needs no further request.
     await waitFor(() => {
       expect(result.current.semanticOrder).toEqual(["passport", "router", "tent"]);
     });
   });
 
-  test("a renamed item is re-embedded even though the list has the same ids", async () => {
+  test("a renamed item's new strings are embedded even though the list has the same ids", async () => {
     const { worker, client } = setup();
     const { result, rerender } = renderHook(({ docs }) => useSemanticSearch(docs, "", client), {
       initialProps: { docs: [passport] },
@@ -252,5 +248,52 @@ describe("corpus changes", () => {
     rerender({ docs: [{ ...passport }, { ...tent }] });
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(worker.embedRequests).toHaveLength(1);
+  });
+});
+
+describe("the vector memo", () => {
+  test("remounting the screen embeds nothing again", async () => {
+    const { worker, client } = setup();
+    const first = renderHook(() => useSemanticSearch([passport, tent], "travel documents", client));
+    await readyWithCorpus(worker, first.result);
+    await waitFor(() => {
+      expect(worker.embedRequests.length).toBe(2);
+    });
+    act(() => {
+      worker.answer(1);
+    });
+    await waitFor(() => {
+      expect(first.result.current.semanticOrder).toEqual(["passport", "tent"]);
+    });
+    first.unmount();
+
+    const second = renderHook(() => useSemanticSearch([passport, tent], "travel documents", client));
+    await waitFor(() => {
+      expect(second.result.current.semanticOrder).toEqual(["passport", "tent"]);
+    });
+    expect(worker.embedRequests).toHaveLength(2);
+  });
+
+  test("deleting an item costs no embedding", async () => {
+    const { worker, client } = setup();
+    const { result, rerender } = renderHook(({ docs }) => useSemanticSearch(docs, "travel documents", client), {
+      initialProps: { docs: [passport, tent, router] },
+    });
+    await readyWithCorpus(worker, result);
+    await waitFor(() => {
+      expect(worker.embedRequests.length).toBe(2);
+    });
+    act(() => {
+      worker.answer(1);
+    });
+    await waitFor(() => {
+      expect(result.current.semanticOrder).toEqual(["passport", "router", "tent"]);
+    });
+
+    rerender({ docs: [passport, router] });
+    await waitFor(() => {
+      expect(result.current.semanticOrder).toEqual(["passport", "router"]);
+    });
+    expect(worker.embedRequests).toHaveLength(2);
   });
 });
