@@ -20,8 +20,8 @@ export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
 // offset on every state — the system's floor for an interactive element.
 const baseClasses =
   "inline-flex min-h-control-height min-w-target-min items-center justify-center gap-2 rounded-control px-5 " +
-  "text-body font-medium outline-none transition-colors duration-150 ease-out " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
+  "text-body font-medium transition-colors duration-150 ease-out " +
+  "focus-ring " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 
 const variantClasses: Record<ButtonVariant, string> = {

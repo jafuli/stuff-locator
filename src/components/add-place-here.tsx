@@ -105,7 +105,7 @@ export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
         onClick={() => {
           setIsOpen(true);
         }}
-        className="min-h-14 w-full rounded-panel border border-dashed border-border-strong bg-surface px-4 text-left text-body text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="min-h-14 w-full rounded-panel border border-dashed border-border-strong bg-surface px-4 text-left text-body text-muted focus-ring"
       >
         + Add a place here
       </button>

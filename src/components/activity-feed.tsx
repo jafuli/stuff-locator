@@ -15,8 +15,7 @@ export interface ActivityFeedProps {
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-const ITEM_LINK_CLASS =
-  "rounded-tape font-medium underline-offset-2 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const ITEM_LINK_CLASS = "rounded-tape font-medium underline-offset-2 hover:underline focus-ring";
 
 /** What one event reads as: a sentence after the actor, and an optional second line. */
 interface Description {

@@ -47,8 +47,7 @@ function isNarrowOnServer(): boolean {
 }
 
 const SEGMENT_CLASSES = "inline-flex min-h-6 items-center whitespace-nowrap";
-const LINK_CLASSES =
-  "rounded-tape outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const LINK_CLASSES = "rounded-tape hover:underline focus-ring";
 // Only the last segment is ever on tape — the location is the hero.
 const TAPE_CLASSES = "h-tape-height rounded-tape bg-tape px-2 text-on-tape shadow-tape";
 
@@ -103,7 +102,7 @@ export function PathTrail({ segments, linked = false, printIn = false }: PathTra
                   onClick={() => {
                     setExpanded(true);
                   }}
-                  className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-tape border border-border-strong px-1 text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-tape border border-border-strong px-1 text-muted focus-ring"
                 >
                   …
                 </button>

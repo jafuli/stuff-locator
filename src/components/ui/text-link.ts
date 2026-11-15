@@ -8,11 +8,11 @@ import { cn } from "@/lib/cn";
  */
 export function textLinkClassName(options: { muted?: boolean; inline?: boolean; className?: string } = {}): string {
   return cn(
-    "rounded-tape underline underline-offset-2 outline-none",
+    "rounded-tape underline underline-offset-2",
     // Inside a sentence the link takes the sentence's own size and line; on
     // its own line it is a 44px-tall target.
     options.inline ? "font-medium" : "inline-flex min-h-target-min w-fit items-center text-meta",
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+    "focus-ring",
     options.muted ? "text-muted" : "text-ink",
     !options.inline && !options.muted && "font-medium",
     options.className,

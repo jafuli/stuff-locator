@@ -227,7 +227,7 @@ export function PlaceManager({
                 disabled={isRenaming}
                 aria-invalid={renameError ? true : undefined}
                 aria-describedby="rename-place-hint"
-                className="min-h-control-height w-full rounded-control border border-border-strong bg-surface px-4 text-body text-ink shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                className="min-h-control-height w-full rounded-control border border-border-strong bg-surface px-4 text-body text-ink shadow-control focus-ring"
               />
             </h1>
             <p id="rename-place-hint" className="text-meta text-muted">
@@ -263,7 +263,7 @@ export function PlaceManager({
               onClick={() => {
                 setMenuOpen((open) => !open);
               }}
-              className="inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-control border border-border-strong bg-surface text-ink shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-control border border-border-strong bg-surface text-ink shadow-control focus-ring"
             >
               <MoreIcon />
             </button>
@@ -348,8 +348,8 @@ function MenuItem({
       tabIndex={-1}
       onClick={onSelect}
       className={cn(
-        "flex min-h-12 flex-col items-start justify-center rounded-control px-3 py-2 text-left text-body outline-none",
-        "hover:bg-divider focus-visible:bg-divider focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus",
+        "flex min-h-12 flex-col items-start justify-center rounded-control px-3 py-2 text-left text-body",
+        "hover:bg-divider focus-visible:bg-divider focus-ring-inset",
         destructive ? "text-signal" : "text-ink",
       )}
     >

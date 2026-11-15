@@ -25,7 +25,7 @@ export function LocationList({ locations }: LocationListProps) {
         <li key={location.id} className="border-b border-divider last:border-b-0">
           <Link
             href={`/browse/${location.id}`}
-            className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-title text-ink outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+            className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-title text-ink focus-ring-inset"
           >
             <span className="min-w-0 break-words">{location.name}</span>
             <ChevronRightIcon className="shrink-0 text-faint" />

@@ -8,8 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { FALLBACK_INITIALS, householdInitials } from "@/lib/household-initials";
 import { createClient } from "@/server/db/client";
 
-const ROW_CLASSES =
-  "flex min-h-14 items-center px-5 text-body text-ink outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus";
+const ROW_CLASSES = "flex min-h-14 items-center px-5 text-body text-ink focus-ring-inset";
 
 /**
  * The household's name, read through the caller's own RLS-scoped session
@@ -84,7 +83,7 @@ export function HouseholdMenu() {
         onClick={() => {
           setOpen(true);
         }}
-        className="flex size-11 items-center justify-center rounded-full border border-border-control bg-surface text-meta text-muted shadow-control outline-none transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="flex size-11 items-center justify-center rounded-full border border-border-control bg-surface text-meta text-muted shadow-control transition-colors duration-150 ease-out focus-ring"
       >
         {initials}
       </button>

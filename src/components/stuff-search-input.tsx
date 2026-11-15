@@ -41,7 +41,7 @@ export function StuffSearchInput({ value, onChange, onFocus, ref }: StuffSearchI
           onChange(event.target.value);
         }}
         onFocus={onFocus}
-        className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control outline-none placeholder:text-muted focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control placeholder:text-muted focus-visible:border-border-strong focus-ring"
       />
     </div>
   );
