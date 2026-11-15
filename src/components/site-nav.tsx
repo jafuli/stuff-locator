@@ -7,6 +7,11 @@ import { NAV_TABS } from "@/lib/nav-tabs";
 
 /**
  * Standalone auth pages — not "the main app" in the sense this nav means.
+ * The signed-out "/" (the marketing home) is not on this list: "/" is also
+ * the signed-in Stuff screen, and the pathname can't tell them apart. That
+ * page marks itself with data-without-app-shell instead, and a CSS rule in
+ * globals.css hides everything marked data-app-shell (both components
+ * below) — server-rendered, so there's no flash and no client session check.
  * Not a route-group restructure (see git history/PR discussion): the app's
  * one genuine not-found.tsx can only ever be scoped to the true root
  * layout, so moving SiteNav into a nested group layout would also silently
@@ -34,7 +39,10 @@ export function SiteNav() {
     return null;
   }
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(var(--spacing-space-6)+env(safe-area-inset-bottom))] min-[375px]:px-5">
+    <div
+      data-app-shell
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(var(--spacing-space-6)+env(safe-area-inset-bottom))] min-[375px]:px-5"
+    >
       <div className="mx-auto flex w-full max-w-sm flex-col items-end gap-3">
         <div className="pointer-events-auto">
           <HouseholdMenu />
@@ -58,5 +66,5 @@ export function NavClearance() {
   if (ROUTES_WITHOUT_NAV.includes(pathname)) {
     return null;
   }
-  return <div aria-hidden="true" className="h-nav-clearance" />;
+  return <div data-app-shell aria-hidden="true" className="h-nav-clearance" />;
 }
