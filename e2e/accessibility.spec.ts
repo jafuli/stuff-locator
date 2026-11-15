@@ -51,10 +51,10 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   return email;
 }
 
-// Home now reads real household data and redirects an unauthenticated
-// visitor to /sign-in (see home.spec.ts) — signs up a fresh account and
+// Home now reads real household data and shows an unauthenticated
+// visitor the marketing home instead — signs up a fresh account and
 // seeds one real item so this genuinely scans Home's *populated* state,
-// not the sign-in redirect or an empty list. Seeding a real row here
+// not the marketing home or an empty list. Seeding a real row here
 // (rather than just testing the empty state) matters specifically because
 // ItemCard's linkLocationSegments mode — a distinct DOM shape used only on
 // Home (see item-card.tsx's own "AC #4, home page only" comment) — isn't
@@ -136,6 +136,8 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   { path: "/", name: "guided onboarding (fresh household)", setup: signUpOnly },
   { path: "/items/new", name: "stash form", setup: signUpOnly },
   { path: "/settings/invite", name: "invite panel", setup: signUpOnly },
+  // Signed out, "/" is the marketing home (no setup on purpose).
+  { path: "/", name: "marketing home (signed out)" },
   { path: "/sign-in", name: "sign in" },
   { path: "/sign-up", name: "sign up" },
   { path: "/forgot-password", name: "forgot password" },

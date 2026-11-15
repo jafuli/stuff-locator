@@ -24,10 +24,9 @@ async function signUpFreshAccount(page: Page): Promise<string> {
 // ever runs a query, so what the id points at is irrelevant there.
 const UNRESOLVABLE_ID = "2a4e6c9b-0000-4000-8000-000000000001";
 
-// AC #1's list, exactly. `next` is what the proxy should preserve —
-// null for "/", which is the default landing spot and needs no param.
-const PROTECTED_ROUTES: { path: string; next: string | null }[] = [
-  { path: "/", next: null },
+// AC #1's list, minus "/" (public since the marketing home — see the
+// tests after the loop). `next` is what the proxy should preserve.
+const PROTECTED_ROUTES: { path: string; next: string }[] = [
   { path: "/browse", next: "/browse" },
   { path: `/browse/${UNRESOLVABLE_ID}`, next: `/browse/${UNRESOLVABLE_ID}` },
   { path: `/items/${UNRESOLVABLE_ID}`, next: `/items/${UNRESOLVABLE_ID}` },
@@ -46,6 +45,28 @@ for (const route of PROTECTED_ROUTES) {
     await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
   });
 }
+
+test("signed out, / shows the marketing home without the app's nav", async ({ page }) => {
+  await page.goto("/");
+
+  expect(new URL(page.url()).pathname).toBe("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
+  // SiteNav still mounts on "/" (it decides by pathname); the CSS rule keyed
+  // on data-without-app-shell is what keeps it off screen.
+  await expect(page.getByRole("navigation", { name: "Primary" })).toBeHidden();
+});
+
+test("signed out, the marketing home's Sign up and Sign in links land on their pages", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Sign up" }).click();
+  await expect(page).toHaveURL("/sign-up");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+  await page.goto("/");
+  await page.getByRole("link", { name: "Sign in" }).click();
+  await expect(page).toHaveURL("/sign-in");
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
+});
 
 // AC #2. A regression here locks everyone out of the app, including out
 // of the ability to get back in, so it's asserted rather than assumed.

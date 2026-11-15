@@ -5,7 +5,7 @@ import { tabUntilFocused } from "./utils";
 
 // Home now reads real household data (see the PR description) instead of
 // the ITEMS/LOCATIONS fixtures — every test signs up a fresh real account
-// first (the route redirects an unauthenticated visitor to /sign-in), then
+// first (signed out, "/" is the marketing home instead), then
 // seeds a real item via the service-role client for the tests that need
 // one to render. Matches the account-per-test pattern already established
 // in sign-in.spec.ts / sign-up.spec.ts / stash.spec.ts.
