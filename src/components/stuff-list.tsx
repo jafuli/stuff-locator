@@ -4,6 +4,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { LocationBreadcrumbSegment } from "@/components/path-trail";
 import type { Item } from "@/lib/fixtures/types";
 
+/**
+ * The ResultList panel: surface, hairline border, radius-panel, dividers
+ * between rows (ItemCard draws them). overflow-hidden keeps the first/last
+ * rows inside the rounded corners. Exported for the marketing home's
+ * sample rows, so the demo can't drift from the real list.
+ */
+export const RESULT_LIST_PANEL_CLASSES = "overflow-hidden rounded-panel border border-hairline bg-surface";
+
 export interface StuffListEntry {
   item: Item;
   /** Root→leaf path segments for item.locationId — already resolved by the caller. */
@@ -61,10 +69,7 @@ export function StuffList({
   }
 
   return (
-    // The ResultList panel: surface, hairline border, radius-panel, dividers
-    // between rows. overflow-hidden keeps the first/last rows inside the
-    // rounded corners.
-    <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
+    <div className={RESULT_LIST_PANEL_CLASSES}>
       {entries.map(({ item, segments, byName }) => (
         <ItemCard
           key={item.id}

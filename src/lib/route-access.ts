@@ -8,11 +8,18 @@
  * that proved the old per-page approach leaks: it shipped reachable by
  * anyone, because nothing forced the question to be asked.
  *
+ * "/" is on the list on its own, exactly (its children are not — the match
+ * below is equality, not a prefix): it serves two screens. src/app/page.tsx
+ * checks the session itself and renders the Stuff screen to a member or the
+ * marketing home (src/components/marketing-home.tsx) to a signed-out
+ * visitor, so bouncing that visitor to /sign-in here would hide the one page
+ * written for them.
+ *
  * Static assets, /_next/*, /serwist/*, the manifest and /~offline never
  * reach this module at all — src/proxy.ts's own `matcher` filters them
  * out before the proxy function runs.
  */
-export const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"] as const;
+export const PUBLIC_PATHS = ["/", "/sign-in", "/sign-up", "/forgot-password", "/reset-password"] as const;
 
 /**
  * The invite landing is public on purpose. src/app/join/[code]/page.tsx

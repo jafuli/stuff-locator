@@ -84,3 +84,14 @@ test("NavClearance renders nothing on a standalone auth page, so it doesn't add 
   const { container } = render(<NavClearance />);
   expect(container.firstChild).toBeNull();
 });
+
+test("SiteNav and NavClearance are marked as app shell, so the signed-out home can hide them with CSS", () => {
+  usePathname.mockReturnValue("/");
+  const { container } = render(
+    <>
+      <SiteNav />
+      <NavClearance />
+    </>,
+  );
+  expect(container.querySelectorAll("[data-app-shell]")).toHaveLength(2);
+});
