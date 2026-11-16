@@ -52,7 +52,9 @@ export function safeRedirectPath(value: string | null | undefined): string {
   // return — /sign-in?next=/sign-in would bounce forever.
   const pathname = pathnameOf(value);
   const normalised = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  if ((PUBLIC_PATHS as readonly string[]).includes(normalised)) {
+  // "/" is public too (the signed-out marketing home) but it's no loop: once
+  // signed in it is the Stuff screen, and "/?q=…" should keep its query.
+  if (normalised !== DEFAULT_REDIRECT_PATH && (PUBLIC_PATHS as readonly string[]).includes(normalised)) {
     return DEFAULT_REDIRECT_PATH;
   }
 

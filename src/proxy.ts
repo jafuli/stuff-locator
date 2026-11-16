@@ -21,12 +21,9 @@ export async function proxy(request: NextRequest) {
 
   const signInUrl = new URL("/sign-in", request.url);
   // Return-to, so a shared link to a specific item survives the detour
-  // through sign-in. "/" is the default landing spot anyway, so tacking
-  // ?next=/ onto it would just be noise in the URL bar.
-  const intended = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-  if (intended !== "/") {
-    signInUrl.searchParams.set("next", intended);
-  }
+  // through sign-in. "/" never gets here (it's public: signed out, it is the
+  // marketing home), so every bounced request carries a real destination.
+  signInUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   const redirect = NextResponse.redirect(signInUrl);
   // Carry over anything updateSession just set. A redirect response is a

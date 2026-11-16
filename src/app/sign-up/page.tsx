@@ -1,5 +1,6 @@
 import { SignUpForm } from "@/components/sign-up-form";
 import { safeRedirectPath } from "@/lib/safe-redirect-path";
+import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
 
 // Standalone auth page, and one of the four paths src/lib/route-access.ts
 // keeps reachable without a session (the app is otherwise deny-by-default
@@ -19,9 +20,12 @@ export default async function SignUpPage(props: PageProps<"/sign-up">) {
   const { next } = await props.searchParams;
 
   return (
-    <main className="flex flex-col gap-4 px-gutter pt-6">
-      <h1 className="text-display text-ink">Create your account</h1>
-      <SignUpForm next={safeRedirectPath(typeof next === "string" ? next : undefined)} />
-    </main>
+    <div className={STANDALONE_PAGE_CLASSES}>
+      <SiteHeader homeLink />
+      <main className="flex flex-col gap-4">
+        <h1 className="text-display text-ink">Create your account</h1>
+        <SignUpForm next={safeRedirectPath(typeof next === "string" ? next : undefined)} />
+      </main>
+    </div>
   );
 }

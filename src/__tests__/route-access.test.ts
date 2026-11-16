@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 import { PUBLIC_PATHS, requiresAuth } from "@/lib/route-access";
 
-// The eight routes this task's Acceptance Criteria names as protected.
-// Spelled out one per entry rather than generated, so the list is
-// reviewable against the AC line by line.
+// The routes the route-protection task's Acceptance Criteria named as
+// protected, minus "/" — public since the marketing home (see the test
+// below). Spelled out one per entry rather than generated, so the list is
+// reviewable line by line.
 const AC_PROTECTED_ROUTES = [
-  "/",
   "/browse",
   "/browse/2a4e6c9b-0000-4000-8000-000000000001",
   "/items/2a4e6c9b-0000-4000-8000-000000000002",
@@ -18,7 +18,7 @@ test.each(AC_PROTECTED_ROUTES)("%s requires a session", (path) => {
   expect(requiresAuth(path)).toBe(true);
 });
 
-// AC #2: these four stay reachable without a session. A regression here
+// AC #2: the auth pages (and "/") stay reachable without a session. A regression here
 // locks every user out of the app permanently, including the ability to
 // get back in.
 test.each([...PUBLIC_PATHS])("%s stays reachable without a session", (path) => {
@@ -53,4 +53,15 @@ test("a path that merely starts with a public path's name is still protected", (
   // on startsWith instead of equality would wave it through.
   expect(requiresAuth("/sign-innocuous")).toBe(true);
   expect(requiresAuth("/joined")).toBe(true);
+});
+
+test('"/" is public on its own, but none of its children are', () => {
+  // page.tsx shows a signed-out visitor the marketing home, so the proxy
+  // must let "/" through — by equality, never as a prefix that would open
+  // up the whole app.
+  expect(requiresAuth("/")).toBe(false);
+  expect(requiresAuth("/browse")).toBe(true);
+  expect(requiresAuth("/items/new")).toBe(true);
+  expect(requiresAuth("/activity")).toBe(true);
+  expect(requiresAuth("/settings/invite")).toBe(true);
 });

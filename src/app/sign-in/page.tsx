@@ -1,5 +1,6 @@
 import { SignInForm } from "@/components/sign-in-form";
 import { safeRedirectPath } from "@/lib/safe-redirect-path";
+import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
 
 // Standalone auth page — see src/app/sign-up/page.tsx's comment; the same
 // scope notes apply here.
@@ -15,9 +16,12 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
   const { next } = await props.searchParams;
 
   return (
-    <main className="flex flex-col gap-4 px-gutter pt-6">
-      <h1 className="text-display text-ink">Sign in</h1>
-      <SignInForm next={safeRedirectPath(typeof next === "string" ? next : undefined)} />
-    </main>
+    <div className={STANDALONE_PAGE_CLASSES}>
+      <SiteHeader homeLink />
+      <main className="flex flex-col gap-4">
+        <h1 className="text-display text-ink">Sign in</h1>
+        <SignInForm next={safeRedirectPath(typeof next === "string" ? next : undefined)} />
+      </main>
+    </div>
   );
 }

@@ -105,3 +105,16 @@ test("a row found by meaning alone says so in words, with the ≈ hidden from as
   expect(label.className).not.toMatch(/tape|signal/);
   expect(container.querySelector("[aria-hidden='true']")?.textContent).toBe("≈ ");
 });
+
+test("without an href, renders the same row as a non-interactive div", () => {
+  render(<ItemCard item={baseItem} segments={segments} byName="Noa" />);
+  expect(screen.queryByRole("link")).toBeNull();
+  expect(screen.getByText("Spare house keys")).toBeDefined();
+  expect(document.body.textContent).toContain("Garage › Closet › Toolbox › Red box");
+  expect(document.body.textContent).toContain("Noa,");
+});
+
+test("without an href, linkLocationSegments is ignored rather than linking the path", () => {
+  render(<ItemCard item={baseItem} segments={segments} linkLocationSegments />);
+  expect(screen.queryByRole("link")).toBeNull();
+});

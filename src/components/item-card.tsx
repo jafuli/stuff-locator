@@ -8,8 +8,13 @@ export interface ItemCardProps {
   item: Item;
   /** Already-resolved path for item.locationId — see PathTrail. */
   segments: LocationBreadcrumbSegment[];
-  /** Where this card links to — typically an item's `/items/${id}` detail route. */
-  href: string;
+  /**
+   * Where this card links to — typically an item's `/items/${id}` detail
+   * route. Omit it for a row that only illustrates (the marketing home's
+   * sample results): the same row renders as a plain, non-interactive
+   * `<div>`, and `linkLocationSegments` is ignored.
+   */
+  href?: string;
   /**
    * When true, the path's own segments become links to `/browse/[id]`
    * (home page only). An `<a>` can't nest another `<a>`, so in this mode the
@@ -31,6 +36,8 @@ export interface ItemCardProps {
    */
   matchedOnMeaning?: boolean;
 }
+
+const ROW_CLASSES = "flex min-h-14 flex-col gap-1 border-b border-divider px-4 py-3 last:border-b-0";
 
 // Rows sit in a panel with overflow hidden, so the focus ring is drawn
 // inside the row rather than offset outside it (where it would be clipped).
@@ -75,12 +82,19 @@ export function ItemCard({
   );
   const metaLine = meta ? <p className="text-meta text-muted">{meta}</p> : null;
 
+  if (href === undefined) {
+    return (
+      <div className={ROW_CLASSES}>
+        {titleAndDetail}
+        <PathTrail segments={segments} />
+        {metaLine}
+      </div>
+    );
+  }
+
   if (!linkLocationSegments) {
     return (
-      <Link
-        href={href}
-        className={cn("flex min-h-14 flex-col gap-1 border-b border-divider px-4 py-3 last:border-b-0", LINK_CLASSES)}
-      >
+      <Link href={href} className={cn(ROW_CLASSES, LINK_CLASSES)}>
         {titleAndDetail}
         <PathTrail segments={segments} />
         {metaLine}
@@ -89,7 +103,7 @@ export function ItemCard({
   }
 
   return (
-    <div className="flex min-h-14 flex-col gap-1 border-b border-divider px-4 py-3 last:border-b-0">
+    <div className={ROW_CLASSES}>
       <Link href={href} className={cn("flex flex-col gap-1 rounded-tape", LINK_CLASSES)}>
         {titleAndDetail}
       </Link>
