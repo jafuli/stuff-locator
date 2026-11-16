@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { MarketingHome } from "@/components/marketing-home";
 
 const DESCRIPTION =
@@ -20,6 +21,16 @@ export const metadata: Metadata = {
 // Only ever reached through the proxy's rewrite of a signed-out "/". A
 // direct request for /welcome is redirected to "/" first, so the marketing
 // home has one URL (see resolveRoute in src/lib/route-access.ts).
-export default function WelcomePage() {
+//
+// Rendered per request, never prerendered, for two reasons:
+// - What "/" returns depends on the session cookie. As a static page, the
+//   signed-out prefetch of "/" (every wordmark link) came back as a
+//   long-lived static payload (s-maxage of a year), and the client router
+//   reused it after sign-in, showing a signed-in user the marketing page.
+//   e2e/route-protection.spec.ts ("prefetched while signed out") covers it.
+// - The sample rows' "3 days ago" is measured from the render time; static,
+//   it would freeze at build time.
+export default async function WelcomePage() {
+  await connection();
   return <MarketingHome />;
 }
