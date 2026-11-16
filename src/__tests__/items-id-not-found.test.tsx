@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import NotFound from "@/app/items/[id]/not-found";
+import NotFound from "@/app/(app)/items/[id]/not-found";
 
 test("renders a deliberate not-found state with a real heading and a working way back to the list", () => {
   render(<NotFound />);

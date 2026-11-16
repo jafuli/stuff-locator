@@ -177,19 +177,6 @@
   }
 }
 
-/*
-  App shell opt-out. SiteNav and NavClearance (site-nav.tsx) carry
-  data-app-shell; a page that isn't part of the signed-in app (the signed-out
-  marketing home at "/", which shares its pathname with the Stuff screen)
-  renders data-without-app-shell on its root. The marker arrives in the
-  server-rendered HTML, so the nav is hidden from the first paint — no flash,
-  no client-side session check. The auth pages still opt out by pathname
-  (ROUTES_WITHOUT_NAV).
-*/
-body:has([data-without-app-shell]) [data-app-shell] {
-  display: none;
-}
-
 @utility shadow-control {
   box-shadow: var(--shadow-control);
 }

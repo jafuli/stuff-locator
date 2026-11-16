@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
 
 // Invite-partner UI (/settings/invite) needs a real signed-in session — it
-// redirects an unauthenticated visitor to /sign-in (src/app/settings/invite/
+// redirects an unauthenticated visitor to /sign-in (src/app/(app)/settings/invite/
 // page.tsx), the first route in this app to gate on auth this way. Every
 // test signs up a fresh real account first, matching the account-per-test
 // pattern already established in sign-in.spec.ts / sign-up.spec.ts.

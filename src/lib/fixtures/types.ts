@@ -1,6 +1,6 @@
 // Originally MOCK DATA shapes for the src/components demo/catalog and the
 // fixture arrays in this directory — NOT the real schema (see
-// src/lib/database.types.ts for that). Home (src/app/page.tsx) now also
+// src/lib/database.types.ts for that). Home (src/app/(app)/page.tsx) now also
 // reuses these same shapes as its mapping target for real Supabase rows:
 // filterItems/StuffList/ItemCard/getBreadcrumbSegments all operate on this
 // shape structurally, so real rows are adapted into it at the read

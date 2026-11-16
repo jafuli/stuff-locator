@@ -32,7 +32,7 @@ export interface SignInFormProps {
   /**
    * Where to land after a successful sign-in — the return-to path the
    * proxy attached when it bounced a signed-out visitor here. Already
-   * validated by src/app/sign-in/page.tsx (safeRedirectPath), which is
+   * validated by src/app/(public)/sign-in/page.tsx (safeRedirectPath), which is
    * the only place this arrives from untrusted input; defaults to "/".
    */
   next?: string;

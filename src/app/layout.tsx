@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Next, IBM_Plex_Mono } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
-import { NavClearance, SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 // The design system's two families. Weights are exactly what the type styles
@@ -44,24 +43,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${atkinson.variable} ${plexMono.variable} h-full antialiased`}>
       {/*
-        Fixed-height flex column so BottomNav (rendered via SiteNav below)
-        pins to the bottom of the viewport instead of getting pushed below
-        the fold by page content — the content area scrolls independently.
-        This also affects /~offline and /~components (both wired here at
-        the true root layout, not scoped to just / and /activity). /~offline
-        used to leave extra scroll slack under this shell (its own <main>
-        used min-h-dvh, forcing a full viewport height on top of this
-        already-constrained container) — fixed in ~offline/page.tsx
-        (min-h-full instead). /~components never had the same issue — its
-        content naturally scrolls within this shared container.
+        Fixed-height flex column with one scrolling content area, shared by
+        every page. Which frame a page gets is decided one level down, by
+        route group (ADR 0013): (app)/layout.tsx adds the floating nav and
+        its clearance (it's position: fixed, so it pins to the viewport, not
+        this scroller); (public)/layout.tsx adds the standalone column.
+        /~offline sizes itself with min-h-full minus the nav clearance rather
+        than min-h-dvh, which would overflow this already-constrained
+        container (see ~offline/page.tsx).
       */}
       <body className="flex h-dvh flex-col overflow-hidden">
         <SerwistProvider swUrl="/serwist/sw.js">
-          <div className="flex-1 overflow-y-auto">
-            {children}
-            <NavClearance />
-          </div>
-          <SiteNav />
+          <div className="flex-1 overflow-y-auto">{children}</div>
         </SerwistProvider>
       </body>
     </html>

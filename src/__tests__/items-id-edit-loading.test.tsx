@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
-import Loading from "@/app/items/[id]/edit/loading";
+import Loading from "@/app/(app)/items/[id]/edit/loading";
 
 test("renders an accessible, edit-form-scoped loading state", () => {
   render(<Loading />);

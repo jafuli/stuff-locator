@@ -1,3 +1,4 @@
+import { SiteHeader } from "@/components/site-header";
 import { JoinInviteFlow } from "@/components/join-invite-flow";
 import { createClient } from "@/server/db/server";
 
@@ -17,9 +18,12 @@ export default async function Page(props: PageProps<"/join/[code]">) {
   } = await supabase.auth.getUser();
 
   return (
-    <main className="flex flex-col gap-4 px-gutter pt-6">
-      <h1 className="text-display text-ink">Join a household</h1>
-      <JoinInviteFlow code={code} initiallySignedIn={Boolean(user)} />
-    </main>
+    <>
+      <SiteHeader homeLink />
+      <main className="flex flex-col gap-4">
+        <h1 className="text-display text-ink">Join a household</h1>
+        <JoinInviteFlow code={code} initiallySignedIn={Boolean(user)} />
+      </main>
+    </>
   );
 }

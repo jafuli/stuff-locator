@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
-import { MarketingHome } from "@/components/marketing-home";
 import type { StuffListEntry } from "@/components/stuff-list";
 import { StuffScreenSkeleton } from "@/components/stuff-screen-skeleton";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
@@ -13,21 +12,6 @@ import { STUFF_HEADING } from "@/lib/stuff-heading";
 import { buttonClassName } from "@/components/ui/button";
 import { createClient } from "@/server/db/server";
 import { fetchDisplayNames } from "@/server/services/profiles";
-
-const DESCRIPTION =
-  "A shared list of the 20–50 hard-to-find things you and your partner keep at home, and exactly where each one is.";
-
-// For a shared link to "/", which a signed-out visitor sees as the marketing
-// home. No `title` here, so the root layout's "Stuff Locator" stays.
-export const metadata: Metadata = {
-  description: DESCRIPTION,
-  openGraph: {
-    title: "Stuff Locator",
-    description: DESCRIPTION,
-    siteName: "Stuff Locator",
-    type: "website",
-  },
-};
 
 // The Stash entry point is a link (it navigates) wearing the system's primary
 // button look: ink fill, paper text.
@@ -52,16 +36,16 @@ export default async function Page(props: PageProps<"/">) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // "/" is public in src/lib/route-access.ts, so a signed-out visitor gets
-  // here instead of being bounced to /sign-in: they see what the app is.
+  // A signed-out "/" never reaches this page: src/proxy.ts rewrites it to
+  // the marketing home (/welcome). The proxy only checks the cookie's
+  // claims, though, so a session that looked valid there but has no user
+  // here (deleted account, revoked session) still needs somewhere to go.
   if (!user) {
-    return <MarketingHome />;
+    redirect("/sign-in");
   }
 
-  // The skeleton covers only the signed-in data reads, not the session
-  // check above, so a signed-out "/" never flashes the Stuff screen before
-  // the marketing home (see stuff-screen-skeleton.tsx for why this isn't a
-  // root loading.tsx).
+  // The skeleton covers only the data reads, not the session check above
+  // (see stuff-screen-skeleton.tsx for why this isn't a root loading.tsx).
   return (
     <Suspense fallback={<StuffScreenSkeleton />}>
       <StuffScreen userId={user.id} initialQuery={initialQuery} />

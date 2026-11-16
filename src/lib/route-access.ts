@@ -8,21 +8,17 @@
  * that proved the old per-page approach leaks: it shipped reachable by
  * anyone, because nothing forced the question to be asked.
  *
- * "/" is on the list on its own, exactly (its children are not — the match
- * below is equality, not a prefix): it serves two screens. src/app/page.tsx
- * checks the session itself and renders the Stuff screen to a member or the
- * marketing home (src/components/marketing-home.tsx) to a signed-out
- * visitor, so bouncing that visitor to /sign-in here would hide the one page
- * written for them.
+ * "/" is not on the list: a signed-out "/" never reaches the gate, because
+ * resolveRoute below rewrites it to the marketing home first.
  *
  * Static assets, /_next/*, /serwist/*, the manifest and /~offline never
  * reach this module at all — src/proxy.ts's own `matcher` filters them
  * out before the proxy function runs.
  */
-export const PUBLIC_PATHS = ["/", "/sign-in", "/sign-up", "/forgot-password", "/reset-password"] as const;
+export const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"] as const;
 
 /**
- * The invite landing is public on purpose. src/app/join/[code]/page.tsx
+ * The invite landing is public on purpose. src/app/(public)/join/[code]/page.tsx
  * resolves whether the visitor has a session and hands that down to
  * JoinInviteFlow, which shows a sign-up/sign-in toggle to a logged-out
  * one. Gating it would make every invite link dead for precisely the
@@ -60,4 +56,37 @@ export function requiresAuth(pathname: string): boolean {
   }
 
   return !PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+/**
+ * The marketing home's real route. Signed out, "/" is rewritten here (the
+ * URL in the address bar stays "/"); asked for by name, it redirects to "/"
+ * so the page has one canonical URL. See ADR 0013.
+ */
+export const MARKETING_PATH = "/welcome";
+
+export type RouteDecision =
+  { kind: "next" } | { kind: "rewrite"; pathname: string } | { kind: "redirect"; pathname: string; next?: string };
+
+/**
+ * Everything src/proxy.ts decides about a request, as data, so it can be
+ * tested without a NextRequest. `search` is the query string including its
+ * "?" (or ""), carried into the sign-in return path.
+ */
+export function resolveRoute(pathname: string, search: string, signedIn: boolean): RouteDecision {
+  const path = normalise(pathname);
+
+  if (path === MARKETING_PATH) {
+    return { kind: "redirect", pathname: "/" };
+  }
+
+  if (path === "/" && !signedIn) {
+    return { kind: "rewrite", pathname: MARKETING_PATH };
+  }
+
+  if (signedIn || !requiresAuth(pathname)) {
+    return { kind: "next" };
+  }
+
+  return { kind: "redirect", pathname: "/sign-in", next: `${pathname}${search}` };
 }

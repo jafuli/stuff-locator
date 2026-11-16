@@ -41,8 +41,3 @@ test("has no CLOSEST marker — there's no search to be closest to", () => {
   render(<MarketingHome now={NOW} />);
   expect(screen.queryByText("Closest")).toBeNull();
 });
-
-test("marks its root so the app shell (floating nav) is hidden", () => {
-  const { container } = render(<MarketingHome now={NOW} />);
-  expect(container.querySelector("[data-without-app-shell]")).not.toBeNull();
-});

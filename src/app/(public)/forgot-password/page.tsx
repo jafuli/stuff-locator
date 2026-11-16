@@ -1,5 +1,5 @@
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
-import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
+import { SiteHeader } from "@/components/site-header";
 
 // Standalone auth page — mirrors sign-in/sign-up's shape (no loading.tsx/
 // error.tsx: this is a pure client form with no async Server Component
@@ -7,12 +7,12 @@ import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
 // such as Stash or item-detail).
 export default function ForgotPasswordPage() {
   return (
-    <div className={STANDALONE_PAGE_CLASSES}>
+    <>
       <SiteHeader homeLink />
       <main className="flex flex-col gap-4">
         <h1 className="text-display text-ink">Reset your password</h1>
         <ForgotPasswordForm />
       </main>
-    </div>
+    </>
   );
 }
