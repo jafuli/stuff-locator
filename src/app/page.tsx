@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
 import { MarketingHome } from "@/components/marketing-home";
 import type { StuffListEntry } from "@/components/stuff-list";
+import { StuffScreenSkeleton } from "@/components/stuff-screen-skeleton";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
@@ -56,6 +58,25 @@ export default async function Page(props: PageProps<"/">) {
     return <MarketingHome />;
   }
 
+  // The skeleton covers only the signed-in data reads, not the session
+  // check above, so a signed-out "/" never flashes the Stuff screen before
+  // the marketing home (see stuff-screen-skeleton.tsx for why this isn't a
+  // root loading.tsx).
+  return (
+    <Suspense fallback={<StuffScreenSkeleton />}>
+      <StuffScreen userId={user.id} initialQuery={initialQuery} />
+    </Suspense>
+  );
+}
+
+interface StuffScreenProps {
+  userId: string;
+  initialQuery: string;
+}
+
+async function StuffScreen({ userId, initialQuery }: StuffScreenProps) {
+  const supabase = await createClient();
+
   // create_household's own migration notes multi-household membership is
   // intentionally unrestricted (composite PK, not unique on user_id) — a
   // caller could belong to more than one. Without an explicit order, which
@@ -68,7 +89,7 @@ export default async function Page(props: PageProps<"/">) {
   const { data: membership, error: membershipError } = await supabase
     .from("household_members")
     .select("household_id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("joined_at", { ascending: true })
     .limit(1)
     .maybeSingle();

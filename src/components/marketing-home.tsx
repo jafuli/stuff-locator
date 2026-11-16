@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ItemCard } from "@/components/item-card";
+import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
 import { RESULT_LIST_PANEL_CLASSES, type StuffListEntry } from "@/components/stuff-list";
 import { buttonClassName } from "@/components/ui/button";
 import { textLinkClassName } from "@/components/ui/text-link";
@@ -81,19 +82,17 @@ export interface MarketingHomeProps {
  *
  * data-without-app-shell hides the floating nav (see globals.css): "/" is
  * also the signed-in Stuff screen, so the nav can't decide by pathname.
- *
- * The wordmark uses the logo-tape *type style* on ink, not the bg-tape fill:
- * label tape stays reserved for the last segment of a location.
  */
 export function MarketingHome({ now = new Date() }: MarketingHomeProps) {
   return (
-    <div data-without-app-shell className="mx-auto flex w-full max-w-xl flex-col gap-8 px-gutter pt-6 pb-10">
-      <header className="flex items-center justify-between gap-3">
-        <span className="inline-block bg-ink px-2 py-1 text-logo-tape text-paper">Stuff Locator</span>
-        <Link href="/sign-in" className={textLinkClassName()}>
-          Sign in
-        </Link>
-      </header>
+    <div data-without-app-shell className={STANDALONE_PAGE_CLASSES}>
+      <SiteHeader
+        action={
+          <Link href="/sign-in" className={textLinkClassName()}>
+            Sign in
+          </Link>
+        }
+      />
 
       <main className="flex flex-col gap-8">
         <div className="flex flex-col gap-4">
