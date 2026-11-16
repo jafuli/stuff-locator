@@ -184,3 +184,22 @@ test("the invite landing stays reachable without an account", async ({ page }) =
   expect(new URL(page.url()).pathname).toBe("/join/some-code-that-does-not-resolve");
   await expect(page.getByRole("heading", { level: 1, name: "Join a household" })).toBeVisible();
 });
+
+test("a link to / prefetched while signed out still opens Stuff once a session exists", async ({ page, context }) => {
+  // The shape of the join flow: a public page prefetches "/" (the wordmark
+  // link) while signed out, then the visitor gets a session without a router
+  // refresh, then follows a plain <Link href="/">. "/" is two different
+  // documents depending on the cookie, so that signed-out prefetch must not
+  // be reused. /welcome is rendered per request (connection()) for exactly
+  // this reason.
+  await page.goto("/forgot-password");
+  await page.waitForLoadState("networkidle");
+
+  const other = await context.newPage();
+  await signUpFreshAccount(other);
+  await other.close();
+
+  await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+});

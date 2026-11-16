@@ -1,8 +1,21 @@
-import { expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MarketingHome } from "@/components/marketing-home";
 
 const NOW = new Date("2026-11-15T12:00:00Z");
+
+// The sample rows are offsets from `now`, but ItemCard formats "3 days ago"
+// against the real clock. Freezing Date (only Date, so timers still run)
+// keeps both on the same instant; without it this test started failing a
+// day after NOW.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 test("has exactly one h1, phrased as the screen's question", () => {
   render(<MarketingHome now={NOW} />);
