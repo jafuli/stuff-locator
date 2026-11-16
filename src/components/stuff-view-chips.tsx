@@ -13,9 +13,9 @@ export interface StuffViewChipsProps {
 // Chips press down 1px on tap (brand book); the transform is dropped under
 // prefers-reduced-motion by the global switch in globals.css.
 const CHIP_BASE =
-  "inline-flex min-h-target-min items-center justify-center rounded-full border px-4 text-nav outline-none " +
+  "inline-flex min-h-target-min items-center justify-center rounded-full border px-4 text-nav " +
   "transition-[transform,background-color] duration-150 ease-out active:translate-y-px " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+  "focus-ring";
 const CHIP_ACTIVE = "border-ink bg-ink text-paper";
 // A chip's only edge is its border, so it's border-strong, not border-control.
 const CHIP_INACTIVE = "border-border-strong bg-surface text-muted [font-weight:400]";

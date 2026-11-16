@@ -148,6 +148,36 @@
   of its own name).
 */
 /*
+  The focus ring: 2px `focus` outline with a 2px offset, on keyboard focus
+  only. One definition for every interactive element: use `focus-ring`, or
+  `focus-ring-inset` for a row inside an overflow-hidden panel, where an
+  outside ring would be clipped.
+
+  Spelled out in full on purpose. The previous per-component pattern,
+  `outline-none focus-visible:outline-2 …`, drew nothing under Tailwind v4:
+  `outline-none` sets `--tw-outline-style: none`, and `outline-2` takes its
+  style from that same variable, so the focused outline computed to `none`.
+  This rule doesn't read any Tailwind variable, so that can't recur.
+*/
+@utility focus-ring {
+  outline-style: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+@utility focus-ring-inset {
+  outline-style: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+}
+
+/*
   App shell opt-out. SiteNav and NavClearance (site-nav.tsx) carry
   data-app-shell; a page that isn't part of the signed-in app (the signed-out
   marketing home at "/", which shares its pathname with the Stuff screen)

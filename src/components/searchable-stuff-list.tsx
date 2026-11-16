@@ -191,10 +191,7 @@ export function SearchableStuffList({
           {isRanked ? (
             <p className="text-center text-meta text-muted">
               Nothing else close. Try another word, or{" "}
-              <Link
-                href="/browse"
-                className="rounded-tape underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-              >
+              <Link href="/browse" className="rounded-tape underline focus-ring">
                 browse by place
               </Link>
               .

@@ -62,7 +62,7 @@ export function SignOutButton({ assumeSession = false }: SignOutButtonProps) {
         onClick={() => void handleSignOut()}
         disabled={isSigningOut}
         aria-busy={isSigningOut || undefined}
-        className="flex min-h-14 w-full items-center px-5 text-left text-body text-signal outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
+        className="flex min-h-14 w-full items-center px-5 text-left text-body text-signal focus-ring-inset disabled:opacity-60"
       >
         {isSigningOut ? "Signing out…" : "Sign out"}
       </button>

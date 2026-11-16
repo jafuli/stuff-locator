@@ -95,7 +95,7 @@ export function HouseholdSheetDemo() {
         onClick={() => {
           setOpen(true);
         }}
-        className="flex size-11 items-center justify-center rounded-full border border-border-control bg-surface text-meta text-muted shadow-control outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="flex size-11 items-center justify-center rounded-full border border-border-control bg-surface text-meta text-muted shadow-control focus-ring"
       >
         SH
       </button>
@@ -115,7 +115,7 @@ export function HouseholdSheetDemo() {
                 onClick={() => {
                   setOpen(false);
                 }}
-                className="flex min-h-14 w-full items-center px-5 text-left text-body text-ink outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+                className="flex min-h-14 w-full items-center px-5 text-left text-body text-ink focus-ring-inset"
               >
                 {label}
               </button>
@@ -127,7 +127,7 @@ export function HouseholdSheetDemo() {
               onClick={() => {
                 setOpen(false);
               }}
-              className="flex min-h-14 w-full items-center px-5 text-left text-body text-signal outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+              className="flex min-h-14 w-full items-center px-5 text-left text-body text-signal focus-ring-inset"
             >
               Sign out
             </button>

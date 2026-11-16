@@ -58,9 +58,9 @@ export function TabCapsule({ tabs, activePath }: TabCapsuleProps) {
               href={tab.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control px-4 text-nav outline-none",
+                "flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control px-4 text-nav",
                 "transition-colors duration-150 ease-out",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                "focus-ring",
                 active ? "bg-ink text-paper" : "text-muted [font-weight:400]",
               )}
             >

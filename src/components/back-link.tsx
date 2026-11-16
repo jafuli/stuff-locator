@@ -16,7 +16,7 @@ export function BackLink({ href, label }: BackLinkProps) {
   return (
     <Link
       href={href}
-      className="inline-flex min-h-target-min w-fit items-center rounded-tape text-meta text-muted outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="inline-flex min-h-target-min w-fit items-center rounded-tape text-meta text-muted hover:underline focus-ring"
     >
       ‹ Back to {label}
     </Link>

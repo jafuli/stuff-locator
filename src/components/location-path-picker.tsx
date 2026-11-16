@@ -268,8 +268,8 @@ export function LocationPathPicker({
                 // location so far); a chip that doesn't exist yet is dashed
                 // and untaped until the item is saved — the tape prints in
                 // then (see StashForm's success panel).
-                "inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-tape px-2 text-path break-words outline-none",
-                "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
+                "inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-tape px-2 text-path break-words",
+                "focus-ring",
                 chip.kind === "new"
                   ? "border border-dashed border-border-strong bg-transparent text-ink"
                   : index === value.length - 1

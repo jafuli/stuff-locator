@@ -41,7 +41,7 @@ const ROW_CLASSES = "flex min-h-14 flex-col gap-1 border-b border-divider px-4 p
 
 // Rows sit in a panel with overflow hidden, so the focus ring is drawn
 // inside the row rather than offset outside it (where it would be clipped).
-const LINK_CLASSES = "outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus";
+const LINK_CLASSES = "focus-ring-inset";
 
 /**
  * A single ResultList row: title, optional detail, the full path (last

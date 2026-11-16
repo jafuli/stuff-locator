@@ -47,9 +47,9 @@ export function FormField({ id, label, type, value, onChange, error, disabled = 
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         className={cn(
-          "min-h-control-height w-full rounded-control border bg-surface px-4 text-body text-ink shadow-control outline-none",
+          "min-h-control-height w-full rounded-control border bg-surface px-4 text-body text-ink shadow-control",
           "placeholder:text-muted disabled:opacity-60",
-          "focus-visible:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+          "focus-visible:border-border-strong focus-ring",
           error ? "border-border-strong" : "border-border-control",
         )}
       />
