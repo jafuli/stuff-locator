@@ -21,6 +21,7 @@ vi.mock("@/server/db/client", () => ({
 // Static import is safe here for the same reason as site-nav.test.tsx: the
 // vi.mock calls above are hoisted above imports.
 import { SignInForm } from "@/components/sign-in-form";
+import { STUFF_PATH } from "@/lib/routes";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -99,7 +100,7 @@ test("valid credentials bootstrap a household, then redirect to /", async () => 
   await user.click(screen.getByRole("button", { name: "Sign in" }));
 
   await waitFor(() => {
-    expect(push).toHaveBeenCalledWith("/");
+    expect(push).toHaveBeenCalledWith(STUFF_PATH);
   });
   expect(refresh).toHaveBeenCalled();
   expect(fetchMock).toHaveBeenCalledWith("/api/household/bootstrap", { method: "POST" });
@@ -125,7 +126,7 @@ test("a household-bootstrap failure shows a dismissible notice, logs it, and nev
   expect(push).not.toHaveBeenCalled();
 
   await user.click(screen.getByRole("button", { name: "Continue" }));
-  expect(push).toHaveBeenCalledWith("/");
+  expect(push).toHaveBeenCalledWith(STUFF_PATH);
   expect(refresh).toHaveBeenCalled();
 
   consoleError.mockRestore();
@@ -153,7 +154,7 @@ test("submit shows a real loading state while signInWithPassword is in flight", 
 
   resolveSignIn({ data: { user: null, session: null }, error: null });
   await waitFor(() => {
-    expect(push).toHaveBeenCalledWith("/");
+    expect(push).toHaveBeenCalledWith(STUFF_PATH);
   });
 });
 
@@ -223,7 +224,7 @@ test("a return-to path sends the user where they were headed, not to /", async (
   await waitFor(() => {
     expect(push).toHaveBeenCalledWith("/items/abc");
   });
-  expect(push).not.toHaveBeenCalledWith("/");
+  expect(push).not.toHaveBeenCalledWith(STUFF_PATH);
 });
 
 test("the sign-up link carries the return-to path along, so switching forms doesn't lose it", () => {

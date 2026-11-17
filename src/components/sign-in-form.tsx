@@ -21,7 +21,7 @@ interface FieldErrors {
 export interface SignInFormProps {
   /**
    * When set, a successful sign-in redeems this invite code BEFORE the
-   * usual household-bootstrap check runs, instead of navigating to "/" —
+   * usual household-bootstrap check runs, instead of navigating to the Stuff screen —
    * see SignUpFormProps' own doc comment (identical reasoning) and
    * /join/[code]/page.tsx.
    */
@@ -33,14 +33,15 @@ export interface SignInFormProps {
    * Where to land after a successful sign-in — the return-to path the
    * proxy attached when it bounced a signed-out visitor here. Already
    * validated by src/app/(public)/sign-in/page.tsx (safeRedirectPath), which is
-   * the only place this arrives from untrusted input; defaults to "/".
+   * the only place this arrives from untrusted input; defaults to the Stuff screen (DEFAULT_REDIRECT_PATH).
    */
   next?: string;
 }
 
 /**
  * Standalone sign-in form — calls the browser Supabase client directly
- * (src/server/db/client.ts). Always redirects to "/" on success (or, with
+ * (src/server/db/client.ts). Always redirects to `next` (the Stuff screen by
+ * default) on success (or, with
  * `invite` set, redeems the invite instead); there's no confirmation branch
  * here the way there is for sign-up.
  *

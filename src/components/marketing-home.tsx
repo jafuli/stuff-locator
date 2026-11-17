@@ -74,9 +74,10 @@ export interface MarketingHomeProps {
 }
 
 /**
- * What a signed-out visitor sees at "/". src/proxy.ts rewrites that request
- * to /welcome (src/app/(public)/welcome/page.tsx), so the URL stays "/" and
- * the (public) layout supplies the column with no floating nav (ADR 0013).
+ * What a signed-out visitor sees at the site root, "/"
+ * (src/app/(public)/page.tsx); a signed-in visitor is redirected to the Stuff
+ * screen instead. The (public) layout supplies the column with no floating
+ * nav (ADR 0013).
  * Layout agreed in the Notion task on 2026-11-15: wordmark + Sign in, the
  * one display question, the pitch, Sign up, "How it works", and three
  * sample result rows — and it ends there, no repeated call to action.

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { signOutViaMenu } from "./utils";
+import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
 
 // Runs against a real local Supabase stack — see sign-up.spec.ts's header
 // comment. Proves the gate in src/proxy.ts both ways: every route the
@@ -15,7 +16,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -24,9 +25,11 @@ async function signUpFreshAccount(page: Page): Promise<string> {
 // ever runs a query, so what the id points at is irrelevant there.
 const UNRESOLVABLE_ID = "2a4e6c9b-0000-4000-8000-000000000001";
 
-// AC #1's list, minus "/" (public since the marketing home — see the
-// tests after the loop). `next` is what the proxy should preserve.
+// AC #1's list, with the Stuff screen at STUFF_PATH ("/" is the public
+// marketing home — see the tests after the loop). `next` is what the proxy
+// should preserve.
 const PROTECTED_ROUTES: { path: string; next: string }[] = [
+  { path: STUFF_PATH, next: STUFF_PATH },
   { path: "/browse", next: "/browse" },
   { path: `/browse/${UNRESOLVABLE_ID}`, next: `/browse/${UNRESOLVABLE_ID}` },
   { path: `/items/${UNRESOLVABLE_ID}`, next: `/items/${UNRESOLVABLE_ID}` },
@@ -47,19 +50,25 @@ for (const route of PROTECTED_ROUTES) {
 }
 
 test("signed out, / shows the marketing home without the app's nav", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(MARKETING_PATH);
 
-  expect(new URL(page.url()).pathname).toBe("/");
+  expect(new URL(page.url()).pathname).toBe(MARKETING_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
-  // The proxy rewrote "/" to /welcome, which lives in the (public) route
-  // group: the nav isn't hidden, it was never rendered.
+  // "/" is (public)/page.tsx, in the (public) route group: the nav isn't
+  // hidden, it was never rendered.
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
 });
 
-test("/welcome redirects to /, so the marketing home has one URL", async ({ page }) => {
-  await page.goto("/welcome");
-  expect(new URL(page.url()).pathname).toBe("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
+test("signed in, / redirects to the Stuff screen and keeps ?q=", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  // One item, so the Stuff screen shows its search box rather than onboarding.
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Hallway"]);
+  await seedItem(email, TEST_PASSWORD, { name: `Spare keys ${randomUUID()}`, locationId });
+
+  await page.goto(`${MARKETING_PATH}?q=keys`);
+  await expect(page).toHaveURL(`${STUFF_PATH}?q=keys`);
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search your stuff" })).toHaveValue("keys");
 });
 
 test("signed in, an unknown URL shows the standalone 404, and its wordmark goes back to Stuff", async ({ page }) => {
@@ -69,19 +78,20 @@ test("signed in, an unknown URL shows the standalone 404, and its wordmark goes 
   await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeAttached();
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
 
+  // The wordmark goes to the site root, which sends a signed-in visitor on to Stuff.
   await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
 });
 
 test("signed out, the marketing home's Sign up and Sign in links land on their pages", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(MARKETING_PATH);
   await page.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL("/sign-up");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-  await page.goto("/");
+  await page.goto(MARKETING_PATH);
   await page.getByRole("link", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/sign-in");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
@@ -105,7 +115,7 @@ test("signed in, every protected route reaches its real page", async ({ page }) 
   const itemId = await seedItem(email, TEST_PASSWORD, { name: `Spare keys ${randomUUID()}`, locationId });
 
   const routes: { path: string; heading: RegExp }[] = [
-    { path: "/", heading: /What are you looking for\?/ },
+    { path: STUFF_PATH, heading: /What are you looking for\?/ },
     { path: "/browse", heading: /What are you looking for\?/ },
     { path: `/browse/${locationId}`, heading: /Toolbox/ },
     { path: `/items/${itemId}`, heading: /Spare keys/ },
@@ -162,8 +172,8 @@ test("the return-to path also survives choosing 'sign up' instead", async ({ pag
 
 test("a ?next= pointing off-origin is ignored rather than followed", async ({ page }) => {
   // The open-redirect case: the param is just a query string on a public
-  // page, so anyone can craft this link. Signing in must land on "/",
-  // not on the attacker's host.
+  // page, so anyone can craft this link. Signing in must land on the Stuff
+  // screen, not on the attacker's host.
   const email = await signUpFreshAccount(page);
   await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
@@ -173,7 +183,7 @@ test("a ?next= pointing off-origin is ignored rather than followed", async ({ pa
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 });
 
@@ -188,10 +198,10 @@ test("the invite landing stays reachable without an account", async ({ page }) =
 test("a link to / prefetched while signed out still opens Stuff once a session exists", async ({ page, context }) => {
   // The shape of the join flow: a public page prefetches "/" (the wordmark
   // link) while signed out, then the visitor gets a session without a router
-  // refresh, then follows a plain <Link href="/">. "/" is two different
-  // documents depending on the cookie, so that signed-out prefetch must not
-  // be reused. /welcome is rendered per request (connection()) for exactly
-  // this reason.
+  // refresh, then follows that link. "/" still answers differently by cookie
+  // (the marketing home, or a redirect to the Stuff screen), so the
+  // signed-out prefetch must not be reused: (public)/page.tsx renders per
+  // request (connection()) for exactly this reason.
   await page.goto("/forgot-password");
   await page.waitForLoadState("networkidle");
 
@@ -200,6 +210,6 @@ test("a link to / prefetched while signed out still opens Stuff once a session e
   await other.close();
 
   await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 });

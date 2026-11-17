@@ -1,11 +1,12 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StuffViewChips } from "@/components/stuff-view-chips";
+import { STUFF_PATH } from "@/lib/routes";
 
 test("shows 'All (n)' with the household total and a 'By place' link", () => {
   render(<StuffViewChips total={18} active="all" />);
 
-  expect(screen.getByRole("link", { name: "All (18)" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "All (18)" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("href")).toBe("/browse");
 });
 

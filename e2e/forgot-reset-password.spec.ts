@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused, signOutViaMenu } from "./utils";
 import { fetchLatestLinkForEmail } from "./mailpit-test-client";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Runs against a real local Supabase stack — same stance as sign-in.spec.ts
 // / sign-up.spec.ts: there's no way to fake Supabase Auth's
@@ -21,7 +22,7 @@ async function signUpFreshAccount(page: Page, password: string): Promise<string>
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await signOutViaMenu(page);
   await page.waitForURL("/sign-in");
   return email;
@@ -105,7 +106,7 @@ test("the full recovery flow: request a link, follow the real emailed link, set 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(newPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

@@ -26,7 +26,7 @@ const STASH_LINK_CLASSES = buttonClassName("primary", "shrink-0");
 // Real household data now (see the PR description): items/locations are
 // read directly via PostgREST, RLS-scoped to the caller's household — no
 // route handler for this plain read, per the settled architecture.
-export default async function Page(props: PageProps<"/">) {
+export default async function Page(props: PageProps<"/stuff">) {
   const searchParams = await props.searchParams;
   // A search typed on Browse arrives as ?q=; only a plain string is used.
   const rawQuery = searchParams.q;
@@ -37,8 +37,8 @@ export default async function Page(props: PageProps<"/">) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // A signed-out "/" never reaches this page: src/proxy.ts rewrites it to
-  // the marketing home (/welcome). The proxy only checks the cookie's
+  // A signed-out visitor never reaches this page: src/proxy.ts sends them
+  // to /sign-in?next=/stuff first. The proxy only checks the cookie's
   // claims, though, so a session that looked valid there but has no user
   // here (deleted account, revoked session) still needs somewhere to go.
   if (!user) {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { MARKETING_PATH } from "@/lib/routes";
 
 /**
  * The column every page outside the signed-in app uses: the marketing home
@@ -11,8 +12,10 @@ export const STANDALONE_PAGE_CLASSES = "mx-auto flex w-full max-w-xl flex-col ga
 
 export interface SiteHeaderProps {
   /**
-   * Makes the wordmark a link to "/" (the marketing home when signed out).
-   * Off on "/" itself, which would only link to the page you're on.
+   * Makes the wordmark a link to MARKETING_PATH, the site root: the
+   * marketing home signed out, a redirect to the Stuff screen signed in.
+   * Off on the marketing home itself, which would only link to the page
+   * you're on.
    */
   homeLink?: boolean;
   /** Right-hand slot: the marketing home's Sign in link. */
@@ -32,7 +35,7 @@ export function SiteHeader({ homeLink = false, action }: SiteHeaderProps) {
     // so the heading below starts at the same height on every page.
     <header className="flex min-h-target-min items-center justify-between gap-3">
       {homeLink ? (
-        <Link href="/" className={textLinkClassName({ underline: false })}>
+        <Link href={MARKETING_PATH} className={textLinkClassName({ underline: false })}>
           {wordmark}
         </Link>
       ) : (

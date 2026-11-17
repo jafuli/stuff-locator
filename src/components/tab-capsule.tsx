@@ -19,8 +19,8 @@ export interface TabCapsuleProps {
 
 /**
  * Whether `tabHref` should read as active for `activePath` — an exact match,
- * or `activePath` nested under `tabHref` (e.g. "/stuff/42" under "/stuff").
- * Guards against "/stuff" false-matching a sibling like "/stuffing".
+ * or `activePath` nested under `tabHref` (e.g. "/browse/42" under "/browse").
+ * Guards against "/browse" false-matching a sibling like "/browser".
  */
 export function isTabActive(tabHref: string, activePath: string): boolean {
   if (activePath === tabHref) {

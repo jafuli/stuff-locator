@@ -1,12 +1,16 @@
 import { PUBLIC_PATHS } from "@/lib/route-access";
+import { STUFF_PATH } from "@/lib/routes";
 
 function pathnameOf(value: string): string {
   const [pathname = ""] = value.split(/[?#]/);
   return pathname;
 }
 
-/** Where a sign-in lands when there's no usable return-to path. */
-export const DEFAULT_REDIRECT_PATH = "/";
+/**
+ * Where a sign-in lands when there's no usable return-to path: the Stuff
+ * screen. "/" stays a valid `next` — the proxy sends a signed-in "/" there.
+ */
+export const DEFAULT_REDIRECT_PATH = STUFF_PATH;
 
 /**
  * Validates the `?next=` return-to path the proxy attaches when it bounces
@@ -16,7 +20,8 @@ export const DEFAULT_REDIRECT_PATH = "/";
  * public page — so an unchecked `router.push(next)` is an open redirect:
  * a link to /sign-in?next=https://evil.example sends the user somewhere
  * else entirely, wearing this app's sign-in page as the referrer. Only
- * same-origin absolute paths survive; everything else falls back to "/".
+ * same-origin absolute paths survive; everything else falls back to the
+ * Stuff screen.
  */
 export function safeRedirectPath(value: string | null | undefined): string {
   if (typeof value !== "string" || value.length === 0) {
@@ -63,7 +68,7 @@ export function safeRedirectPath(value: string | null | undefined): string {
  * Builds a link to an auth route that carries the current return-to path
  * along with it, so bouncing between /sign-in and /sign-up doesn't lose
  * where the visitor was originally headed. Omits the param entirely for
- * the default path — ?next=/ is noise.
+ * the default path — ?next=/stuff is noise.
  */
 export function withNextParam(path: string, next: string): string {
   return next === DEFAULT_REDIRECT_PATH ? path : `${path}?next=${encodeURIComponent(next)}`;

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { StuffSearchInput } from "@/components/stuff-search-input";
 import { StuffViewChips } from "@/components/stuff-view-chips";
 import { STUFF_HEADING } from "@/lib/stuff-heading";
+import { stuffSearchHref } from "@/lib/routes";
 
 export interface BrowseHeaderProps {
   /** The household's total item count, for the "All (n)" chip. */
@@ -30,7 +31,7 @@ export function BrowseHeader({ total }: BrowseHeaderProps) {
         value={query}
         onChange={(value) => {
           setQuery(value);
-          router.push(`/?q=${encodeURIComponent(value)}`);
+          router.push(stuffSearchHref(value));
         }}
       />
       <StuffViewChips total={total} active="place" />

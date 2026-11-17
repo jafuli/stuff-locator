@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { countHouseholdsForUser, householdIdsForUser, seedInviteForNewHousehold } from "./supabase-test-client";
 import { signOutViaMenu } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Redeem-invite landing (/join/[code]) — the other half of Invite-partner
 // UI's `${origin}/join/${code}` link. Every test seeds a real inviter
@@ -23,7 +24,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -55,14 +56,14 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
   await expect(status.getByText("Maayan's home")).toBeVisible();
-  await expect(status.getByRole("link", { name: "Go to Stuff Locator" })).toHaveAttribute("href", "/");
+  await expect(status.getByRole("link", { name: "Go to Stuff Locator" })).toHaveAttribute("href", STUFF_PATH);
 
   // The critical assertion (AC #2): exactly one household, the inviter's —
   // not a bootstrap-created one in addition to it.
   expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(1);
 
   await status.getByRole("link", { name: "Go to Stuff Locator" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
@@ -100,7 +101,7 @@ test("an invalid code shows a clear, specific error state, with no partial house
   const alert = page.getByRole("alert");
   await expect(alert).toBeVisible();
   await expect(alert.getByText(/invite/i)).toBeVisible();
-  await expect(alert.getByRole("link", { name: "Back to Stuff Locator" })).toHaveAttribute("href", "/");
+  await expect(alert.getByRole("link", { name: "Back to Stuff Locator" })).toHaveAttribute("href", STUFF_PATH);
 
   // Bootstrap's own fallback household still exists (this account isn't
   // stranded), but exactly one — no partial/duplicate household from the

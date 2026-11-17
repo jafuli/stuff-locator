@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
-// This test's "Back to Stuff" link lands on "/", which now reads real
-// household data, while a signed-out "/" is the marketing home
-// (ADR 0013) — signing up first keeps this test's own
+// This test's "Back to Stuff" link goes to the site root, which sends a
+// signed-in visitor on to the Stuff screen (real household data) and shows
+// a signed-out one the marketing home (ADR 0013) — signing up first keeps this test's own
 // point (the app's 404 page links back to a working Home) intact.
 async function signUpFreshAccount(page: Page): Promise<void> {
   const email = `e2e-not-found-${randomUUID()}@example.com`;
@@ -13,7 +14,7 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
 }
 
 // Unlike a segment-level notFound() (items/[id], browse/[id] — both return
@@ -54,7 +55,8 @@ test("an unmatched route renders the app's own 404, not Next's default, and link
   await page.getByRole("link", { name: "Back to Stuff" }).click();
   await page.waitForLoadState("networkidle");
 
-  await expect(page).toHaveURL(/\/$/);
+  // Via the site root, which sends a signed-in visitor on to the Stuff screen.
+  await expect(page).toHaveURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   // Not "Spare house keys" or any other route's content — beyond that,
   // what a brand-new signed-up account's household shows here (Guided
@@ -75,9 +77,9 @@ test("signed out, an unmatched route is the 404 straight away, not a detour thro
   expect(new URL(page.url()).pathname).toBe("/badroute");
   await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
 
-  // "/" for a signed-out visitor is the marketing home.
+  // The site root, for a signed-out visitor, is the marketing home.
   await page.getByRole("link", { name: "Back to Stuff" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL(MARKETING_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
 });
 

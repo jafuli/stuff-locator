@@ -1,7 +1,9 @@
 # 13. Page frames by route group; the proxy chooses what "/" serves
 
 **Status:** Accepted, 2026-11-16. Follows PR #73 (marketing home) and builds
-on ADR 0006 (route protection).
+on ADR 0006 (route protection). **Amended 2026-11-17:** the Stuff screen moved
+to `/stuff`, and `/` is now only the marketing home (see the amendment at the
+end; the rewrite described below is gone).
 
 ## Context
 
@@ -84,3 +86,51 @@ Two consequences, agreed when this was planned:
   not a new one.
 - A new top-level route has to pick a group. A page added outside both groups
   gets the bare root layout: no nav and no column.
+
+## Amendment, 2026-11-17: the app moves to `/stuff`
+
+**What changed.** The Stuff screen moved from `(app)/page.tsx` to
+`(app)/stuff/page.tsx`, at `/stuff`. The marketing home moved from
+`(public)/welcome/page.tsx` to `(public)/page.tsx`, so it is the real `/`.
+`/welcome` is gone outright (it was never deployed, so no redirect). Both paths
+are named once, in `src/lib/routes.ts` (`STUFF_PATH`, `MARKETING_PATH`), and
+`src/__tests__/route-constants.test.ts` fails on a literal that bypasses them.
+
+`resolveRoute` now decides:
+
+- signed in and `/` → **redirect** to `/stuff`, keeping the query string, so an
+  old `/?q=keys` link still searches;
+- signed out and `/` → the marketing home, a public page like the auth pages;
+- signed out and `/stuff` → `/sign-in?next=/stuff`, like every protected page;
+- everything else as before. The `rewrite` decision is gone.
+
+The default landing after sign-in (`DEFAULT_REDIRECT_PATH`) and the manifest's
+`start_url` are both `/stuff`.
+
+**Why.** "Two different documents at one URL" was listed above as a
+consequence. In practice it was a source of bugs, and two have already been
+patched one at a time:
+
+- 101bdc1: the client router reused a signed-out prefetch of `/` after sign-in
+  and showed a signed-in user the marketing page. `/welcome` had to render per
+  request to stop it.
+- ADR 0014: the service worker's `others` cache is keyed by URL, so `/` held
+  whichever version was fetched last.
+
+Every cache keyed by URL has the same problem, so patching each one doesn't
+end it. Giving each document its own URL does. It also lets the installed PWA
+open straight into the app (or into sign-in, which returns there), not the
+marketing page.
+
+**How this squares with "Rejected" above.** That section rejected moving the
+*marketing page* off `/`, because of the extra round trip and because the URL
+people share would change. Moving the *app* instead keeps the shared URL: `/` is
+still the marketing home. The cost moves to signed-in users. Typing the bare
+domain while signed in costs one redirect. The installed app, in-app links and
+sign-in all go straight to `/stuff`.
+
+**Still true.** `/` answers differently by cookie (a page or a redirect), so
+`(public)/page.tsx` keeps `await connection()` and renders per request. That
+reason, and the sample rows' request-time dates, are why `/` isn't static.
+Making it fully static would need those dates computed on the client. That is
+not done here.

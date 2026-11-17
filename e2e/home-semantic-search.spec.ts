@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type ModelRoutes, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Find's embedding search, against a production build. How the model reaches
 // the browser (a read-through disk cache vs. blocked) is e2e/fixtures.ts's job.
@@ -12,7 +13,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -96,7 +97,7 @@ test.describe("with the real model", () => {
 
       const email = await signUpFreshAccount(page);
       await seedHousehold(email);
-      await page.goto("/");
+      await page.goto(STUFF_PATH);
 
       await unlessHostUnreachable(modelRoutes, async () => {
         // Nobody has touched the search box, and the model is on its way.
@@ -144,7 +145,7 @@ test.describe("with the real model", () => {
     test("nothing is fetched until the search box is focused", async ({ page, modelRoutes }) => {
       const email = await signUpFreshAccount(page);
       await seedHousehold(email);
-      await page.goto("/");
+      await page.goto(STUFF_PATH);
       await page.waitForLoadState("networkidle");
       // Well past the idle callback.
       await page.waitForTimeout(1500);
@@ -161,7 +162,7 @@ test.describe("with the real model", () => {
       });
       const email = await signUpFreshAccount(page);
       await seedHousehold(email);
-      await page.goto("/");
+      await page.goto(STUFF_PATH);
       await page.waitForLoadState("networkidle");
 
       // First visit: 3g, so the model only comes when asked for.
@@ -175,7 +176,7 @@ test.describe("with the real model", () => {
       // model starts on idle without anyone touching the search box...
       workers.length = 0;
       const requestsBefore = modelRoutes.requestCount();
-      await page.goto("/");
+      await page.goto(STUFF_PATH);
       await expect.poll(() => workers.length, { timeout: 15_000 }).toBeGreaterThan(0);
       // ...and without downloading anything again.
       await page.waitForLoadState("networkidle");
@@ -192,7 +193,7 @@ test.describe("with the real model", () => {
     test("nothing is fetched until the search box is focused", async ({ page, modelRoutes }) => {
       const email = await signUpFreshAccount(page);
       await seedHousehold(email);
-      await page.goto("/");
+      await page.goto(STUFF_PATH);
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(1500);
       expect(modelRoutes.requestCount()).toBe(0);
@@ -205,7 +206,7 @@ test.describe("with the real model", () => {
   test("a substring hit stays on top while the person is still typing a word", async ({ page, modelRoutes }) => {
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
-    await page.goto("/");
+    await page.goto(STUFF_PATH);
     await page.waitForLoadState("networkidle");
 
     await page.getByRole("searchbox", { name: "Search your stuff" }).fill("pass");
@@ -222,7 +223,7 @@ test.describe("when the model is unavailable", () => {
   test("Find stays on the typo-tolerant lexical ranking and nothing breaks", async ({ page, modelRoutes }) => {
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
-    await page.goto("/");
+    await page.goto(STUFF_PATH);
     await page.waitForLoadState("networkidle");
 
     const search = page.getByRole("searchbox", { name: "Search your stuff" });
@@ -255,7 +256,7 @@ test.describe("Save-Data", () => {
   }) => {
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
-    await page.goto("/");
+    await page.goto(STUFF_PATH);
     await page.waitForLoadState("networkidle");
 
     const search = page.getByRole("searchbox", { name: "Search your stuff" });
@@ -300,7 +301,7 @@ test.describe("with the service worker active", () => {
 
     const email = await signUpFreshAccount(page);
     await seedHousehold(email);
-    await page.goto("/");
+    await page.goto(STUFF_PATH);
     await page.waitForLoadState("networkidle");
     await expect
       .poll(() =>

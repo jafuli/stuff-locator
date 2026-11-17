@@ -1,12 +1,14 @@
 import { expect, test } from "vitest";
 import { DEFAULT_REDIRECT_PATH, safeRedirectPath, withNextParam } from "@/lib/safe-redirect-path";
+import { STUFF_PATH } from "@/lib/routes";
 
 test("keeps a same-origin absolute path, including its query string", () => {
   expect(safeRedirectPath("/items/abc")).toBe("/items/abc");
   expect(safeRedirectPath("/browse?q=keys")).toBe("/browse?q=keys");
 });
 
-test("falls back to / when there's no usable value", () => {
+test("falls back to the Stuff screen when there's no usable value", () => {
+  expect(DEFAULT_REDIRECT_PATH).toBe(STUFF_PATH);
   expect(safeRedirectPath(null)).toBe(DEFAULT_REDIRECT_PATH);
   expect(safeRedirectPath(undefined)).toBe(DEFAULT_REDIRECT_PATH);
   expect(safeRedirectPath("")).toBe(DEFAULT_REDIRECT_PATH);
@@ -51,6 +53,8 @@ test("withNextParam carries the destination and omits it when it's the default",
   expect(withNextParam("/sign-up", DEFAULT_REDIRECT_PATH)).toBe("/sign-up");
 });
 
+// The proxy redirects a signed-in "/" to the Stuff screen, keeping the query,
+// so an old "/?q=" link is still a fine place to return to.
 test('"/" is a valid return, query included', () => {
   expect(safeRedirectPath("/")).toBe("/");
   expect(safeRedirectPath("/?q=passport")).toBe("/?q=passport");
