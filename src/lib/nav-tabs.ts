@@ -1,4 +1,5 @@
 import type { NavTab } from "@/components/tab-capsule";
+import { STUFF_PATH } from "@/lib/routes";
 
 // The wireframe draws 3 tabs (Stuff / Activity / Home) and its own footer
 // calls the tab count an open question. Two it is: the third ("Home" —
@@ -9,6 +10,6 @@ import type { NavTab } from "@/components/tab-capsule";
 // Single source of truth: both the real app shell (src/components/site-nav.tsx)
 // and the /~components catalog page import this, so they can't drift apart.
 export const NAV_TABS: NavTab[] = [
-  { href: "/", label: "Stuff", icon: "box" },
+  { href: STUFF_PATH, label: "Stuff", icon: "box" },
   { href: "/activity", label: "Activity", icon: "clock" },
 ];

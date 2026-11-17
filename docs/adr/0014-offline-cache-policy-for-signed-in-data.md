@@ -131,7 +131,8 @@ strategy:
 
 Setup: signed in. The Stuff screen loaded with its links prefetched, one item
 opened, then Browse, one place and Activity visited by client navigation.
-Then the connection was dropped.
+Then the connection was dropped. (Measured when the Stuff screen was at `/`;
+it has since moved to `/stuff`, per the ADR 0013 amendment of the same day.)
 
 | Page                                         | Client navigation | Document load (reload / URL) |
 | -------------------------------------------- | ----------------- | ---------------------------- |

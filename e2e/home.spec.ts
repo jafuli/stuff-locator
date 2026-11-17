@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Home now reads real household data (see the PR description) instead of
 // the ITEMS/LOCATIONS fixtures — every test signs up a fresh real account
-// first (signed out, "/" is the marketing home instead), then
+// first (signed out, the Stuff screen redirects to sign-in), then
 // seeds a real item via the service-role client for the tests that need
 // one to render. Matches the account-per-test pattern already established
 // in sign-in.spec.ts / sign-up.spec.ts / stash.spec.ts.
@@ -17,7 +18,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -37,7 +38,7 @@ test("home route boots cleanly, shows a real item, and is keyboard-reachable", a
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet"]);
   await seedItem(email, TEST_PASSWORD, { name: itemName, locationId });
 
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   // next/link prefetches in-viewport links shortly after paint, not
   // synchronously with navigation — waiting for network idle before
   // asserting on consoleErrors below is what actually catches that class of
@@ -70,7 +71,7 @@ test("a real item's breadcrumb segment links to the correct /browse/[id] — Bro
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
   await seedItem(email, TEST_PASSWORD, { name: `Passport ${randomUUID()}`, locationId });
 
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("link", { name: "Filing box" })).toHaveAttribute("href", `/browse/${locationId}`);
@@ -85,7 +86,7 @@ test("a brand-new household with zero items shows guided onboarding, not the pla
   // not the whole page).
   await signUpFreshAccount(page);
 
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
@@ -111,7 +112,7 @@ test("home has a visible, keyboard-reachable entry point into the Stash flow", a
   const email = await signUpFreshAccount(page);
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
   await seedItem(email, TEST_PASSWORD, { name: `Spare key ${randomUUID()}`, locationId });
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   const addItemLink = page.getByRole("link", { name: "Stash", exact: true });

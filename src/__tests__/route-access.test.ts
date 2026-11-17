@@ -2,7 +2,6 @@ import { expect, test } from "vitest";
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import {
-  MARKETING_PATH,
   PROTECTED_ROUTES,
   PUBLIC_PATHS,
   PUBLIC_ROUTES,
@@ -10,13 +9,14 @@ import {
   requiresAuth,
   resolveRoute,
 } from "@/lib/route-access";
+import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
 
 // The routes the route-protection task's Acceptance Criteria named as
 // protected. Spelled out one per entry rather than generated, so the list is
-// reviewable line by line. "/" is gated too: a signed-out "/" is rewritten
-// to the marketing home before the gate runs (see resolveRoute below).
+// reviewable line by line. The Stuff screen moved from "/" to STUFF_PATH
+// (ADR 0013, amended 2026-11-17); "/" is now the public marketing home.
 const AC_PROTECTED_ROUTES = [
-  "/",
+  STUFF_PATH,
   "/browse",
   "/browse/2a4e6c9b-0000-4000-8000-000000000001",
   "/items/2a4e6c9b-0000-4000-8000-000000000002",
@@ -89,18 +89,32 @@ test("route patterns match whole segments, so a lookalike path is never a public
   expect(matchesRoute("/items/new", "/items/new")).toBe(true);
 });
 
-test("signed out, / is rewritten to the marketing home and the URL stays /", () => {
-  expect(resolveRoute("/", "", false)).toEqual({ kind: "rewrite", pathname: "/welcome" });
-  expect(resolveRoute("/", "?q=keys", false)).toEqual({ kind: "rewrite", pathname: "/welcome" });
+test("signed in, / redirects to the Stuff screen and keeps the query string", () => {
+  expect(resolveRoute(MARKETING_PATH, "", true)).toEqual({ kind: "redirect", pathname: STUFF_PATH, search: "" });
+  // An old "/?q=keys" link still searches.
+  expect(resolveRoute(MARKETING_PATH, "?q=keys", true)).toEqual({
+    kind: "redirect",
+    pathname: STUFF_PATH,
+    search: "?q=keys",
+  });
 });
 
-test("signed in, / is the Stuff screen", () => {
-  expect(resolveRoute("/", "", true)).toEqual({ kind: "next" });
+test("signed out, / is the marketing home, a public page", () => {
+  expect(resolveRoute(MARKETING_PATH, "", false)).toEqual({ kind: "next" });
+  expect(requiresAuth(MARKETING_PATH)).toBe(false);
 });
 
-test("/welcome redirects to /, signed in or out, so the marketing home has one URL", () => {
-  expect(resolveRoute("/welcome", "", false)).toEqual({ kind: "redirect", pathname: "/" });
-  expect(resolveRoute("/welcome/", "", true)).toEqual({ kind: "redirect", pathname: "/" });
+test("signed out, the Stuff screen goes to sign-in and comes back to it", () => {
+  expect(resolveRoute(STUFF_PATH, "", false)).toEqual({ kind: "redirect", pathname: "/sign-in", next: STUFF_PATH });
+});
+
+test("signed in, the Stuff screen is let through", () => {
+  expect(resolveRoute(STUFF_PATH, "?q=keys", true)).toEqual({ kind: "next" });
+});
+
+test("/welcome is gone: an unknown path, so it falls through to the 404, signed in or out", () => {
+  expect(resolveRoute("/welcome", "", false)).toEqual({ kind: "next" });
+  expect(resolveRoute("/welcome", "", true)).toEqual({ kind: "next" });
 });
 
 test("signed out, a protected route redirects to sign-in carrying the full return path", () => {
@@ -140,9 +154,8 @@ function pageRoutes(dir: string, root: string): string[] {
 }
 
 // Not gated by design: the proxy's matcher never runs on /~offline (the
-// service worker serves it offline), and /welcome is only reached through
-// resolveRoute's rewrite of a signed-out "/".
-const OUTSIDE_THE_GATE = ["/~offline", MARKETING_PATH];
+// service worker serves it offline).
+const OUTSIDE_THE_GATE = ["/~offline"];
 
 test("every page is listed as public or protected, so none goes public by being forgotten", () => {
   const appDir = join(process.cwd(), "src/app");

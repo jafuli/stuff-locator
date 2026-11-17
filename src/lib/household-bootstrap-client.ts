@@ -1,5 +1,5 @@
 // How long SignUpForm/SignInForm keep the bootstrap-failure notice up
-// before auto-navigating to "/" — see HouseholdBootstrapNotice's doc
+// before auto-navigating to the Stuff screen — see HouseholdBootstrapNotice's doc
 // comment for why this is both self-clearing and dismissible.
 export const BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS = 2000;
 
@@ -12,7 +12,7 @@ export const BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS = 2000;
  * boolean back and decide what to show.
  *
  * Shared by SignUpForm and SignInForm rather than duplicated inline, since
- * both call it identically right before their existing router.push("/").
+ * both call it identically right before their existing router.push(next).
  */
 export async function triggerHouseholdBootstrap(): Promise<boolean> {
   try {

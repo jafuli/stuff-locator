@@ -8,6 +8,7 @@ import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/
 import { createClient } from "@/server/db/client";
 import { buttonClassName } from "@/components/ui/button";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { STUFF_PATH } from "@/lib/routes";
 
 export interface JoinInviteFlowProps {
   code: string;
@@ -85,7 +86,7 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
         <p className="text-body text-ink">
           You&apos;ve joined <span className="font-medium">{stage.householdName ?? "the household"}</span>&apos;s home
         </p>
-        <Link href="/" className={LINK_CLASSES}>
+        <Link href={STUFF_PATH} className={LINK_CLASSES}>
           Go to Stuff Locator
         </Link>
       </div>
@@ -97,7 +98,7 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
       <div role="alert" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         <p className="text-title text-ink">Couldn&apos;t join this household</p>
         <p className="text-meta text-muted">{stage.message}</p>
-        <Link href="/" className={LINK_CLASSES}>
+        <Link href={STUFF_PATH} className={LINK_CLASSES}>
           Back to Stuff Locator
         </Link>
       </div>

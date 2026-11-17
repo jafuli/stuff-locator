@@ -16,6 +16,7 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { STUFF_PATH } from "@/lib/routes";
 
 export interface ItemEditFormProps {
   item: Item;
@@ -181,7 +182,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
           <p className="text-section-label text-muted">Deleted</p>
           <p className="text-title text-ink">{item.name}</p>
         </div>
-        <Link href="/" className={textLinkClassName()}>
+        <Link href={STUFF_PATH} className={textLinkClassName()}>
           Back to home
         </Link>
       </div>

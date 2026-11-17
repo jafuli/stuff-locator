@@ -6,6 +6,7 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { BrowseHeader } from "@/components/browse-header";
+import { STUFF_PATH } from "@/lib/routes";
 
 beforeEach(() => {
   push.mockReset();
@@ -25,10 +26,10 @@ test("typing sends the query to Home, encoded", async () => {
   render(<BrowseHeader total={1} />);
 
   await user.type(screen.getByRole("searchbox"), "t");
-  expect(push).toHaveBeenLastCalledWith("/?q=t");
+  expect(push).toHaveBeenLastCalledWith(`${STUFF_PATH}?q=t`);
 
   await user.type(screen.getByRole("searchbox"), " & a");
-  expect(push).toHaveBeenLastCalledWith("/?q=t%20%26%20a");
+  expect(push).toHaveBeenLastCalledWith(`${STUFF_PATH}?q=t%20%26%20a`);
 });
 
 test("characters typed before the navigation lands are kept in the field", async () => {

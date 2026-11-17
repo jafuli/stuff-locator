@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { findItemByName, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Stash (/items/new) now makes a real Supabase write (see the PR
 // description) — every test signs up a fresh real account first (the route
@@ -25,7 +26,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -81,7 +82,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
   await expect(status.getByRole("link", { name: "View item" })).toHaveAttribute("href", `/items/${persisted.id}`);
 
   await status.getByRole("link", { name: "Back to home" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

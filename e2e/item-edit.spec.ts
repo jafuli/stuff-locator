@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused, tabUntilHrefFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Edit item (/items/[id]/edit) now makes real Supabase writes — every test
 // signs up a fresh real account first (the route redirects an
@@ -16,7 +17,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -198,7 +199,7 @@ test("delete requires confirmation: cancel leaves the item unchanged, confirm pe
   await expect(status.getByText("Passport", { exact: true })).toBeVisible();
 
   await status.getByRole("link", { name: "Back to home" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   // Real deletion, not a UI-only echo — revisiting the item's own url now
@@ -252,5 +253,5 @@ test("the whole edit form, including delete confirmation, is operable keyboard-o
 
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
-  expect(await tabUntilHrefFocused(page, "/", 5)).toBe(true);
+  expect(await tabUntilHrefFocused(page, STUFF_PATH, 5)).toBe(true);
 });

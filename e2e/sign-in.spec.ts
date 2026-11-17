@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { countHouseholdsForUser } from "./supabase-test-client";
 import { signOutViaMenu } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Runs against a real local Supabase stack — see sign-up.spec.ts's header
 // comment. Each test creates its own fresh account through the real
@@ -15,7 +16,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -41,7 +42,7 @@ test("sign-up, sign-out, and sign-in with the same credentials round-trip back t
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   expect(consoleErrors).toEqual([]);

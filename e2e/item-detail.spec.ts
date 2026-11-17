@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Item detail (/items/[id]) now reads real household data — every test
 // signs up a fresh real account first (the route redirects an
@@ -16,7 +17,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -105,7 +106,7 @@ test("item detail names the person who added the item, never their raw user id",
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
 
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
   const itemName = `Spare keys ${suffix}`;

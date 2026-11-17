@@ -3,6 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { PRIVATE_CACHE_NAMES } from "../src/lib/offline/cache-policy";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { signOutViaMenu } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Selects root layout.tsx's own scroll container by its class
 // (`flex-1 overflow-y-auto`, the only element in the app with that class —
@@ -54,7 +55,7 @@ async function signUpWithItem(page: Page): Promise<{ itemId: string; itemName: s
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
 
   // A name no other page or test could contain, so finding it in a cached
   // body can only mean this household's data.
@@ -66,7 +67,7 @@ async function signUpWithItem(page: Page): Promise<{ itemId: string; itemName: s
 
 /** Loads the Stuff screen under the service worker's control. */
 async function openStuffControlled(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -130,7 +131,7 @@ test("signing out empties the household-data caches, so offline shows nothing of
   expect(cacheNames.some((name) => name.startsWith("serwist-precache"))).toBe(true);
 
   await context.setOffline(true);
-  for (const path of ["/", `/items/${itemId}`]) {
+  for (const path of [STUFF_PATH, `/items/${itemId}`]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1, name: "You're offline" })).toBeVisible();
     await expect(page.getByText(itemName)).toHaveCount(0);

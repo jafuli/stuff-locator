@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Home's search now filters real household items (see home.spec.ts's
 // header comment for why every test here signs up first) instead of the
@@ -15,7 +16,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -37,7 +38,7 @@ test("searching the home item list filters, shows no-matches, and clears back to
   await seedItem(email, TEST_PASSWORD, { name: passportName, locationId });
   await seedItem(email, TEST_PASSWORD, { name: keysName, locationId });
 
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   const search = page.getByRole("searchbox", { name: "Search your stuff" });
