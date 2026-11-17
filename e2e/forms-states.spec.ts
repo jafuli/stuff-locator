@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -10,7 +11,7 @@ async function signUp(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 }
 

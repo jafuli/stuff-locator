@@ -8,6 +8,7 @@ import {
   seedLocationChainAllIds,
   signedInClient,
 } from "./supabase-test-client";
+import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -47,7 +48,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -115,7 +116,7 @@ async function signUpOnly(page: Page): Promise<void> {
 // findings are logged (via the failure message, if the test ever does
 // fail) but don't fail the build, per the AC's "critical or serious" bar.
 const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void> }[] = [
-  { path: "/", name: "home (populated, real household state)", setup: signUpAndSeedHomeItem },
+  { path: STUFF_PATH, name: "home (populated, real household state)", setup: signUpAndSeedHomeItem },
   // Browse now reads real household data too (see this task's PR
   // description) — a fresh account has zero locations, so this scans the
   // real empty state. The "a location with a nested child" case moved to
@@ -132,12 +133,12 @@ const ROUTES: { path: string; name: string; setup?: (page: Page) => Promise<void
   { path: "/this-route-does-not-exist", name: "root not-found", setup: signUpOnly },
   { path: "/~offline", name: "offline fallback" },
   // Design 5/5: the forms and flows. A brand-new account has zero items and
-  // hasn't finished onboarding, so "/" is the guided onboarding here.
-  { path: "/", name: "guided onboarding (fresh household)", setup: signUpOnly },
+  // hasn't finished onboarding, so the Stuff screen is the guided onboarding here.
+  { path: STUFF_PATH, name: "guided onboarding (fresh household)", setup: signUpOnly },
   { path: "/items/new", name: "stash form", setup: signUpOnly },
   { path: "/settings/invite", name: "invite panel", setup: signUpOnly },
-  // Signed out, "/" is the marketing home (no setup on purpose).
-  { path: "/", name: "marketing home (signed out)" },
+  // Signed out, the site root is the marketing home (no setup on purpose).
+  { path: MARKETING_PATH, name: "marketing home (signed out)" },
   { path: "/sign-in", name: "sign in" },
   { path: "/sign-up", name: "sign up" },
   { path: "/forgot-password", name: "forgot password" },
@@ -162,7 +163,7 @@ for (const route of ROUTES) {
 // breadcrumb one level deep. Needs a real seeded id (computed at test time),
 // which the static ROUTES table above can't express, so this lives as its
 // own test rather than a table entry. A leaf with direct items would
-// exercise ItemCard instead, but that shape is already covered by "/" above.
+// exercise ItemCard instead, but that shape is already covered by STUFF_PATH above.
 test("browse/[id] (a location with a nested child) has no critical or serious axe violations in light and dark", async ({
   page,
 }) => {

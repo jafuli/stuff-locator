@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "./fixtures";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // The All (n) / By place chips are the way into Browse (wireframes 02 / C1).
 const TEST_PASSWORD = "correct-horse-battery-1";
@@ -13,7 +14,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -31,7 +32,7 @@ async function seedTwoItems(page: Page): Promise<{ tent: string; passport: strin
 
 test("the Stuff screen shows All (n) with the household total, current, and By place", async ({ page }) => {
   await seedTwoItems(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   const all = page.getByRole("link", { name: "All (2)" });
@@ -44,7 +45,7 @@ test("the Stuff screen shows All (n) with the household total, current, and By p
 
 test("the count is the household total, not the search results", async ({ page }) => {
   const { tent } = await seedTwoItems(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("searchbox", { name: "Search your stuff" }).fill(tent);
@@ -54,7 +55,7 @@ test("the count is the household total, not the search results", async ({ page }
 
 test("Stuff → By place → Browse → All → Stuff, by keyboard", async ({ page }) => {
   await seedTwoItems(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   expect(await tabUntilFocused(page, "By place", 15)).toBe(true);
@@ -70,7 +71,7 @@ test("Stuff → By place → Browse → All → Stuff, by keyboard", async ({ pa
   expect(await tabUntilFocused(page, "All (2)", 15)).toBe(true);
   await page.keyboard.press("Enter");
 
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("link", { name: "All (2)" })).toHaveAttribute("aria-current", "page");
 });
 
@@ -81,7 +82,7 @@ test("typing in the search box on Browse lands on Stuff with that query applied"
 
   await page.getByRole("searchbox", { name: "Search your stuff" }).fill("Camping");
 
-  await page.waitForURL(/\/\?q=Camping/);
+  await page.waitForURL((url) => url.pathname === STUFF_PATH && url.searchParams.get("q") === "Camping");
   await expect(page.getByRole("searchbox", { name: "Search your stuff" })).toHaveValue("Camping");
   await expect(page.getByText(tent)).toBeVisible();
   await expect(page.getByText(passport)).toHaveCount(0);
@@ -103,7 +104,7 @@ test("sub-pages keep their Back link and do not show the chips", async ({ page }
 test("chips are comfortable touch targets and the page doesn't scroll sideways at 320px", async ({ page }) => {
   await seedTwoItems(page);
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   for (const name of ["All (2)", "By place"]) {
@@ -119,7 +120,7 @@ test("chips are comfortable touch targets and the page doesn't scroll sideways a
 test("Home and the top of Browse have no critical or serious axe violations with the chips", async ({ page }) => {
   await seedTwoItems(page);
 
-  for (const path of ["/", "/browse"]) {
+  for (const path of [STUFF_PATH, "/browse"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     const results = await new AxeBuilder({ page }).analyze();

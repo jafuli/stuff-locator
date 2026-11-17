@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { openHouseholdMenu, tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -11,7 +12,7 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   // Hydrated before any keyboard driving: Tab presses during hydration can
   // land on a page that's about to re-render.
   await page.waitForLoadState("networkidle");

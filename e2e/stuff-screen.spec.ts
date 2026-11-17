@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
+import { STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -11,13 +12,13 @@ async function signUpAndSeed(page: Page): Promise<{ keyName: string }> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   const deep = await seedLocationChain(email, TEST_PASSWORD, ["Garage", "Closet", "Toolbox", "Red box"]);
   const shallow = await seedLocationChain(email, TEST_PASSWORD, ["Kitchen"]);
   const keyName = `Spare key ${randomUUID().slice(0, 6)}`;
   await seedItem(email, TEST_PASSWORD, { name: keyName, locationId: deep });
   await seedItem(email, TEST_PASSWORD, { name: `Spare tin ${randomUUID().slice(0, 6)}`, locationId: shallow });
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
   return { keyName };
 }

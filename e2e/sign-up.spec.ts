@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { countHouseholdsForUser } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Runs against a real local Supabase stack — there's no way to fake
 // Supabase Auth. `npm run supabase:start` must be running first; see the
@@ -44,7 +45,7 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
   // / is an (app) route group page (ADR 0013) and signUp()
@@ -98,10 +99,10 @@ test("a household-bootstrap failure still reaches / with a visible, keyboard-rea
   expect(await tabUntilFocused(page, "Continue", 5)).toBe(true);
 
   // Non-blocking: even with no interaction, the auto-continue timer takes
-  // this to / on its own — never traps the user on the auth page.
-  await page.waitForURL("/", { timeout: 10_000 });
+  // this to the Stuff screen on its own — never traps the user on the auth page.
+  await page.waitForURL(STUFF_PATH, { timeout: 10_000 });
 
-  // "/" offers to finish the setup. This used to assert "What are you
+  // The Stuff screen offers to finish the setup. This used to assert "What are you
   // looking for?", which the loading skeleton also shows, so it passed by
   // catching the skeleton while the page went on to "Couldn't load your
   // stuff". Assert the real end state instead.
