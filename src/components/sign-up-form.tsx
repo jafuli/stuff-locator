@@ -21,7 +21,7 @@ interface FieldErrors {
 export interface SignUpFormProps {
   /**
    * When set, a successful sign-up redeems this invite code BEFORE the
-   * usual household-bootstrap check runs, instead of navigating to "/" —
+   * usual household-bootstrap check runs, instead of navigating to the Stuff screen —
    * see /join/[code]/page.tsx and JoinInviteFlow. This ordering is the
    * whole point (see redeem-invite-client.ts and that route's own PR
    * description): bootstrap only creates a household if the caller has
@@ -39,7 +39,7 @@ export interface SignUpFormProps {
    * via withNextParam, so a visitor bounced off a protected route who
    * then chooses "create an account" still ends up where they meant to
    * go. Already validated by src/app/(public)/sign-up/page.tsx (safeRedirectPath);
-   * defaults to "/".
+   * defaults to the Stuff screen (DEFAULT_REDIRECT_PATH).
    */
   next?: string;
 }
@@ -56,7 +56,7 @@ export interface SignUpFormProps {
  * Branches on the actual `data.session` in signUp's response rather than
  * assuming: locally, supabase/config.toml has `enable_confirmations =
  * false`, so signUp returns an active session immediately and this redirects
- * straight to "/" (or, with `invite` set, redeems the invite instead — see
+ * straight to the Stuff screen (or, with `invite` set, redeems the invite instead — see
  * that prop's own doc comment). If confirmations were required, session
  * would come back null and this shows a real "check your email" state
  * instead of silently doing nothing.

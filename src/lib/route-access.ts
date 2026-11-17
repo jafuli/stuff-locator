@@ -23,25 +23,25 @@
  * out before the proxy function runs.
  */
 
+import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
+
 /** The auth pages. Also read by safeRedirectPath: never a return target. */
 export const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"] as const;
 
 /**
- * Pages anyone may open. The invite landing is public on purpose:
+ * Pages anyone may open: the auth pages, the marketing home at "/" (a
+ * signed-in "/" never gets this far — resolveRoute redirects it to the Stuff
+ * screen first), and the invite landing. The invite landing is public on purpose:
  * (public)/join/[code]/page.tsx resolves whether the visitor has a session
  * and hands that to JoinInviteFlow, which shows a sign-up/sign-in toggle to
  * a signed-out one. Gating it would make every invite link dead for
  * precisely the person it was sent to (e2e/join-invite.spec.ts).
  */
-export const PUBLIC_ROUTES = [...PUBLIC_PATHS, "/join/[code]"] as const;
+export const PUBLIC_ROUTES = [...PUBLIC_PATHS, MARKETING_PATH, "/join/[code]"] as const;
 
-/**
- * Pages that need a session. "/" is here because a signed-in "/" is the
- * Stuff screen; a signed-out "/" never reaches the gate, since resolveRoute
- * rewrites it to the marketing home first (ADR 0013).
- */
+/** Pages that need a session. STUFF_PATH is the Stuff screen (ADR 0013, amended 2026-11-17). */
 export const PROTECTED_ROUTES = [
-  "/",
+  STUFF_PATH,
   "/browse",
   "/browse/[id]",
   "/items/new",
@@ -96,30 +96,33 @@ export function requiresAuth(pathname: string): boolean {
   return !matchesAny(path, PUBLIC_ROUTES) && matchesAny(path, PROTECTED_ROUTES);
 }
 
-/**
- * The marketing home's real route. Signed out, "/" is rewritten here (the
- * URL in the address bar stays "/"); asked for by name, it redirects to "/"
- * so the page has one canonical URL. See ADR 0013.
- */
-export const MARKETING_PATH = "/welcome";
-
 export type RouteDecision =
-  { kind: "next" } | { kind: "rewrite"; pathname: string } | { kind: "redirect"; pathname: string; next?: string };
+  | { kind: "next" }
+  | {
+      kind: "redirect";
+      pathname: string;
+      /** Query string to keep on the target, including its "?". */
+      search?: string;
+      /** Return-to path, set as ?next= on the sign-in redirect. */
+      next?: string;
+    };
 
 /**
  * Everything src/proxy.ts decides about a request, as data, so it can be
  * tested without a NextRequest. `search` is the query string including its
- * "?" (or ""), carried into the sign-in return path.
+ * "?" (or "").
+ *
+ * - A signed-in "/" goes to the Stuff screen, keeping the query string, so an
+ *   old "/?q=keys" link still searches. That's the one cost of the app not
+ *   living at "/": a redirect when a signed-in user types the bare domain.
+ * - A signed-out "/" is the marketing home, a public page like any other.
+ * - Everything else goes through the deny-by-default gate.
  */
 export function resolveRoute(pathname: string, search: string, signedIn: boolean): RouteDecision {
   const path = normalise(pathname);
 
-  if (path === MARKETING_PATH) {
-    return { kind: "redirect", pathname: "/" };
-  }
-
-  if (path === "/" && !signedIn) {
-    return { kind: "rewrite", pathname: MARKETING_PATH };
+  if (path === MARKETING_PATH && signedIn) {
+    return { kind: "redirect", pathname: STUFF_PATH, search };
   }
 
   if (signedIn || !requiresAuth(pathname)) {

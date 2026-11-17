@@ -12,6 +12,7 @@ import { resolvePath, type PathChip } from "@/lib/location-path-picker";
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { STUFF_PATH } from "@/lib/routes";
 
 export interface StashFormProps {
   /** Every place in the household — the picker searches and descends through these. */
@@ -180,7 +181,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
           <Button type="button" variant="secondary" onClick={handleAddAnother}>
             Add another
           </Button>
-          <Link href="/" className={textLinkClassName()}>
+          <Link href={STUFF_PATH} className={textLinkClassName()}>
             Back to home
           </Link>
         </div>

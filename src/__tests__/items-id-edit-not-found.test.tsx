@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import NotFound from "@/app/(app)/items/[id]/edit/not-found";
+import { STUFF_PATH } from "@/lib/routes";
 
 test("renders a deliberate not-found state with a real heading and a working way back to the list", () => {
   render(<NotFound />);
@@ -9,5 +10,5 @@ test("renders a deliberate not-found state with a real heading and a working way
   expect(screen.getByText("It may have been moved or removed.")).toBeDefined();
 
   const backLink = screen.getByRole("link", { name: "Back to Stuff" });
-  expect(backLink.getAttribute("href")).toBe("/");
+  expect(backLink.getAttribute("href")).toBe(STUFF_PATH);
 });

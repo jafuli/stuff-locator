@@ -12,7 +12,7 @@ import { SiteHeader } from "@/components/site-header";
 //
 // Takes the same validated ?next= return-to as /sign-in — a visitor
 // bounced off a protected route who follows the "create an account" link
-// keeps their destination instead of silently landing on "/". See
+// keeps their destination instead of silently landing on the Stuff screen. See
 // src/app/(public)/sign-in/page.tsx for why this is read server-side.
 export default async function SignUpPage(props: PageProps<"/sign-up">) {
   const { next } = await props.searchParams;

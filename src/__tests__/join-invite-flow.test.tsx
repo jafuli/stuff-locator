@@ -22,6 +22,7 @@ vi.mock("@/server/db/client", () => ({
 // Static import is safe here for the same reason as sign-up-form.test.tsx:
 // the vi.mock calls above are hoisted above imports.
 import { JoinInviteFlow } from "@/components/join-invite-flow";
+import { STUFF_PATH } from "@/lib/routes";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -48,7 +49,7 @@ test("an already-signed-in visitor redeems automatically and shows the real succ
 
   const status = await screen.findByRole("status");
   expect(status.textContent).toContain("Maayan's home");
-  expect(screen.getByRole("link", { name: "Go to Stuff Locator" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "Go to Stuff Locator" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(rpc).toHaveBeenCalledWith("redeem_invite", { p_code: "abc123" });
 });
 
@@ -60,7 +61,7 @@ test("an already-signed-in visitor with an invalid code sees a specific error st
 
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("redeem_invite: invite not found");
-  expect(screen.getByRole("link", { name: "Back to Stuff Locator" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "Back to Stuff Locator" }).getAttribute("href")).toBe(STUFF_PATH);
 });
 
 test("a signed-out visitor sees the sign-up form by default; a successful sign-up redeems and shows success", async () => {

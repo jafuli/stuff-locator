@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonClassName } from "@/components/ui/button";
+import { MARKETING_PATH } from "@/lib/routes";
 
 // Next's root not-found.tsx convention: automatically rendered for any
 // unmatched path under the app, no notFound() call needed — distinct from
@@ -21,8 +22,9 @@ import { buttonClassName } from "@/components/ui/button";
 //
 // Route groups (ADR 0013): a root not-found.tsx can't sit inside (app) or
 // (public), so it renders as a standalone page, with the wordmark header and
-// no floating nav. "Back to Stuff" goes to "/", which serves the Stuff screen
-// or the marketing home depending on the session. A bad item or place id
+// no floating nav. "Back to Stuff" goes to the site root (MARKETING_PATH):
+// anyone can land here, and "/" sends a signed-in visitor on to the Stuff
+// screen and shows a signed-out one the marketing home. A bad item or place id
 // (items/[id]/not-found.tsx, browse/[id]/not-found.tsx) is inside (app) and
 // keeps the nav.
 export default function NotFound() {
@@ -38,7 +40,7 @@ export default function NotFound() {
             // A real navigation, so a <Link>, not Button's <button> — styled
             // to match Button's secondary variant, same as the other
             // not-found routes.
-            <Link href="/" className={buttonClassName("secondary")}>
+            <Link href={MARKETING_PATH} className={buttonClassName("secondary")}>
               Back to Stuff
             </Link>
           }

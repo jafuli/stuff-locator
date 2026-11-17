@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StashForm } from "@/components/stash-form";
 import type { Location } from "@/lib/fixtures/types";
+import { STUFF_PATH } from "@/lib/routes";
 
 const LOCATIONS: Location[] = [
   { id: "garage", parentId: null, name: "Garage" },
@@ -116,7 +117,7 @@ test("a valid fill-and-submit calls stash_item with the place id and shows the r
   expect(status.textContent).toContain("Garage");
   expect(status.textContent).toContain("Closet");
   expect(status.textContent).toContain("Top shelf, behind the shoebox");
-  expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe(STUFF_PATH);
   // The real returned id, not an echo of form input.
   expect(screen.getByRole("link", { name: "View item" }).getAttribute("href")).toBe(
     "/items/33333333-3333-3333-3333-333333333333",

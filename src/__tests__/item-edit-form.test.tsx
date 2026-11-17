@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ItemEditForm } from "@/components/item-edit-form";
 import type { Item, Location } from "@/lib/fixtures/types";
+import { STUFF_PATH } from "@/lib/routes";
 
 const LOCATIONS: Location[] = [
   { id: "garage", parentId: null, name: "Garage" },
@@ -231,7 +232,7 @@ test("confirming delete calls delete_item and shows a success state with a way b
 
   const status = await screen.findByRole("status");
   expect(status.textContent).toContain("Bike pump");
-  expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("delete_item", { p_item_id: "bike-pump" });
 });

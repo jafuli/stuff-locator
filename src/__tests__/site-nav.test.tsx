@@ -24,16 +24,17 @@ vi.mock("@/server/db/client", () => ({
 // next/navigation and @/server/db/client are already mocked by the time
 // site-nav.tsx evaluates them.
 import { NavClearance, SiteNav } from "@/components/site-nav";
+import { STUFF_PATH } from "@/lib/routes";
 
-test("marks the Stuff tab active on /", () => {
-  usePathname.mockReturnValue("/");
+test("marks the Stuff tab active on the Stuff screen", () => {
+  usePathname.mockReturnValue(STUFF_PATH);
   render(<SiteNav />);
   expect(screen.getByRole("link", { name: "Stuff" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "Activity" }).getAttribute("aria-current")).toBeNull();
 });
 
 test("has exactly two capsule tabs, and no loose Invite link or Sign out button under them any more", () => {
-  usePathname.mockReturnValue("/");
+  usePathname.mockReturnValue(STUFF_PATH);
   render(<SiteNav />);
   // Invite partner / Settings / Sign out moved into the household sheet (see
   // household-menu.test.tsx) — the primary nav is just the two tabs.
