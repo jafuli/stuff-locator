@@ -17,7 +17,7 @@ jobs:
       # overwrites these with real local values via $GITHUB_ENV before the
       # UI smoke test step runs.
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -67,7 +67,8 @@ jobs:
           npx supabase status -o env > /tmp/supabase-status.env
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$(grep '^API_URL=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
-            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
+            # The app gets the publishable key, as in production (DEPLOYMENT.md).
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(grep '^PUBLISHABLE_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_URL=$(grep '^API_URL=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_ANON_KEY=$(grep '^ANON_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"
             echo "SUPABASE_SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase-status.env | cut -d= -f2- | tr -d '"')"

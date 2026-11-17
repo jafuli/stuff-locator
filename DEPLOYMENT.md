@@ -30,7 +30,7 @@ Use a **separate** Supabase project for production. The local stack
    the code that needs it.
 
 3. **API keys** (Project Settings → API Keys). Use the **publishable key**
-   (`sb_publishable_…`) as the value of `NEXT_PUBLIC_SUPABASE_ANON_KEY`:
+   (`sb_publishable_…`) as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`:
    - **Why:** Supabase is deprecating the legacy JWT `anon` and
      `service_role` keys by the end of 2026, and its Next.js guide now uses
      the publishable key.
@@ -38,10 +38,10 @@ Use a **separate** Supabase project for production. The local stack
      variable with this repo's `@supabase/supabase-js`. Sign-up and
      authenticated reads succeed. Anonymous table reads are refused by
      Postgres, as ADR 0005 intends.
-   - **The variable name is not renamed in this PR.** A rename to
-     `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is worth a small follow-up so the
-     name matches what it holds; it touches only `src/lib/env.ts`, the two
-     client factories and `.env.example`.
+   - **The variable was renamed** from `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     on 2026-11-17, so the name says what it holds. CI feeds the app the
+     local stack's publishable key too, so CI runs what production runs.
+     After pulling this change, rename the line in your own `.env.local`.
    - **The secret key (`sb_secret_…`) never goes to Vercel.** The app has no
      use for it at runtime: every privileged write is a `SECURITY DEFINER`
      function called with the user's own JWT.
@@ -63,25 +63,28 @@ Where these come from in the code:
   Supabase only honours a `redirectTo` that is on the allow-list. Otherwise it
   silently falls back to the Site URL and drops the path, so the reset page
   never opens. This is the one redirect URL the app needs.
-- **Sign-up confirmation.** `signUp` passes no `emailRedirectTo`, so the
-  confirmation link lands on the **Site URL**. The form already handles a
-  sign-up that returns no session: it says "Check your email…, then sign in".
+- **Sign-up confirmation.** Off in production (below), so no email and no
+  redirect. If it's ever turned on: `signUp` passes no `emailRedirectTo`, so
+  the link lands on the **Site URL**.
 - **Invite links (`/join/[code]`).** These are not an auth redirect, so they
   need no allow-list entry. `invite-panel.tsx` builds them from
   `window.location.origin`, so a link made on a preview deployment points at
   that preview.
 
-**Email confirmation.** It is off locally (`enable_confirmations = false` in
-`supabase/config.toml`). Supabase-hosted projects default to **on**. Decide
-deliberately:
+**Email confirmation: turn it off** (Authentication → Sign In / Providers →
+Email → "Confirm email"). Decided 2026-11-17: this is a portfolio demo that
+people will try, so sign-up signs you straight in, as it does locally
+(`enable_confirmations = false` in `supabase/config.toml`). Supabase-hosted
+projects default to **on**, so this is a step to take, not a default to keep.
 
-- **On** means every sign-up and every invited partner needs the email,
-  which needs working SMTP (below).
-- **Off** means anyone can register any address.
-
-There is no `/auth/confirm` route, so with confirmations on, the link
-confirms the address and the person then signs in by hand. That flow has not
-been exercised against a hosted project.
+- **The trade-off:** anyone can register with an address that isn't theirs.
+  The harm here is small: an account sees only its own household, and
+  joining someone else's takes their invite code.
+- **If it's ever turned on:** the confirmation link lands on the Site URL,
+  and there is no `/auth/confirm` route, so the person confirms and then
+  signs in by hand. The sign-up form already handles that ("Check your
+  email…, then sign in"). That flow hasn't been tested against a hosted
+  project.
 
 ### Custom SMTP (Authentication → Emails → SMTP Settings)
 
@@ -94,7 +97,8 @@ been exercised against a hosted project.
 - **has no SLA.** Supabase says it is for non-production use and urges a
   custom SMTP server for everything else.
 
-Password reset, and sign-up confirmation if it's on, both send email. Any
+Password reset sends email even with confirmation off, so SMTP is still
+needed. Any
 transactional provider works (Resend, Postmark, SES, …). After switching,
 raise the email rate limit under Authentication → Rate Limits.
 
@@ -120,7 +124,7 @@ raise the email rate limit under Authentication → Rate Limits.
    | Name | Value |
    | --- | --- |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the **publishable** key (see 1.3) |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | the **publishable** key (see 1.3) |
 
    That's all the app reads (`src/lib/env.ts` validates both at start-up).
    Both are `NEXT_PUBLIC_`, so they are inlined into the client bundle
@@ -223,7 +227,9 @@ What this means in practice:
 
 ## 5. After the first deploy
 
-- [ ] `/` signed out shows the marketing home. Sign up, and sign in.
+- [ ] `/` signed out shows the marketing home. Sign up with a new address:
+      you land in the app straight away, with no "check your email" step
+      (confirmation is off).
 - [ ] Forgot password → the email arrives (custom SMTP) → the link opens
       `/reset-password` on the production domain.
 - [ ] Invite partner → the `/join/<code>` link opens on the production domain.

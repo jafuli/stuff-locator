@@ -7,5 +7,5 @@ import type { Database } from "@/lib/database.types";
  * doesn't need server-only privileges — RLS still applies.
  */
 export function createClient() {
-  return createBrowserClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return createBrowserClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 }
