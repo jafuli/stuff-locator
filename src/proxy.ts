@@ -6,8 +6,8 @@ import { updateSession } from "@/server/db/update-session";
 // runtime). This is that file, not a typo.
 //
 // Two jobs, in order: keep the Supabase session cookie fresh (what this
-// file always did), then route the request: rewrite a signed-out "/" to the
-// marketing home (ADR 0013), and gate everything else. The gate is deny-by-default —
+// file always did), then route the request: send a signed-in "/" on to the
+// Stuff screen (ADR 0013, amended 2026-11-17), and gate everything else. The gate is deny-by-default —
 // src/lib/route-access.ts names the handful of paths that stay open and
 // everything else needs a session. It is deliberately an *optimistic*
 // check on the cookie's verified claims, not the app's authorisation
@@ -22,22 +22,18 @@ export async function proxy(request: NextRequest) {
   }
 
   const target = new URL(decision.pathname, request.url);
-  let routed: NextResponse;
-  if (decision.kind === "rewrite") {
-    // Signed-out "/": serve the marketing home from /welcome while the
-    // address bar keeps "/". Forwarding `request` keeps any cookie
-    // updateSession refreshed on the request the page renders with.
-    routed = NextResponse.rewrite(target, { request });
-  } else {
-    // Return-to, so a shared link to a specific item survives the detour
-    // through sign-in. Absent for the /welcome → "/" redirect.
-    if (decision.next !== undefined) {
-      target.searchParams.set("next", decision.next);
-    }
-    routed = NextResponse.redirect(target);
+  // Signed-in "/" → the Stuff screen: keep the query, so "/?q=keys" still searches.
+  if (decision.search !== undefined) {
+    target.search = decision.search;
   }
+  // Return-to, so a shared link to a specific item survives the detour
+  // through sign-in.
+  if (decision.next !== undefined) {
+    target.searchParams.set("next", decision.next);
+  }
+  const routed = NextResponse.redirect(target);
 
-  // Carry over anything updateSession just set. A rewrite or redirect is a
+  // Carry over anything updateSession just set. A redirect is a
   // *different* response object, so without this the refreshed auth
   // cookies are dropped on exactly the requests that get routed.
   for (const cookie of response.cookies.getAll()) {

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { MARKETING_PATH } from "@/lib/routes";
 
 // The signed-out pages (marketing home, the auth pages, the invite landing)
 // share one header and must move between each other in a single step.
@@ -7,7 +8,7 @@ for (const path of ["/sign-in", "/sign-up", "/forgot-password", "/reset-password
   test(`${path}: the wordmark links back to the marketing home`, async ({ page }) => {
     await page.goto(path);
     await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL(MARKETING_PATH);
     await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
   });
 }
@@ -36,8 +37,8 @@ async function recordHeadings(page: Page): Promise<() => Promise<string[]>> {
 const NAVIGATIONS = [
   { from: "/sign-in", link: "Sign up", to: "Create your account" },
   { from: "/sign-up", link: "Sign in", to: "Sign in" },
-  { from: "/", link: "Sign in", to: "Sign in" },
-  { from: "/", link: "Sign up", to: "Create your account" },
+  { from: MARKETING_PATH, link: "Sign in", to: "Sign in" },
+  { from: MARKETING_PATH, link: "Sign up", to: "Create your account" },
   { from: "/sign-in", link: "Stuff Locator", to: "Where did we put the passports?" },
 ];
 

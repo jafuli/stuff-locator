@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { STUFF_PATH } from "@/lib/routes";
 
 export type StuffView = "all" | "place";
 
@@ -33,7 +34,7 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
   return (
     <nav aria-label="Stuff view" className="flex flex-wrap gap-2">
       <Link
-        href="/"
+        href={STUFF_PATH}
         aria-current={active === "all" ? "page" : undefined}
         className={cn(CHIP_BASE, active === "all" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >

@@ -8,6 +8,7 @@ import { createClient } from "@/server/db/server";
 import { BackLink } from "@/components/back-link";
 import { buttonClassName } from "@/components/ui/button";
 import { fetchDisplayNames } from "@/server/services/profiles";
+import { STUFF_PATH } from "@/lib/routes";
 
 // A malformed id (not a valid uuid at all — e.g. an old fixture slug, or a
 // typo) fails at the Postgres driver level before RLS/row-matching even
@@ -104,7 +105,7 @@ export default async function Page(props: PageProps<"/items/[id]">) {
   return (
     <main className="flex flex-col gap-4 px-gutter pt-4">
       <div className="flex items-center justify-between gap-3">
-        <BackLink href="/" label="Stuff" />
+        <BackLink href={STUFF_PATH} label="Stuff" />
         <Link href={`/items/${id}/edit`} className={buttonClassName("secondary", "min-h-target-min px-4")}>
           Edit
         </Link>

@@ -7,7 +7,7 @@ interface HouseholdBootstrapNoticeProps {
 /**
  * Shown by SignUpForm/SignInForm when the best-effort household-bootstrap
  * call (POST /api/household/bootstrap) fails. Non-blocking by design: the
- * caller still auto-navigates to "/" shortly after showing this (see
+ * caller still auto-navigates to the Stuff screen shortly after showing this (see
  * timeoutRef in each form), so this notice is both self-clearing (the
  * redirect happens regardless) and dismissible (this button jumps ahead of
  * that timer). Reuses the same role="alert" + bordered-box pattern as the

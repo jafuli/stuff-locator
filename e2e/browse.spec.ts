@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChain, seedLocationChainAllIds } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Browse (/browse, /browse/[id]) now reads real household data — every test
 // signs up a fresh real account first (both routes redirect an
@@ -16,7 +17,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 

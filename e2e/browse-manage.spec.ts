@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { seedItem, seedLocationChainAllIds } from "./supabase-test-client";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Browse as navigate + tidy up (ADR 0010): "+ Add a place here", and a ⋯ menu
 // on a place's own page with Rename / Move into… / Delete (blocked until the
@@ -15,7 +16,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 

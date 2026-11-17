@@ -4,7 +4,7 @@ import { ensureHousehold } from "@/server/services/household";
 /**
  * Makes sure the calling user belongs to a household, creating one via
  * create_household if they don't already. Called from the sign-up and
- * sign-in forms right before they redirect to "/" — see those components
+ * sign-in forms right before they redirect to the Stuff screen — see those components
  * for the client side of this.
  *
  * No request body: identity is resolved server-side from the session

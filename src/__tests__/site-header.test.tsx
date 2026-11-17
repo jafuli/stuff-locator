@@ -2,10 +2,11 @@ import { expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SiteHeader } from "@/components/site-header";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { MARKETING_PATH } from "@/lib/routes";
 
 test("with homeLink, the wordmark is a link to /", () => {
   render(<SiteHeader homeLink />);
-  expect(screen.getByRole("link", { name: "Stuff Locator" }).getAttribute("href")).toBe("/");
+  expect(screen.getByRole("link", { name: "Stuff Locator" }).getAttribute("href")).toBe(MARKETING_PATH);
 });
 
 test("without homeLink, the wordmark is plain text (on / itself, a link would point at the page you're on)", () => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonClassName } from "@/components/ui/button";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Next's not-found.tsx convention: rendered when notFound() is called
 // within this segment (see page.tsx). Scoped separately from the parent
@@ -17,7 +18,7 @@ export default function NotFound() {
         action={
           // A real navigation, so a <Link>, not Button's <button> — styled
           // to match Button's secondary variant (see src/components/ui/button.tsx).
-          <Link href="/" className={buttonClassName("secondary")}>
+          <Link href={STUFF_PATH} className={buttonClassName("secondary")}>
             Back to Stuff
           </Link>
         }

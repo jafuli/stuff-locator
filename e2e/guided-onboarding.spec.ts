@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 // Guided onboarding — shown on Home instead of the plain empty state for a
 // household with zero items that hasn't finished (or skipped) the sequence
@@ -16,7 +17,7 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return email;
 }
 
@@ -48,7 +49,7 @@ test("a brand-new household sees guided onboarding, with all four steps reachabl
   });
 
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByText("Step 1 of 4")).toBeVisible();
@@ -61,7 +62,7 @@ test("skip path: skipping every step completes onboarding and reaches the real e
   page,
 }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("button", { name: "Skip this step" }).click();
@@ -90,7 +91,7 @@ test("'Skip guided setup' exits immediately from the very first step, without cl
   page,
 }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("button", { name: "Skip guided setup" }).click();
@@ -113,7 +114,7 @@ test("complete-through-invite path: real items added during onboarding show up o
   });
 
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   // Step 1: a genuinely brand-new household has zero existing locations —
@@ -135,7 +136,7 @@ test("complete-through-invite path: real items added during onboarding show up o
   await page.waitForURL("/settings/invite");
   await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
 
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
@@ -157,7 +158,7 @@ test("a household that already has items never shows onboarding, even with onboa
   page,
 }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   // Adding a real item via the guided step itself is the simplest way to
@@ -175,7 +176,7 @@ test("a household that already has items never shows onboarding, even with onboa
 
 test("the guided sequence, including the location autocomplete, is operable keyboard-only", async ({ page }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   // "Skip guided setup" is the very first tab stop — the header's
@@ -218,7 +219,7 @@ test("the onboarding screen has one way forward: no header '+ Add item', no View
   page,
 }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("link", { name: "Stash", exact: true })).toHaveCount(0);
@@ -233,7 +234,7 @@ test("the onboarding screen has one way forward: no header '+ Add item', no View
 
 test("a place created in step 1 is offered as an existing place in step 2", async ({ page }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await stashViaOnboardingStep(page, "Passport", "Filing box");
@@ -247,7 +248,7 @@ test("a place created in step 1 is offered as an existing place in step 2", asyn
 
 test("'Skip guided setup' is a comfortable touch target (at least 44px tall)", async ({ page }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   const box = await page.getByRole("button", { name: "Skip guided setup" }).boundingBox();
@@ -256,7 +257,7 @@ test("'Skip guided setup' is a comfortable touch target (at least 44px tall)", a
 
 test("the same place typed in two steps ends up as exactly one place on Browse", async ({ page }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   // Step 1: Office does not exist yet, so "+ New place" is the only row.
@@ -283,7 +284,7 @@ test("a nested place can be built in one go during onboarding, and the placehold
   page,
 }) => {
   await signUpFreshAccount(page);
-  await page.goto("/");
+  await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await expect(page.getByPlaceholder("e.g. Office, then Cabinet…")).toBeVisible();

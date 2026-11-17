@@ -17,6 +17,7 @@ import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import { NAV_TABS } from "@/lib/nav-tabs";
+import { STUFF_PATH } from "@/lib/routes";
 
 const ACTIVITY_NOW = new Date("2026-10-22T12:00:00Z");
 
@@ -228,7 +229,7 @@ export default function ComponentsDemoPage() {
 
       <Section id="tab-capsule-heading" title="Tab capsule">
         <ThemePair>
-          <TabCapsule tabs={NAV_TABS} activePath="/" />
+          <TabCapsule tabs={NAV_TABS} activePath={STUFF_PATH} />
           <TabCapsule tabs={NAV_TABS} activePath="/activity" />
         </ThemePair>
       </Section>

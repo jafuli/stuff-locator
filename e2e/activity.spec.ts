@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { seedLocationChainAllIds, signedInClient } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
+import { STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
@@ -18,7 +19,7 @@ async function signUpFreshAccount(page: Page): Promise<{ email: string; displayN
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("/");
+  await page.waitForURL(STUFF_PATH);
   return { email, displayName };
 }
 

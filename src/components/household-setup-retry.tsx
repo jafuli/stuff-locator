@@ -7,14 +7,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
 
 /**
- * What "/" shows a signed-in user who has no household yet: the household
+ * What the Stuff screen shows a signed-in user who has no household yet: the household
  * bootstrap at sign-up or sign-in failed, and HouseholdBootstrapNotice
  * auto-continued them here. "Try again" re-runs that same bootstrap
  * (POST /api/household/bootstrap) and refreshes, which lands a fresh
  * household on guided onboarding.
  *
- * The write happens only on this click, never while "/" renders: a prefetch
- * of "/" mid invite sign-up must not be able to create a household before
+ * The write happens only on this click, never while the Stuff screen
+ * renders: a prefetch of it mid invite sign-up must not be able to create a household before
  * the redeem lands (ADR 0008).
  */
 export function HouseholdSetupRetry() {
