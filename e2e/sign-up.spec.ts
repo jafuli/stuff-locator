@@ -100,10 +100,23 @@ test("a household-bootstrap failure still reaches / with a visible, keyboard-rea
   // Non-blocking: even with no interaction, the auto-continue timer takes
   // this to / on its own — never traps the user on the auth page.
   await page.waitForURL("/", { timeout: 10_000 });
-  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+
+  // "/" offers to finish the setup. This used to assert "What are you
+  // looking for?", which the loading skeleton also shows, so it passed by
+  // catching the skeleton while the page went on to "Couldn't load your
+  // stuff". Assert the real end state instead.
+  await expect(page.getByRole("heading", { level: 1, name: "Your household isn't set up yet" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Couldn't load your stuff" })).toHaveCount(0);
 
   // The failure is genuinely observable, not silently swallowed.
   expect(consoleErrors.some((message) => /household-bootstrap/i.test(message))).toBe(true);
+
+  // Recovery: with the bootstrap route working again, Try again creates the
+  // household and lands on guided onboarding (a fresh household, no items).
+  await page.unroute("**/api/household/bootstrap");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("heading", { name: "Stash something filed away" })).toBeVisible();
+  expect(await countHouseholdsForUser(email, TEST_PASSWORD)).toBe(1);
 });
 
 test("empty fields show real inline errors and never navigate away", async ({ page }) => {
