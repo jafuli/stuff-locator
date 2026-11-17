@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useHasSession } from "@/components/use-has-session";
 import { createClient } from "@/server/db/client";
+import { clearPrivateCaches } from "@/lib/offline/clear-private-caches";
 
 export interface SignOutButtonProps {
   /**
@@ -27,6 +28,11 @@ export interface SignOutButtonProps {
  * which Next doesn't remount — so "Signing out…" never resolved back. The
  * try/finally below guarantees isSigningOut clears regardless of whether
  * the call succeeds, fails, or navigates nowhere.
+ *
+ * Before redirecting it empties the service worker's household-data caches
+ * (docs/adr/0014), so the next person on this device can't read them offline.
+ * clearPrivateCaches never rejects and gives up waiting after a moment, so a
+ * missing service worker or Cache API can't block signing out.
  */
 export function SignOutButton({ assumeSession = false }: SignOutButtonProps) {
   const router = useRouter();
@@ -44,6 +50,7 @@ export function SignOutButton({ assumeSession = false }: SignOutButtonProps) {
         setError(signOutError.message);
         return;
       }
+      await clearPrivateCaches();
       router.push("/sign-in");
       router.refresh();
     } finally {

@@ -1,8 +1,10 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
-import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
+import { deletePrivateCaches, isClearPrivateCachesMessage } from "../lib/offline/cache-policy";
+import { createEpochGuard } from "../lib/offline/epoch-guard";
+import { createRuntimeCaching } from "../lib/offline/runtime-caching";
 import { isModelRequest } from "../lib/search/model-hosts";
 
 declare global {
@@ -13,12 +15,20 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Runtime caching is declared in this repo rather than taken from Serwist's
+// defaultCache, so the caches holding household data have names we own and
+// clear. See src/lib/offline/runtime-caching.ts and docs/adr/0014.
+const privateCacheGuard = createEpochGuard(() => self.caches);
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: createRuntimeCaching({
+    production: process.env.NODE_ENV === "production",
+    privateCacheGuard: privateCacheGuard.plugin,
+  }),
   fallbacks: {
     entries: [
       {
@@ -53,6 +63,30 @@ self.addEventListener("fetch", (event) => {
   if (event.request.destination === "worker" || isModelRequest(new URL(event.request.url), self.location.origin)) {
     event.stopImmediatePropagation();
   }
+});
+
+// Sign-out, or a different user signing in, asks for the private caches to be
+// emptied (src/lib/offline/clear-private-caches.ts). The epoch is bumped
+// before deleting, so a request already in flight can't write its response
+// back into a cache that was just cleared. The reply tells the page it may
+// navigate on; the page doesn't wait long for it.
+self.addEventListener("message", (event) => {
+  if (!isClearPrivateCachesMessage(event.data)) {
+    return;
+  }
+  privateCacheGuard.bump();
+  // `at` rather than `[0]`: a message posted without a port has none.
+  const port = event.ports.at(0);
+  event.waitUntil(
+    deletePrivateCaches(self.caches).then(
+      () => {
+        port?.postMessage({ ok: true });
+      },
+      () => {
+        port?.postMessage({ ok: false });
+      },
+    ),
+  );
 });
 
 serwist.addEventListeners();
