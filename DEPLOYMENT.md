@@ -109,10 +109,11 @@ raise the email rate limit under Authentication → Rate Limits.
    exists if the build creates it. Verified in a fresh `git clone`: before
    the build `public/ort/` does not exist, and after `npm ci && npm run build`
    it holds the 4 runtime files and the build passes.
-4. **Node.js version: set 22.x** (Project Settings → Build and Deployment).
-   `package.json` says `"node": ">=22.0.0"`, and Vercel resolves an
-   open-ended range to its newest major (24.x). CI tests on 22. Either pin
-   Vercel to 22.x, or move CI to 24 first, so production runs what CI tested.
+4. **Node.js version: 24.x, nothing to set.** `package.json` pins
+   `"engines": { "node": "24.x" }`, and Vercel takes the version from there
+   (it overrides the dashboard setting). CI runs the same major. Node 24 is
+   the current LTS and Vercel's default. To change it, change `engines` and
+   `node-version` in `.github/workflows/ci.yml` together.
 5. **Environment variables** (Production, and Preview if previews should
    work):
 
@@ -199,29 +200,26 @@ raise the email rate limit under Authentication → Rate Limits.
     removes ~300 MB, but it breaks any future server-side use of
     transformers, so it's a trade-off to make deliberately.
 
-### The embedding model: facts for the self-hosting decision
+### The embedding model: served from Hugging Face
 
-This decision is Itamar's, on the deploy task. Today the model downloads from
-the Hugging Face Hub in the browser, pinned to commit
-`751bff37182d3f1213fa05d7196b954e230abad9` (`MODEL_REVISION`, ADR 0012).
+**Decided 2026-11-17 (Itamar): not self-hosted.** The browser downloads the
+model from the Hugging Face Hub, pinned to commit
+`751bff37182d3f1213fa05d7196b954e230abad9` (`MODEL_REVISION`, ADR 0012), so
+nothing about it touches the build or the deployment. About 23.7 MB in total
+(`model_quantized.onnx` 22.97 MB plus `tokenizer.json` 0.71 MB). It downloads
+once per browser and is cached by transformers.js after that.
 
-- **Size:**
-  - `onnx/model_quantized.onnx` is 22.97 MB (21.9 MiB);
-  - `tokenizer.json` is 0.71 MB;
-  - the config files are a few KB.
-  - ~23.7 MB in total, cached by transformers.js after the first search.
-- **Self-hosting would mean one of two things:**
-  - **Download the files at build time.** The build would then depend on
-    the Hugging Face Hub being reachable. Pin the same revision, and serve
-    them from `public/` like `/ort/` (gitignored).
-  - **Commit them to the repo.** About 24 MB of binary, Git LFS advisable.
-- **Either way:**
-  - the model's host and path settings (`src/lib/search/model-hosts.ts`,
-    `env.remotePathTemplate`) would point at this origin;
-  - the service worker's model-request exception (`sw.ts`) would have to
-    cover the new path;
-  - and the deployment's static output grows by ~24 MB, compressed by the
-    CDN.
+What this means in practice:
+
+- If Hugging Face is down or slow, Find falls back to the word-matching
+  (lexical) ranking. Search keeps working, just without matching on meaning.
+- The model downloads on the first search, or in the background on a fast
+  connection (ADR 0012), never on Save-Data or 2g.
+- To self-host later: download the pinned files at build time into a
+  gitignored `public/` folder (like `/ort/`), or commit them (~24 MB, Git LFS
+  advisable). Then point `src/lib/search/model-hosts.ts` and
+  `env.remotePathTemplate` at this origin, and widen the model exception in
+  `sw.ts` to the new path.
 
 ## 5. After the first deploy
 
