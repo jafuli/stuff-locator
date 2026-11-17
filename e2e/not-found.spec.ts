@@ -4,8 +4,8 @@ import { test, expect, type Page } from "@playwright/test";
 const TEST_PASSWORD = "correct-horse-battery-1";
 
 // This test's "Back to Stuff" link lands on "/", which now reads real
-// household data and redirects an unauthenticated visitor to /sign-in
-// instead (see home.spec.ts) — signing up first keeps this test's own
+// household data, while a signed-out "/" is the marketing home
+// (ADR 0013) — signing up first keeps this test's own
 // point (the app's 404 page links back to a working Home) intact.
 async function signUpFreshAccount(page: Page): Promise<void> {
   const email = `e2e-not-found-${randomUUID()}@example.com`;
@@ -63,4 +63,27 @@ test("an unmatched route renders the app's own 404, not Next's default, and link
   // on a working Home.
 
   expect(consoleErrors).toEqual([]);
+});
+
+test("signed out, an unmatched route is the 404 straight away, not a detour through sign-in", async ({ page }) => {
+  // Amendment to ADR 0006 (2026-11-17): the path matches no page, so there
+  // is nothing to protect. It used to redirect to /sign-in?next=/badroute
+  // and only show the 404 after signing in.
+  const response = await page.goto("/badroute");
+
+  expect(response?.status()).toBe(404);
+  expect(new URL(page.url()).pathname).toBe("/badroute");
+  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+
+  // "/" for a signed-out visitor is the marketing home.
+  await page.getByRole("link", { name: "Back to Stuff" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
+});
+
+test("signed out, a real route with an unknown id still goes through sign-in", async ({ page }) => {
+  // Whether an item exists is data only a member may learn, so the gate
+  // can't answer "404" here; the page decides after sign-in.
+  await page.goto("/items/does-not-exist");
+  await expect(page).toHaveURL("/sign-in?next=%2Fitems%2Fdoes-not-exist");
 });

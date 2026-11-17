@@ -126,3 +126,35 @@ documents, so an offline visitor can be served a previously-cached
 authenticated page after signing out. Pre-existing PWA behaviour, not
 introduced here, but it means "protected" describes the network path, not
 the device's disk.
+
+## Amendment, 2026-11-17: unknown paths are not gated
+
+**What changed.** The allowlist named only the public paths, so the gate
+couldn't tell a protected page from a path that doesn't exist. A signed-out
+visitor at `/badroute` was sent to `/sign-in?next=%2Fbadroute`, and after
+signing in got a 404. There's nothing behind such a path to protect, so the
+detour was pure cost.
+
+`src/lib/route-access.ts` now names every page, as route patterns in the
+app router's own spelling (`/items/[id]/edit`): `PUBLIC_ROUTES` and
+`PROTECTED_ROUTES`. A path matching neither is unknown and passes through
+without a session to the root `not-found.tsx` (a real 404, standalone, no
+data).
+
+**Deny-by-default still holds**, but the guarantee moved from the runtime
+rule to a test. `src/__tests__/route-access.test.ts` walks `src/app` and
+fails if any `page.tsx` is in neither list (and if a listed route has no
+page, or is in both). A page added without a decision fails CI instead of
+going public. The pages' own `auth.getUser()` checks remain the
+authorisation story, as above.
+
+**Still gated:** a real route with an id that doesn't exist. `/items/<missing>`
+matches `/items/[id]`, so a signed-out visitor still goes through sign-in.
+Whether an item exists is data only a member may learn; the page answers
+after sign-in.
+
+**Rejected:**
+- *Keep the behaviour and document it.* Route names here aren't secret (the
+  repo is public), so hiding which paths exist buys nothing.
+- *Read Next's build manifests at runtime to learn the routes.* They're
+  internal and unversioned; a hand-kept list checked by a test is plainer.
