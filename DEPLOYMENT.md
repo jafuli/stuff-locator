@@ -98,9 +98,52 @@ projects default to **on**, so this is a step to take, not a default to keep.
   custom SMTP server for everything else.
 
 Password reset sends email even with confirmation off, so SMTP is still
-needed. Any
-transactional provider works (Resend, Postmark, SES, …). After switching,
-raise the email rate limit under Authentication → Rate Limits.
+needed.
+
+**Provider: Resend (decided 2026-11-17).**
+
+- **Free plan:** 100 emails a day and 3,000 a month. With confirmation off,
+  only password resets send mail, so a couple's app stays far below that.
+- **No surprise bills:** sending pauses at the cap, and nothing is charged.
+- **Supabase integration:** Resend has a built-in one that creates the key
+  and fills in these settings.
+
+**Prerequisite: a domain of your own. There isn't one yet.**
+
+- Resend delivers to other people's inboxes only from a domain you've
+  verified with DNS records.
+- `*.vercel.app` can't be verified, because Vercel owns it.
+- Until a domain is verified, Resend sends only to your own account
+  address.
+- Sending "from" a Gmail address through any provider fails Gmail's DMARC
+  check.
+- So, until there is a domain, password reset works only for addresses in
+  the Supabase team, at 2 emails an hour.
+
+Steps, once there's a domain:
+
+1. Buy the domain, and add it to the Vercel project (Settings → Domains).
+2. In Resend, go to Domains → Add, and add the DNS records it lists (SPF,
+   DKIM, and optionally DMARC) at your DNS host. Wait for Resend to show
+   "Verified".
+3. Connect Resend to Supabase, either with Resend's Supabase integration
+   or by hand in SMTP Settings:
+
+   | Field | Value |
+   | --- | --- |
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | a Resend API key with sending access (keep it out of the repo) |
+   | Sender email | e.g. `no-reply@<your-domain>` |
+   | Sender name | `Stuff Locator` |
+
+4. Raise the email rate limit under Authentication → Rate Limits. It stays
+   at the built-in sender's low value until you change it.
+5. Change the Site URL and Redirect URLs (above) to the new domain.
+
+Other providers (Postmark, Amazon SES, SendGrid, Brevo) work the same way,
+and every one of them needs a verified domain too.
 
 ## 3. Vercel project
 
