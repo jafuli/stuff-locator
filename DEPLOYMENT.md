@@ -193,7 +193,7 @@ and every one of them needs a verified domain too.
   `/~offline` re-download on every deploy if there was no `.git` directory.
 - **`/~offline`** is precached and shows when a page isn't cached.
 - **Manifest** at `/manifest.webmanifest` (`application/manifest+json`):
-  name, `start_url: /`, `display: standalone`, theme and background colours,
+  name, `start_url: /stuff`, `display: standalone`, theme and background colours,
   and 192, 512 and 512-maskable icons, all returning 200. That covers
   Chromium's installability criteria (a manifest with those fields and
   icons, a service worker with a fetch handler, HTTPS). On a deployment,
@@ -271,8 +271,9 @@ What this means in practice:
 ## 5. After the first deploy
 
 - [ ] `/` signed out shows the marketing home. Sign up with a new address:
-      you land in the app straight away, with no "check your email" step
-      (confirmation is off).
+      you land on `/stuff` straight away, with no "check your email" step
+      (confirmation is off). Opening `/` again while signed in redirects
+      to `/stuff`.
 - [ ] Forgot password → the email arrives (custom SMTP) → the link opens
       `/reset-password` on the production domain.
 - [ ] Invite partner → the `/join/<code>` link opens on the production domain.
