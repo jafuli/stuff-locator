@@ -14,6 +14,9 @@ vi.mock("@/server/db/client", () => ({
   createClient: () => ({ auth: { signOut, getSession, onAuthStateChange } }),
 }));
 
+const { clearPrivateCaches } = vi.hoisted(() => ({ clearPrivateCaches: vi.fn() }));
+vi.mock("@/lib/offline/clear-private-caches", () => ({ clearPrivateCaches }));
+
 // Static import is safe here for the same reason as site-nav.test.tsx: the
 // vi.mock calls above are hoisted above imports.
 import { SignOutButton } from "@/components/sign-out-button";
@@ -24,6 +27,7 @@ afterEach(() => {
   signOut.mockReset();
   getSession.mockReset();
   onAuthStateChange.mockClear();
+  clearPrivateCaches.mockReset();
 });
 
 test("renders nothing while there is no active session", async () => {
@@ -87,4 +91,47 @@ test("becoming signed out live (via onAuthStateChange) hides the control", async
   await waitFor(() => {
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
+});
+
+test("empties the household-data caches before redirecting to /sign-in", async () => {
+  getSession.mockResolvedValue({ data: { session: { access_token: "t" } } });
+  signOut.mockResolvedValue({ error: null });
+  const order: string[] = [];
+  let finishClearing: () => void = () => undefined;
+  clearPrivateCaches.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        order.push("clear");
+        finishClearing = resolve;
+      }),
+  );
+  push.mockImplementation(() => order.push("push"));
+  const user = userEvent.setup();
+  render(<SignOutButton />);
+
+  await user.click(await screen.findByRole("button", { name: "Sign out" }));
+  await waitFor(() => {
+    expect(clearPrivateCaches).toHaveBeenCalled();
+  });
+  // Still clearing: no redirect yet, so nothing can navigate (and prefetch)
+  // under the old caches' noses.
+  expect(push).not.toHaveBeenCalled();
+
+  finishClearing();
+  await waitFor(() => {
+    expect(push).toHaveBeenCalledWith("/sign-in");
+  });
+  expect(order).toEqual(["clear", "push"]);
+});
+
+test("a failed signOut leaves the caches alone (the session is still there)", async () => {
+  getSession.mockResolvedValue({ data: { session: { access_token: "t" } } });
+  signOut.mockResolvedValue({ error: { message: "Network error" } });
+  const user = userEvent.setup();
+  render(<SignOutButton />);
+
+  await user.click(await screen.findByRole("button", { name: "Sign out" }));
+  await screen.findByRole("alert");
+
+  expect(clearPrivateCaches).not.toHaveBeenCalled();
 });
