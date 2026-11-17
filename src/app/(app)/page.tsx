@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
+import { HouseholdSetupRetry } from "@/components/household-setup-retry";
 import type { StuffListEntry } from "@/components/stuff-list";
 import { StuffScreenSkeleton } from "@/components/stuff-screen-skeleton";
 import { SearchableStuffList } from "@/components/searchable-stuff-list";
@@ -81,8 +82,11 @@ async function StuffScreen({ userId, initialQuery }: StuffScreenProps) {
   if (membershipError) {
     throw new Error(membershipError.message);
   }
+  // The household bootstrap at sign-up/sign-in failed (its notice
+  // auto-continues here). Offer to finish the setup rather than throwing
+  // into error.tsx, whose Retry would only repeat this same read.
   if (!membership) {
-    throw new Error("home: signed-in user has no household");
+    return <HouseholdSetupRetry />;
   }
 
   const [itemsResult, locationsResult, householdResult] = await Promise.all([
