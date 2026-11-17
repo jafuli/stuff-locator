@@ -51,9 +51,28 @@ test("signed out, / shows the marketing home without the app's nav", async ({ pa
 
   expect(new URL(page.url()).pathname).toBe("/");
   await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
-  // SiteNav still mounts on "/" (it decides by pathname); the CSS rule keyed
-  // on data-without-app-shell is what keeps it off screen.
-  await expect(page.getByRole("navigation", { name: "Primary" })).toBeHidden();
+  // The proxy rewrote "/" to /welcome, which lives in the (public) route
+  // group: the nav isn't hidden, it was never rendered.
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+});
+
+test("/welcome redirects to /, so the marketing home has one URL", async ({ page }) => {
+  await page.goto("/welcome");
+  expect(new URL(page.url()).pathname).toBe("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Where did we put the passports?" })).toBeVisible();
+});
+
+test("signed in, an unknown URL shows the standalone 404, and its wordmark goes back to Stuff", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.goto("/no-such-page");
+
+  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeAttached();
+  await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+
+  await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
 });
 
 test("signed out, the marketing home's Sign up and Sign in links land on their pages", async ({ page }) => {
@@ -164,4 +183,23 @@ test("the invite landing stays reachable without an account", async ({ page }) =
   await page.goto("/join/some-code-that-does-not-resolve");
   expect(new URL(page.url()).pathname).toBe("/join/some-code-that-does-not-resolve");
   await expect(page.getByRole("heading", { level: 1, name: "Join a household" })).toBeVisible();
+});
+
+test("a link to / prefetched while signed out still opens Stuff once a session exists", async ({ page, context }) => {
+  // The shape of the join flow: a public page prefetches "/" (the wordmark
+  // link) while signed out, then the visitor gets a session without a router
+  // refresh, then follows a plain <Link href="/">. "/" is two different
+  // documents depending on the cookie, so that signed-out prefetch must not
+  // be reused. /welcome is rendered per request (connection()) for exactly
+  // this reason.
+  await page.goto("/forgot-password");
+  await page.waitForLoadState("networkidle");
+
+  const other = await context.newPage();
+  await signUpFreshAccount(other);
+  await other.close();
+
+  await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 });

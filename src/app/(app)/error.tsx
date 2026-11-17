@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 // so this migration makes every error boundary in the repo consistent.
 //
 // Renders EmptyState as this page's only content — nothing above it in the
-// tree supplies a heading (root layout.tsx renders only SiteNav, a <nav>) —
+// tree supplies a heading ((app)/layout.tsx adds only SiteNav, a <nav>) —
 // so titleAs="h1" gives this route a real heading instead of shipping with
 // none.
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {

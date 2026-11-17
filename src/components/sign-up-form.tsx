@@ -38,7 +38,7 @@ export interface SignUpFormProps {
    * Where to land after a successful sign-up. Carried over from /sign-in
    * via withNextParam, so a visitor bounced off a protected route who
    * then chooses "create an account" still ends up where they meant to
-   * go. Already validated by src/app/sign-up/page.tsx (safeRedirectPath);
+   * go. Already validated by src/app/(public)/sign-up/page.tsx (safeRedirectPath);
    * defaults to "/".
    */
   next?: string;

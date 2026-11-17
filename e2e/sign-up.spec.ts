@@ -47,7 +47,7 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await page.waitForURL("/");
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
 
-  // / is a real app route (not one of ROUTES_WITHOUT_NAV) and signUp()
+  // / is an (app) route group page (ADR 0013) and signUp()
   // actually returned a session, so the nav — tabs and sign-out alike —
   // is back.
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();

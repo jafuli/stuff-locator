@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 // Named ErrorBoundary locally — importing the default export as `Error`
 // would shadow the global Error class within this file.
-import ErrorBoundary from "@/app/browse/error";
+import ErrorBoundary from "@/app/(app)/browse/error";
 
 test("renders the Browse error state with a real heading and calls retry when Retry is clicked", async () => {
   const retry = vi.fn();

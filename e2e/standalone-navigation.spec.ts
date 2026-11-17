@@ -1,9 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// The signed-out pages (marketing home, sign in, sign up, forgot password)
+// The signed-out pages (marketing home, the auth pages, the invite landing)
 // share one header and must move between each other in a single step.
 
-for (const path of ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"]) {
+for (const path of ["/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/join/not-a-real-code"]) {
   test(`${path}: the wordmark links back to the marketing home`, async ({ page }) => {
     await page.goto(path);
     await page.getByRole("banner").getByRole("link", { name: "Stuff Locator" }).click();

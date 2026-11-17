@@ -51,7 +51,7 @@ test("withNextParam carries the destination and omits it when it's the default",
   expect(withNextParam("/sign-up", DEFAULT_REDIRECT_PATH)).toBe("/sign-up");
 });
 
-test('"/" is public now (the signed-out marketing home) but still a valid return, query included', () => {
+test('"/" is a valid return, query included', () => {
   expect(safeRedirectPath("/")).toBe("/");
   expect(safeRedirectPath("/?q=passport")).toBe("/?q=passport");
 });

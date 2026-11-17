@@ -1,6 +1,6 @@
 // In-memory ancestor-walk helpers over the Location shape (see types.ts) —
 // originally written for fixture data, now also used by Home
-// (src/app/page.tsx) to build breadcrumbs from real rows mapped into that
+// (src/app/(app)/page.tsx) to build breadcrumbs from real rows mapped into that
 // same shape. A real "everything under X" walk (e.g. Browse's subtree
 // listing) is a recursive CTE server-side instead (CLAUDE.md,
 // location_subtree_items) — this is the client-side, whole-tree-already-

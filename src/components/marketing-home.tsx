@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ItemCard } from "@/components/item-card";
-import { SiteHeader, STANDALONE_PAGE_CLASSES } from "@/components/site-header";
+import { SiteHeader } from "@/components/site-header";
 import { RESULT_LIST_PANEL_CLASSES, type StuffListEntry } from "@/components/stuff-list";
 import { buttonClassName } from "@/components/ui/button";
 import { textLinkClassName } from "@/components/ui/text-link";
@@ -74,18 +74,16 @@ export interface MarketingHomeProps {
 }
 
 /**
- * What a signed-out visitor sees at "/" (src/app/page.tsx renders it when
- * there's no user; the Stuff screen otherwise). Layout agreed in the Notion
- * task on 2026-11-15: wordmark + Sign in, the one display question, the
- * pitch, Sign up, "How it works", and three sample result rows — and it
- * ends there, no repeated call to action.
- *
- * data-without-app-shell hides the floating nav (see globals.css): "/" is
- * also the signed-in Stuff screen, so the nav can't decide by pathname.
+ * What a signed-out visitor sees at "/". src/proxy.ts rewrites that request
+ * to /welcome (src/app/(public)/welcome/page.tsx), so the URL stays "/" and
+ * the (public) layout supplies the column with no floating nav (ADR 0013).
+ * Layout agreed in the Notion task on 2026-11-15: wordmark + Sign in, the
+ * one display question, the pitch, Sign up, "How it works", and three
+ * sample result rows — and it ends there, no repeated call to action.
  */
 export function MarketingHome({ now = new Date() }: MarketingHomeProps) {
   return (
-    <div data-without-app-shell className={STANDALONE_PAGE_CLASSES}>
+    <>
       <SiteHeader
         action={
           <Link href="/sign-in" className={textLinkClassName()}>
@@ -134,6 +132,6 @@ export function MarketingHome({ now = new Date() }: MarketingHomeProps) {
           </div>
         </section>
       </main>
-    </div>
+    </>
   );
 }

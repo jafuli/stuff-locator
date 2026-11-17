@@ -49,49 +49,7 @@ test("marks the Activity tab active on /activity", () => {
   expect(screen.getByRole("link", { name: "Stuff" }).getAttribute("aria-current")).toBeNull();
 });
 
-test("renders nothing on /sign-up — the Stuff/Activity tabs don't belong on a standalone auth page", () => {
-  usePathname.mockReturnValue("/sign-up");
-  const { container } = render(<SiteNav />);
-  expect(container.firstChild).toBeNull();
-});
-
-test("renders nothing on /sign-in", () => {
-  usePathname.mockReturnValue("/sign-in");
-  const { container } = render(<SiteNav />);
-  expect(container.firstChild).toBeNull();
-});
-
-test("renders nothing on /forgot-password", () => {
-  usePathname.mockReturnValue("/forgot-password");
-  const { container } = render(<SiteNav />);
-  expect(container.firstChild).toBeNull();
-});
-
-test("renders nothing on /reset-password", () => {
-  usePathname.mockReturnValue("/reset-password");
-  const { container } = render(<SiteNav />);
-  expect(container.firstChild).toBeNull();
-});
-
-test("NavClearance reserves room for the floating nav on app pages", () => {
-  usePathname.mockReturnValue("/");
+test("NavClearance reserves room for the floating nav", () => {
   const { container } = render(<NavClearance />);
   expect(container.firstChild).not.toBeNull();
-});
-
-test("NavClearance renders nothing on a standalone auth page, so it doesn't add a phantom scroll area", () => {
-  usePathname.mockReturnValue("/sign-in");
-  const { container } = render(<NavClearance />);
-  expect(container.firstChild).toBeNull();
-});
-
-test("SiteNav and NavClearance are marked as app shell, so the signed-out home can hide them with CSS", () => {
-  usePathname.mockReturnValue("/");
-  const { container } = render(
-    <>
-      <SiteNav />
-      <NavClearance />
-    </>,
-  );
-  expect(container.querySelectorAll("[data-app-shell]")).toHaveLength(2);
 });
