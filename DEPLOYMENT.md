@@ -1,9 +1,15 @@
 # Deploying Stuff Locator
 
-How to put this repo on Vercel with a production Supabase project. This file
-makes the repo **ready** to deploy. Nothing here has been deployed yet: no
-Vercel project, no production Supabase project and no real secrets exist.
-Those steps are manual and listed below.
+How to put this repo on Vercel with a production Supabase project.
+
+**Deployed on 2026-11-17** at <https://stuff-locator.vercel.app>:
+
+- Vercel project `stuff-locator` in team `itamarbadash-3143s-projects`,
+  with functions in `fra1`.
+- Supabase project `lkumnzgjvjvovdinpqwd` in Frankfurt (`eu-central-1`).
+
+Everything below was done except custom SMTP and a domain (§2). How to
+check a deploy by hand: [docs/post-deploy-checks.md](docs/post-deploy-checks.md).
 
 Checked on 2026-11-17 against Next.js 16.3.5, `@supabase/ssr` 0.12, Supabase
 CLI 2.117 and the Vercel and Supabase docs of that date.
@@ -13,8 +19,18 @@ CLI 2.117 and the Vercel and Supabase docs of that date.
 Use a **separate** Supabase project for production. The local stack
 (`npm run supabase:start`) is for development and tests only.
 
-1. **Create the project** in the Supabase dashboard. Pick the region nearest
-   to the people using it. Save the database password in a password manager.
+1. **Create the project** in the Supabase dashboard. Save the database
+   password in a password manager.
+   - **Region:** the one nearest the people using it. Production uses
+     Frankfurt (`eu-central-1`). It can't be changed later, and the Vercel
+     function region should match it (§3).
+   - **Security options on the create form:**
+
+     | Option | Set to | Why |
+     | --- | --- | --- |
+     | Enable Data API | **on** | All reads and RPC calls go through PostgREST |
+     | Automatically expose new tables | **off** | Same as `auto_expose_new_tables = false` in `supabase/config.toml`. Every grant is written out in a migration (ADR 0005). Left on, every Data API role would get full privileges on every new table. |
+     | Enable automatic RLS | **off** | Every migration turns on RLS for its own tables. Local has no such trigger, so leaving it off keeps production the same as local and CI. |
 2. **Link and push the migrations from this repo.** Never create or change
    tables in the dashboard: the schema, RLS policies, grants and functions
    all live in `supabase/migrations/` (CLAUDE.md, ADR 0005).
@@ -28,6 +44,14 @@ Use a **separate** Supabase project for production. The local stack
 
    Run `db push` again after every merged migration, **before** deploying
    the code that needs it.
+
+   - **Don't run `supabase config push`**, and answer no if anything asks to
+     sync `supabase/config.toml` to the remote project. That file holds
+     local-only values, such as `site_url = http://127.0.0.1:3000`.
+     Production auth settings are set in the dashboard (§2).
+   - **Check the result from outside:** the curl loop in
+     [post-deploy-checks §2](docs/post-deploy-checks.md#2-database-privileges-terminal)
+     must return `42501` for every table.
 
 3. **API keys** (Project Settings → API Keys). Use the **publishable key**
    (`sb_publishable_…`) as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`:
@@ -147,7 +171,14 @@ and every one of them needs a verified domain too.
 
 ## 3. Vercel project
 
-1. **Add New → Project, and import the GitHub repo.**
+1. **Add New → Project, and import the GitHub repo.** Vercel suggests the
+   **Supabase integration** here. **Skip it.**
+   - **It would copy secrets into Vercel:** the service-role/secret key,
+     the JWT secret, and Postgres URLs that contain the database password.
+   - **The app doesn't read them.** It reads only the two variables in
+     step 5.
+   - **It can create a new Supabase project** instead of using the one
+     that has our migrations.
 2. **Framework preset: Next.js**, which is auto-detected. Leave the root
    directory, install command and output directory at their defaults.
 3. **Build command: the default, `npm run build`.** npm runs `prebuild`
@@ -176,7 +207,23 @@ and every one of them needs a verified domain too.
    Previews pointed at the production project share its data. A second
    Supabase project for previews avoids that.
 
-6. **Deploy.** Then run the checks in §5 against the production URL.
+6. **Deploy.**
+7. **Function region:** go to Settings → Functions → Function Region and
+   pick the region next to the Supabase project. Production uses Frankfurt
+   (`fra1`).
+   - **Why it matters:** new projects default to Washington, D.C.
+     (`iad1`). The proxy calls Supabase Auth on every request, and pages
+     read from PostgREST, so a function on another continent adds a
+     transatlantic round trip to every one of those calls.
+   - **The change applies from the next deployment**, so redeploy after
+     changing it.
+   - The build itself still runs in `iad1`, which doesn't matter.
+8. **Set the Supabase Site URL and Redirect URLs** (§2) to the
+   **production domain**, `https://stuff-locator.vercel.app`. Don't use
+   the per-deployment URL (`stuff-locator-<hash>-<team>.vercel.app`).
+   That URL changes with every deploy, and Vercel Authentication puts it
+   behind a login.
+9. Run the checks in §5 against the production URL.
 
 ## 4. What production depends on, and what was checked
 
@@ -270,6 +317,9 @@ What this means in practice:
 
 ## 5. After the first deploy
 
+How to run each check, what a pass looks like and what a failure points
+to: [docs/post-deploy-checks.md](docs/post-deploy-checks.md).
+
 - [ ] `/` signed out shows the marketing home. Sign up with a new address:
       you land on `/stuff` straight away, with no "check your email" step
       (confirmation is off). Opening `/` again while signed in redirects
@@ -296,12 +346,14 @@ What this means in practice:
 - **Paused means down.** Sign-in fails until the project is resumed. The
   service worker shows cached pages, if any, or `/~offline`.
 
-## Out of scope here
+## Still to do
 
-These are manual steps for whoever deploys:
+Everything else above was done on 2026-11-17. These two steps are left:
 
-- creating the Vercel project;
-- creating the production Supabase project and running `db push`;
-- setting real secrets;
-- configuring SMTP;
-- choosing the domain.
+- **Configure custom SMTP** (Resend, §2). Until then, password reset only
+  reaches members of the Supabase team.
+- **Choose a domain.** SMTP needs one. When it's added, update the Site
+  URL, the Redirect URLs and the production URL in
+  `docs/post-deploy-checks.md`.
+- Optional, once the app has run on the publishable key for a while:
+  disable the legacy JWT keys (§1.3).

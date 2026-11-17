@@ -4,7 +4,7 @@ A mobile-first PWA where a couple shares one household inventory of ~20–50 har
 
 It is deliberately **not** a whole-house inventory. The failure mode for this category is cataloguing everything, spending two hours on the kitchen, and quitting before reaching anything you'd ever actually search for. Twenty items you'd genuinely lose is more useful than five hundred you wouldn't.
 
-**Live demo:** [TODO: add live URL once deployed] — see [DEPLOYMENT.md](DEPLOYMENT.md) for how to deploy.
+**Live demo:** <https://stuff-locator.vercel.app> — see [DEPLOYMENT.md](DEPLOYMENT.md) for how it's deployed.
 
 ## Screenshots
 
