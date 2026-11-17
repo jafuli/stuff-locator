@@ -170,8 +170,9 @@ take:
 - the cost: one server render per visible link, which is ~24 requests at
   seven items today.
 
-That is a product decision about cost versus offline reach, so it's flagged
-here, not made.
+**Decided 2026-11-17 (Itamar): not now.** Offline reach stays "what you've
+already opened". Revisit if people report needing items offline that they
+haven't looked at on that device.
 
 ## Consequences
 
