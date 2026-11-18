@@ -40,3 +40,12 @@ test("characters typed before the navigation lands are kept in the field", async
 
   expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe("tent");
 });
+
+test("has the same Stash button as the Stuff screen, beside the search field", () => {
+  render(<BrowseHeader total={3} />);
+
+  const stash = screen.getByRole("link", { name: "Stash" });
+  expect(stash.getAttribute("href")).toBe("/items/new");
+  // Same row as the search field.
+  expect(stash.parentElement?.contains(screen.getByRole("searchbox"))).toBe(true);
+});

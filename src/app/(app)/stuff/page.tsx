@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
+import { StashLink } from "@/components/stash-link";
 import { HouseholdSetupRetry } from "@/components/household-setup-retry";
 import type { StuffListEntry } from "@/components/stuff-list";
 import { StuffScreenSkeleton } from "@/components/stuff-screen-skeleton";
@@ -13,10 +14,6 @@ import { STUFF_HEADING } from "@/lib/stuff-heading";
 import { buttonClassName } from "@/components/ui/button";
 import { createClient } from "@/server/db/server";
 import { fetchDisplayNames } from "@/server/services/profiles";
-
-// The Stash entry point is a link (it navigates) wearing the system's primary
-// button look: ink fill, paper text.
-const STASH_LINK_CLASSES = buttonClassName("primary", "shrink-0");
 
 // Wireframe screen 02, "Home — everything (default)": search box, the
 // "All (n)" / "By place" chips (the way into Browse; v1's "Recent" chip is
@@ -184,11 +181,7 @@ async function StuffScreen({ userId, initialQuery }: StuffScreenProps) {
         <SearchableStuffList
           entries={entries}
           initialQuery={initialQuery}
-          searchAction={
-            <Link href="/items/new" className={STASH_LINK_CLASSES}>
-              Stash
-            </Link>
-          }
+          searchAction={<StashLink />}
           emptyStateAction={
             <Link href="/items/new" className={buttonClassName("primary")}>
               Stash your first item

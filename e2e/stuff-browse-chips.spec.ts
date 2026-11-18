@@ -128,3 +128,32 @@ test("Home and the top of Browse have no critical or serious axe violations with
     expect(serious, `${path}: ${JSON.stringify(serious, null, 2)}`).toEqual([]);
   }
 });
+
+test("the bottom nav keeps Stuff selected on Browse and inside a place, but not on an item's page", async ({
+  page,
+}) => {
+  const email = await signUpFreshAccount(page);
+  const placeId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Camping tent", locationId: placeId });
+  const stuffTab = page.getByRole("navigation").getByRole("link", { name: "Stuff" });
+
+  for (const path of ["/browse", `/browse/${placeId}`]) {
+    await page.goto(path);
+    await expect(stuffTab).toHaveAttribute("aria-current", "page");
+  }
+
+  await page.goto(`/items/${itemId}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Camping tent" })).toBeVisible();
+  await expect(stuffTab).not.toHaveAttribute("aria-current", "page");
+});
+
+test("the top of Browse has the same Stash button as the Stuff screen, and it opens Stash", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.goto("/browse");
+
+  const stash = page.getByRole("link", { name: "Stash", exact: true });
+  await expect(stash).toBeVisible();
+  await stash.click();
+  await page.waitForURL("/items/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Add an item" })).toBeVisible();
+});
