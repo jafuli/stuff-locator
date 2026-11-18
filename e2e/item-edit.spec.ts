@@ -99,7 +99,6 @@ test("changing the location exercises the real move_item RPC, showing the new fu
 
   await page.getByRole("combobox").fill("Red box");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
@@ -232,7 +231,6 @@ test("the whole edit form, including delete confirmation, is operable keyboard-o
   // this reactive (downshift re-filters and re-renders on every keystroke).
   await page.keyboard.type("Red box", { delay: 20 });
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 

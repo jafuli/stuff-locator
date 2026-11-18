@@ -148,7 +148,7 @@ test("changing name and location together is still a single call, showing the re
   await user.clear(screen.getByLabelText("Name"));
   await user.type(screen.getByLabelText("Name"), "Bike pump (blue)");
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
   const status = await screen.findByRole("status");
@@ -194,7 +194,7 @@ test("a rejected save shows its own specific error and no success state", async 
   renderForm();
 
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
   const error = await screen.findByText("update_item: item and destination location belong to different households");
