@@ -15,6 +15,7 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 // aren't Stash-specific despite the module's name.
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
+import { useItemFieldErrors } from "@/components/use-item-field-errors";
 import { textLinkClassName } from "@/components/ui/text-link";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -22,11 +23,6 @@ export interface ItemEditFormProps {
   item: Item;
   /** Every place in the household — the picker searches and descends through these. */
   locations: readonly Location[];
-}
-
-interface FieldErrors {
-  name?: string;
-  location?: string;
 }
 
 interface CapturedEdit {
@@ -65,7 +61,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   const [chips, setChips] = useState<PathChip[]>(() => chipsForPlace(item.locationId, locations));
   // Raw text in the picker's field, to catch text that never became a chip.
   const [pendingText, setPendingText] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const { fieldErrors, report, clear, nameRef, locationRef } = useItemFieldErrors();
   const [mode, setMode] = useState<Mode>("editing");
   const [captured, setCaptured] = useState<CapturedEdit | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,14 +93,13 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors: FieldErrors = {
+    // On a failure, focus moves to the first invalid field.
+    const hasErrors = report({
       name: validateItemName(name),
       location: validateLocationPath(chips, pendingText),
-    };
-    setFieldErrors(errors);
-
+    });
     const path = resolvePath(chips);
-    if (errors.name || errors.location || path === null) {
+    if (hasErrors || path === null) {
       return;
     }
 
@@ -168,11 +163,20 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     setMode("deleted");
   }
 
+  // A field's error clears as soon as that field changes, not at the next submit.
+  function handleNameChange(next: string) {
+    setName(next);
+    clear("name");
+  }
+
   function handleChipsChange(next: PathChip[]) {
     setChips(next);
-    if (next.length > 0) {
-      setFieldErrors((previous) => ({ ...previous, location: undefined }));
-    }
+    clear("location");
+  }
+
+  function handlePendingTextChange(next: string) {
+    setPendingText(next);
+    clear("location");
   }
 
   if (mode === "deleted") {
@@ -244,12 +248,15 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     <div className="flex flex-col gap-3">
       <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
         <FormField
+          ref={nameRef}
           id="item-edit-name"
           label="Name"
           type="text"
           value={name}
-          onChange={setName}
+          onChange={handleNameChange}
           error={fieldErrors.name}
+          // An item's name, not the person's: no browser autofill.
+          autoComplete="off"
           disabled={isSubmitting}
         />
 
@@ -259,7 +266,8 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
             locations={locations}
             value={chips}
             onChange={handleChipsChange}
-            onInputChange={setPendingText}
+            onInputChange={handlePendingTextChange}
+            inputRef={locationRef}
             describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
             disabled={isSubmitting}
           />
