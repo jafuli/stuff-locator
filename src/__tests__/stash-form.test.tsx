@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StashForm } from "@/components/stash-form";
@@ -341,4 +341,67 @@ test("'Add another' starts a fresh item: the next save is a new stash_item, not 
   expect(rpc).toHaveBeenCalledTimes(2);
   expect(rpc).toHaveBeenNthCalledWith(1, "stash_item", expect.anything());
   expect(rpc).toHaveBeenNthCalledWith(2, "stash_item", expect.anything());
+});
+
+describe("errors clear as you fix them, and focus goes to the first problem", () => {
+  test("after an empty submit, focus moves to Name, the first invalid field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+    expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe("true");
+  });
+
+  test("with a valid name, focus moves to the place field instead", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Name"), "Bike pump");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
+  });
+
+  test("a second failed submit moves focus back to the first invalid field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+  });
+
+  test("the Name error clears on the first keystroke, leaving the place error until the place changes", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.type(screen.getByLabelText("Name"), "B");
+
+    expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+    expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBeNull();
+    expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+  });
+
+  test("the place error clears as soon as you type in the place field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Name"), "Bike pump");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+
+    await user.type(screen.getByRole("combobox"), "C");
+
+    expect(screen.queryByText("Choose a location for this item.")).toBeNull();
+    expect(screen.getByRole("combobox").getAttribute("aria-invalid")).toBeNull();
+  });
+
+  test("the Name field has autocomplete off, so browsers don't offer the person's own name", () => {
+    renderForm();
+    expect(screen.getByLabelText("Name").getAttribute("autocomplete")).toBe("off");
+  });
 });

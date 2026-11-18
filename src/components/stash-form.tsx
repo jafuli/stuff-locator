@@ -11,6 +11,7 @@ import type { Location } from "@/lib/fixtures/types";
 import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-picker";
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
+import { useItemFieldErrors } from "@/components/use-item-field-errors";
 import { textLinkClassName } from "@/components/ui/text-link";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -47,11 +48,6 @@ export interface StashResult {
   itemId: string;
   /** The place the item landed in (possibly just created). */
   locationId: string;
-}
-
-interface FieldErrors {
-  name?: string;
-  location?: string;
 }
 
 interface CapturedStash {
@@ -95,7 +91,7 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
   const [detail, setDetail] = useState("");
   const [chips, setChips] = useState<PathChip[]>([]);
   const [pendingText, setPendingText] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const { fieldErrors, report, clear, reset, nameRef: nameInputRef, locationRef } = useItemFieldErrors();
   const [captured, setCaptured] = useState<CapturedStash | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -106,7 +102,6 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
 
   const confirmationLabelId = useId();
   const confirmationRef = useRef<HTMLDivElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   // Set by a save or by Back, consumed by the effect below: focus only moves
   // in response to those, never on first render.
   const pendingFocus = useRef<"confirmation" | "name" | null>(null);
@@ -117,19 +112,19 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
       nameInputRef.current?.focus();
     }
     pendingFocus.current = null;
-  }, [captured]);
+    // nameInputRef is a stable ref object from useItemFieldErrors.
+  }, [captured, nameInputRef]);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors: FieldErrors = {
+    // On a failure, focus moves to the first invalid field.
+    const hasErrors = report({
       name: validateItemName(name),
       location: validateLocationPath(chips, pendingText),
-    };
-    setFieldErrors(errors);
-
+    });
     const path = resolvePath(chips);
-    if (errors.name || errors.location || path === null) {
+    if (hasErrors || path === null) {
       return;
     }
 
@@ -188,13 +183,22 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
     onStashed?.({ itemId: data.id, locationId: data.location_id });
   }
 
+  // A field's error clears as soon as that field changes, rather than
+  // waiting for the next submit: a stale "Choose a location…" next to a
+  // fresh "Goes in …" hint contradicts it.
+  function handleNameChange(next: string) {
+    setName(next);
+    clear("name");
+  }
+
   function handleChipsChange(next: PathChip[]) {
     setChips(next);
-    // A real choice clears a stale "Choose a location…" error right away —
-    // otherwise it sits next to the new "Goes in …" hint, contradicting it.
-    if (next.length > 0) {
-      setFieldErrors((previous) => ({ ...previous, location: undefined }));
-    }
+    clear("location");
+  }
+
+  function handlePendingTextChange(next: string) {
+    setPendingText(next);
+    clear("location");
   }
 
   function handleAddAnother() {
@@ -202,7 +206,7 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
     setDetail("");
     setChips([]);
     setPendingText("");
-    setFieldErrors({});
+    reset();
     setSavedItemId(null);
     setAnnouncement("");
     setCaptured(null);
@@ -219,7 +223,7 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
     const known = chipsForPlace(saved.locationId, locations);
     setChips(known.length > 0 ? known : saved.chips);
     setPendingText("");
-    setFieldErrors({});
+    reset();
     setSubmitError(null);
     setAnnouncement("");
     pendingFocus.current = "name";
@@ -303,8 +307,10 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
           label="Name"
           type="text"
           value={name}
-          onChange={setName}
+          onChange={handleNameChange}
           error={fieldErrors.name}
+          // An item's name, not the person's: no browser autofill.
+          autoComplete="off"
           disabled={isSubmitting}
         />
 
@@ -314,7 +320,8 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
             locations={locations}
             value={chips}
             onChange={handleChipsChange}
-            onInputChange={setPendingText}
+            onInputChange={handlePendingTextChange}
+            inputRef={locationRef}
             placeholder={locationPlaceholder}
             describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
             disabled={isSubmitting}

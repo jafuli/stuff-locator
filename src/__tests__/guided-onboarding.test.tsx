@@ -415,3 +415,15 @@ test("a step where nothing was saved has no Back", () => {
   renderOnboarding();
   expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 });
+
+test("in an onboarding step, an empty Add item focuses Name, and its error clears as you type", async () => {
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+
+  await user.type(screen.getByLabelText("Name"), "Passport");
+  expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+  expect(stashRpc).not.toHaveBeenCalled();
+});
