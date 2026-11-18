@@ -41,10 +41,10 @@ function renderForm(props: Partial<React.ComponentProps<typeof StashForm>> = {})
   return render(<StashForm locations={LOCATIONS} {...props} />);
 }
 
-/** Picks "Garage › Closet" the way a person would: type, arrow, Enter. */
+/** Picks "Garage › Closet" the way a person would: type, then Enter on the highlighted first match. */
 async function pickCloset(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
 }
 
 test("submitting with nothing shows both specific inline errors, associated to their fields", async () => {

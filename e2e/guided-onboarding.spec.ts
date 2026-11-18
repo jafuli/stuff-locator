@@ -25,10 +25,10 @@ async function stashViaOnboardingStep(page: Page, name: string, locationName: st
   await page.getByLabel("Name").fill(name);
   await page.getByRole("combobox").fill(locationName);
   // The first row: the existing place when one by that name is already here,
-  // otherwise the "+ New place" row — never both. Wait for the list to
-  // reflect the typed text before arrowing: the field updates first.
+  // otherwise the "+ New place" row — never both. It is highlighted, so Enter
+  // picks it. Wait for the list to reflect the typed text first: the field
+  // updates before the list does.
   await expect(page.getByRole("option").first()).toBeVisible();
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Add item" }).click();
   // A generous explicit timeout: this is a real network round trip — under
@@ -192,7 +192,6 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await expect(page.getByRole("combobox")).toBeFocused();
   await page.keyboard.type("Filing box", { delay: 20 });
   await expect(page.getByRole("option", { name: "New place 'Filing box' at the top level" })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   // The pick really happened (a chip), rather than Enter falling through to
   // the form — checked here so a miss fails here, not later as "no Continue".
@@ -314,7 +313,6 @@ test("the same place typed in two steps ends up as exactly one place on Browse",
   await page.getByRole("combobox").fill("Office");
   await expect(page.getByRole("option", { name: "Office, already here" })).toBeVisible();
   await expect(page.getByRole("option", { name: /^New place/ })).toHaveCount(0);
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Add item" }).click();
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 10_000 });
@@ -336,7 +334,6 @@ test("a nested place can be built in one go during onboarding, and the placehold
   for (const level of ["Office", "Cabinet", "Top drawer"]) {
     await page.getByRole("combobox").fill(level);
     await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
-    await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
   }
   await expect(page.getByText("3 new places")).toBeVisible();
