@@ -194,25 +194,68 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await expect(page.getByRole("option", { name: "New place 'Filing box' at the top level" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
+  // The pick really happened (a chip), rather than Enter falling through to
+  // the form — checked here so a miss fails here, not later as "no Continue".
+  await expect(page.getByRole("group", { name: "Location: Filing box" })).toBeVisible();
 
-  expect(await tabUntilFocused(page, "Add item", 5)).toBe(true);
+  // Every step from here is one exact key press. Before, the test tabbed
+  // from wherever focus fell after the form unmounted (<body>) looking for
+  // Continue; now focus lands on the confirmation, so the path is fixed.
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Detail (optional)")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Add item" })).toBeFocused();
   await page.keyboard.press("Enter");
 
-  // tabUntilFocused presses Tab synchronously with no polling — waiting
-  // for the real insert to resolve and the Continue button to actually
-  // exist first avoids racing that async write (a real network round
-  // trip).
-  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 10_000 });
+  // A real network round trip: a generous bound under concurrent e2e load.
+  const confirmation = page.getByRole("group", { name: "Added" });
+  await expect(confirmation).toBeFocused({ timeout: 10_000 });
+  await expect(page.getByRole("status").filter({ hasText: "Added Passport" })).toHaveCount(1);
 
-  // A generous bound, not a precise count — after submit, focus resets to
-  // the top of the document (the submit button that had it is now
-  // unmounted), so this passes "Skip guided setup" before reaching the
-  // Continue button (the embedded success panel has no controls of its own).
-  expect(await tabUntilFocused(page, "Continue", 25)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Back", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Continue" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Step 2 of 4")).toBeVisible();
   // Focus lands on the new step's heading instead of being lost to <body>.
   await expect(page.getByRole("heading", { name: "Stash something bulky" })).toBeFocused();
+});
+
+test("Back after 'Added' reopens the saved item; saving again edits it, so there is still exactly one", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto(STUFF_PATH);
+  await page.waitForLoadState("networkidle");
+
+  await stashViaOnboardingStep(page, "Pasport", "Filing box");
+
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  // The saved values, back in the form, with focus on Name.
+  await expect(page.getByLabel("Name")).toBeFocused();
+  await expect(page.getByLabel("Name")).toHaveValue("Pasport");
+  await expect(page.getByRole("group", { name: "Location: Filing box" })).toBeVisible();
+  // Continue waits until the item is saved again.
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
+
+  await page.getByLabel("Name").fill("Passport");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("group", { name: "Updated" })).toBeFocused({ timeout: 10_000 });
+  await expect(page.getByRole("status").filter({ hasText: "Updated Passport" })).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Step 2 of 4")).toBeVisible();
+  await page.getByRole("button", { name: "Skip guided setup" }).click();
+  await page.waitForLoadState("networkidle");
+
+  // One item, with the edited name — Back never re-submitted the stash.
+  await page.goto("/browse");
+  await page.getByRole("link", { name: "Filing box", exact: true }).click();
+  const items = page.getByRole("region", { name: "Items" });
+  await expect(items.getByRole("link")).toHaveCount(1);
+  await expect(items.getByText("Passport", { exact: true })).toBeVisible();
+  await expect(items.getByText("Pasport", { exact: true })).toHaveCount(0);
 });
 
 test("the onboarding screen has one way forward: no header '+ Add item', no View item / Add another / Back to home", async ({
@@ -226,7 +269,7 @@ test("the onboarding screen has one way forward: no header '+ Add item', no View
 
   await stashViaOnboardingStep(page, "Passport", "Filing box");
 
-  await expect(page.getByRole("status").getByText("Passport")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Added" }).getByText("Passport")).toBeVisible();
   await expect(page.getByRole("link", { name: "View item" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add another" })).toHaveCount(0);
@@ -299,5 +342,7 @@ test("a nested place can be built in one go during onboarding, and the placehold
   await expect(page.getByText("3 new places")).toBeVisible();
   await page.getByRole("button", { name: "Add item" }).click();
 
-  await expect(page.getByRole("status").getByText("Office › Cabinet › Top drawer")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("group", { name: "Added" }).getByText("Office › Cabinet › Top drawer")).toBeVisible({
+    timeout: 10_000,
+  });
 });
