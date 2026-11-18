@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { FlashNotice } from "@/components/flash-notice";
 import { ItemDetail } from "@/components/item-detail";
 import { displayNameFor } from "@/lib/display-name";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -9,6 +10,7 @@ import { BackLink } from "@/components/back-link";
 import { buttonClassName } from "@/components/ui/button";
 import { fetchDisplayNames } from "@/server/services/profiles";
 import { STUFF_PATH } from "@/lib/routes";
+import { savedNotice } from "@/lib/flash-notice";
 
 // A malformed id (not a valid uuid at all — e.g. an old fixture slug, or a
 // typo) fails at the Postgres driver level before RLS/row-matching even
@@ -26,6 +28,8 @@ const INVALID_UUID_ERROR_CODE = "22P02";
 // The "Edit" link is unchanged — already wired from the fixture-only task.
 export default async function Page(props: PageProps<"/items/[id]">) {
   const { id } = await props.params;
+  // "Saved", when this page was reached from a successful edit.
+  const notice = savedNotice(await props.searchParams);
 
   const supabase = await createClient();
   const {
@@ -110,6 +114,7 @@ export default async function Page(props: PageProps<"/items/[id]">) {
           Edit
         </Link>
       </div>
+      <FlashNotice message={notice} />
       <ItemDetail item={item} segments={segments} />
     </main>
   );

@@ -7,6 +7,8 @@ import { PathTrail } from "@/components/path-trail";
 import { LocationList } from "@/components/location-list";
 import { PlaceManager } from "@/components/place-manager";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FlashNotice } from "@/components/flash-notice";
+import { deletedNotice } from "@/lib/flash-notice";
 import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import type { Database } from "@/lib/database.types";
@@ -112,6 +114,8 @@ async function resolveBreadcrumbSegments(
 // name-only "+ Add a place here".
 export default async function Page(props: PageProps<"/browse/[id]">) {
   const { id } = await props.params;
+  // "Deleted <name>", when this page was reached from deleting an item that was in this place.
+  const notice = deletedNotice(await props.searchParams);
 
   const supabase = await createClient();
   const {
@@ -223,6 +227,7 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
       {/* A real <Link>, so this is keyboard-operable (Tab + Enter) in
           addition to browser back — AC #5. */}
       <BackLink href={upHref} label={upLabel} />
+      <FlashNotice message={notice} />
 
       <div>
         <PlaceManager
