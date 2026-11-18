@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
-import { PathTrail } from "@/components/path-trail";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-picker";
 // Reused directly rather than duplicated: the validation rules for editing
@@ -15,8 +13,7 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 // aren't Stash-specific despite the module's name.
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
-import { textLinkClassName } from "@/components/ui/text-link";
-import { STUFF_PATH } from "@/lib/routes";
+import { browseDeletedHref, itemSavedHref } from "@/lib/flash-notice";
 
 export interface ItemEditFormProps {
   item: Item;
@@ -29,15 +26,9 @@ interface FieldErrors {
   location?: string;
 }
 
-interface CapturedEdit {
-  name: string;
-  segments: LocationBreadcrumbSegment[];
-  detail?: string;
-}
-
 const LOCATION_ERROR_ID = "item-edit-location-error";
 
-type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
+type Mode = "editing" | "confirming-delete";
 
 /**
  * Edit form for an existing item, backed by real Supabase writes: mirrors
@@ -50,6 +41,13 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  * `move_item` followed by a plain UPDATE, which could leave an item moved but
  * not renamed; direct writes on `items` are now revoked, so that path is gone.
  *
+ * Neither outcome is shown inside this form: a save replaces the history
+ * entry with the item's own page and a delete with the Browse page of the
+ * place the item was in, each carrying a one-off notice (src/lib/
+ * flash-notice.ts). `replace`, not `push`, so browser Back can't return to
+ * this form showing the values from before the save, and a reload never
+ * lands on a page for an item that no longer exists.
+ *
  * Delete calls `delete_item` (it records the "deleted" event and what the
  * item's place was). Uses a plain two-step inline confirmation (Delete →
  * Cancel/confirm), an inline panel replacing the form rather than an overlay.
@@ -57,6 +55,7 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  * dialog.tsx); moving this one over is a reasonable follow-up, not done here.
  */
 export function ItemEditForm({ item, locations }: ItemEditFormProps) {
+  const router = useRouter();
   const [name, setName] = useState(item.name);
   const [detail, setDetail] = useState(item.detail ?? "");
   // Starts as the item's current place, as solid chips. Tapping a chip goes
@@ -67,7 +66,6 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   const [pendingText, setPendingText] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [mode, setMode] = useState<Mode>("editing");
-  const [captured, setCaptured] = useState<CapturedEdit | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,7 +86,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     if (mode === "confirming-delete") {
       cameFromConfirmRef.current = true;
       deleteHeadingRef.current?.focus();
-    } else if (mode === "editing" && cameFromConfirmRef.current) {
+    } else if (cameFromConfirmRef.current) {
       cameFromConfirmRef.current = false;
       deleteTriggerRef.current?.focus();
     }
@@ -125,33 +123,17 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
       ...(path.newPath.length === 0 ? {} : { p_new_path: path.newPath }),
     });
 
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setSubmitError(error.message);
       return;
     }
 
-    // A just-created place isn't in the `locations` snapshot, so name the
-    // levels from the chips the person built.
-    const knownSegments = getBreadcrumbSegments(data.location_id, locations);
-    setCaptured({
-      name: data.name,
-      segments:
-        knownSegments.length > 0
-          ? knownSegments
-          : chips.map((chip, index) => ({
-              id:
-                index === chips.length - 1
-                  ? data.location_id
-                  : chip.kind === "existing"
-                    ? chip.id
-                    : `new-${String(index)}`,
-              name: chip.name,
-            })),
-      detail: data.detail ?? undefined,
-    });
-    setMode("edited");
+    // Left disabled while the navigation lands, so a second tap can't save
+    // twice. replace + refresh: the item page is a Server Component, and
+    // refresh makes sure it re-reads rather than reusing a cached payload.
+    router.replace(itemSavedHref(data.id));
+    router.refresh();
   }
 
   async function handleConfirmDelete() {
@@ -159,13 +141,16 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     setIsDeleting(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("delete_item", { p_item_id: item.id });
-    setIsDeleting(false);
 
     if (error) {
+      setIsDeleting(false);
       setDeleteError(error.message);
       return;
     }
-    setMode("deleted");
+    // The place the item was saved in (the prop), not whatever the picker
+    // was showing: an unsaved change of place isn't where the item was.
+    router.replace(browseDeletedHref(item.locationId, item.name));
+    router.refresh();
   }
 
   function handleChipsChange(next: PathChip[]) {
@@ -173,36 +158,6 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     if (next.length > 0) {
       setFieldErrors((previous) => ({ ...previous, location: undefined }));
     }
-  }
-
-  if (mode === "deleted") {
-    return (
-      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        <div>
-          <p className="text-section-label text-muted">Deleted</p>
-          <p className="text-title text-ink">{item.name}</p>
-        </div>
-        <Link href={STUFF_PATH} className={textLinkClassName()}>
-          Back to home
-        </Link>
-      </div>
-    );
-  }
-
-  if (mode === "edited" && captured) {
-    return (
-      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        <div>
-          <p className="text-section-label text-muted">Updated</p>
-          <p className="text-title text-ink">{captured.name}</p>
-        </div>
-        <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
-        <Link href={`/items/${item.id}`} className={textLinkClassName()}>
-          Back to item
-        </Link>
-      </div>
-    );
   }
 
   if (mode === "confirming-delete") {

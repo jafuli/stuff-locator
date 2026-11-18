@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ItemEditForm } from "@/components/item-edit-form";
 import type { Item, Location } from "@/lib/fixtures/types";
-import { STUFF_PATH } from "@/lib/routes";
 
 const LOCATIONS: Location[] = [
   { id: "garage", parentId: null, name: "Garage" },
@@ -27,8 +26,14 @@ vi.mock("@/server/db/client", () => ({
   createClient: () => ({ rpc }),
 }));
 
+const replace = vi.fn();
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
+
 beforeEach(() => {
   rpc.mockReset();
+  replace.mockReset();
+  refresh.mockReset();
 });
 
 function renderForm() {
@@ -99,8 +104,6 @@ test("moving into a place that doesn't exist yet sends the new level along, in t
   expect(screen.getByRole("group", { name: "Location: Garage › Attic" })).toBeDefined();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-  const status = await screen.findByRole("status");
-  expect(status.textContent).toContain("Garage › Attic");
   expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("update_item", {
     p_item_id: "bike-pump",
@@ -124,9 +127,6 @@ test("a save is ONE update_item call carrying name, detail and the place", async
   await user.type(screen.getByLabelText("Name"), "Bike pump (blue)");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-  const status = await screen.findByRole("status");
-  expect(status.textContent).toContain("Bike pump (blue)");
-  expect(status.textContent).toContain("Garage");
   expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("update_item", {
     p_item_id: "bike-pump",
@@ -134,6 +134,25 @@ test("a save is ONE update_item call carrying name, detail and the place", async
     p_detail: "Top shelf",
     p_location_id: "garage",
   });
+});
+
+test("a successful save replaces the history entry with the item's page, carrying the Saved notice", async () => {
+  rpc.mockResolvedValueOnce({
+    data: { id: "bike-pump", name: "Bike pump", detail: "Top shelf", location_id: "garage" },
+    error: null,
+  });
+
+  const user = userEvent.setup();
+  renderForm();
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+  // replace, not push: Back must not return to this form with the old values.
+  expect(replace).toHaveBeenCalledWith("/items/bike-pump?saved=1");
+  expect(refresh).toHaveBeenCalledTimes(1);
+  // No success screen inside the edit page any more.
+  expect(screen.queryByRole("status")).toBeNull();
+  // Still disabled while the navigation lands, so it can't be saved twice.
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Saving…" }).disabled).toBe(true);
 });
 
 test("changing name and location together is still a single call, showing the real combined result", async () => {
@@ -151,10 +170,9 @@ test("changing name and location together is still a single call, showing the re
   await user.keyboard("{ArrowDown}{Enter}");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-  const status = await screen.findByRole("status");
-  expect(status.textContent).toContain("Bike pump (blue)");
-  expect(status.textContent).toContain("Garage");
-  expect(status.textContent).toContain("Closet");
+  await vi.waitFor(() => {
+    expect(replace).toHaveBeenCalledWith("/items/bike-pump?saved=1");
+  });
   expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("update_item", {
     p_item_id: "bike-pump",
@@ -176,7 +194,6 @@ test("clearing the detail omits it from the call, which is how update_item clear
   await user.clear(screen.getByLabelText("Detail (optional)"));
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-  await screen.findByRole("status");
   expect(rpc).toHaveBeenCalledWith("update_item", {
     p_item_id: "bike-pump",
     p_name: "Bike pump",
@@ -199,7 +216,7 @@ test("a rejected save shows its own specific error and no success state", async 
 
   const error = await screen.findByText("update_item: item and destination location belong to different households");
   expect(error.getAttribute("role")).toBe("alert");
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(replace).not.toHaveBeenCalled();
   // Entered values survive for a retry.
   expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Bike pump");
 });
@@ -218,7 +235,7 @@ test("delete requires confirmation: cancel leaves the item unchanged", async () 
   expect(rpc).not.toHaveBeenCalled();
 });
 
-test("confirming delete calls delete_item and shows a success state with a way back to Home", async () => {
+test("confirming delete calls delete_item and replaces the page with the Browse page of the item's place", async () => {
   rpc.mockResolvedValueOnce({ data: { id: "bike-pump" }, error: null });
 
   const user = userEvent.setup();
@@ -230,11 +247,28 @@ test("confirming delete calls delete_item and shows a success state with a way b
   // confirm action itself.
   await user.click(screen.getByRole("button", { name: "Delete item" }));
 
-  const status = await screen.findByRole("status");
-  expect(status.textContent).toContain("Bike pump");
-  expect(screen.getByRole("link", { name: "Back to home" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("delete_item", { p_item_id: "bike-pump" });
+  expect(replace).toHaveBeenCalledWith("/browse/garage?deleted=Bike%20pump");
+  expect(refresh).toHaveBeenCalledTimes(1);
+  // Never a page for the deleted item under the "Edit item" heading.
+  expect(screen.queryByRole("status")).toBeNull();
+});
+
+test("delete goes to the place the item was saved in, not an unsaved place chosen in the picker", async () => {
+  rpc.mockResolvedValueOnce({ data: { id: "bike-pump" }, error: null });
+
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.type(screen.getByRole("combobox"), "Closet");
+  await user.keyboard("{ArrowDown}{Enter}");
+  expect(screen.getByRole("group", { name: "Location: Garage › Closet" })).toBeDefined();
+
+  await user.click(screen.getByRole("button", { name: "Delete item" }));
+  await user.click(screen.getByRole("button", { name: "Delete item" }));
+
+  expect(replace).toHaveBeenCalledWith("/browse/garage?deleted=Bike%20pump");
 });
 
 test("a rejected delete shows a specific error and stays in the confirmation view, not a false success", async () => {
@@ -249,7 +283,7 @@ test("a rejected delete shows a specific error and stays in the confirmation vie
   const error = await screen.findByText("delete_item: item not found or not accessible");
   expect(error.getAttribute("role")).toBe("alert");
   expect(screen.getByRole("heading", { name: "Delete this item?" })).toBeDefined();
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(replace).not.toHaveBeenCalled();
 });
 
 test("the save button shows a loading state and disables fields while in flight", async () => {
@@ -276,5 +310,7 @@ test("the save button shows a loading state and disables fields while in flight"
     data: { id: "bike-pump", name: "Bike pump (blue)", detail: "Top shelf", location_id: "garage" },
     error: null,
   });
-  await screen.findByRole("status");
+  await vi.waitFor(() => {
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
 });

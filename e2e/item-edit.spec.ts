@@ -74,14 +74,13 @@ test("changing only name/detail persists via a plain update, leaving the locatio
   await page.getByLabel("Detail (optional)").fill("with the new passport photos");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  const status = page.getByRole("status");
-  await expect(status).toBeVisible();
-  await expect(status.getByText("Passport (renewed)", { exact: true })).toBeVisible();
-  await expect(status.getByText("Bedroom › Filing box")).toBeVisible();
-  await expect(status.getByText("with the new passport photos")).toBeVisible();
-
-  await status.getByRole("link", { name: "Back to item" }).click();
+  // Lands on the item's own page — the notice parameter is dropped from the
+  // address bar once shown.
   await page.waitForURL(`/items/${itemId}`);
+  await expect(page.getByRole("status")).toHaveText("Saved");
+  await expect(page.getByRole("heading", { level: 1, name: "Passport (renewed)" })).toBeVisible();
+  await expect(page.getByText("Bedroom › Filing box")).toBeVisible();
+  await expect(page.getByText("with the new passport photos")).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });
@@ -104,10 +103,8 @@ test("changing the location exercises the real move_item RPC, showing the new fu
   await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
   await page.getByRole("button", { name: "Save changes" }).click();
-
-  const status = page.getByRole("status");
-  await expect(status).toBeVisible();
-  await expect(status.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
+  await page.waitForURL(`/items/${itemId}`);
+  await expect(page.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
 
   // Real persistence, not a UI echo — the item now genuinely reads back
   // from its new location on a fresh page load.
@@ -166,16 +163,15 @@ test("moving into a place that doesn't exist yet: tap a chip to go back a level,
   await expect(page.getByText("1 new place")).toBeVisible();
 
   await page.getByRole("button", { name: "Save changes" }).click();
-
-  const status = page.getByRole("status");
-  await expect(status.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
+  await page.waitForURL(`/items/${itemId}`);
+  await expect(page.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
 
   await page.goto(`/items/${itemId}`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
 });
 
-test("delete requires confirmation: cancel leaves the item unchanged, confirm performs a real delete with a path to Home", async ({
+test("delete requires confirmation: cancel leaves the item unchanged, confirm lands on the item's place with a notice", async ({
   page,
 }) => {
   const email = await signUpFreshAccount(page);
@@ -194,13 +190,17 @@ test("delete requires confirmation: cancel leaves the item unchanged, confirm pe
   await page.getByRole("button", { name: "Delete item" }).click();
   await page.getByRole("button", { name: "Delete item" }).click();
 
-  const status = page.getByRole("status");
-  await expect(status).toBeVisible();
-  await expect(status.getByText("Passport", { exact: true })).toBeVisible();
+  // The Browse page of the place it was in, never a page for the deleted
+  // item under an "Edit item" heading.
+  await page.waitForURL(`/browse/${locationId}`);
+  await expect(page.getByRole("status")).toHaveText("Deleted Passport");
+  await expect(page.getByRole("heading", { level: 1, name: "Filing box" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Edit item" })).toHaveCount(0);
 
-  await status.getByRole("link", { name: "Back to home" }).click();
-  await page.waitForURL(STUFF_PATH);
-  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+  // A reload is the same place page, without repeating the notice.
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Filing box" })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("");
 
   // Real deletion, not a UI-only echo — revisiting the item's own url now
   // 404s instead of resolving.
@@ -251,7 +251,35 @@ test("the whole edit form, including delete confirmation, is operable keyboard-o
   expect(await tabUntilFocused(page, "Delete item", 5)).toBe(true);
   await page.keyboard.press("Enter");
 
-  const status = page.getByRole("status");
-  await expect(status).toBeVisible();
-  expect(await tabUntilHrefFocused(page, STUFF_PATH, 5)).toBe(true);
+  await page.waitForURL(`/browse/${locationId}`);
+  await expect(page.getByRole("status")).toHaveText("Deleted Passport");
+});
+
+test("after a save, reload and browser Back never show the edit form with the old values", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Bedroom", "Filing box"]);
+  const itemId = await seedItem(email, TEST_PASSWORD, { name: "Passport", locationId });
+
+  // Arrive the way a person does: item page → Edit.
+  await page.goto(`/items/${itemId}`);
+  await page.getByRole("link", { name: "Edit" }).click();
+  await page.waitForURL(`/items/${itemId}/edit`);
+  await page.waitForLoadState("networkidle");
+
+  await page.getByLabel("Name").fill("Passport (renewed)");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.waitForURL(`/items/${itemId}`);
+  await expect(page.getByRole("status")).toHaveText("Saved");
+
+  // Reload: the item page again, not the edit form, and no repeated notice.
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Passport (renewed)" })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("");
+
+  // Back skips the replaced edit entry: it goes to the item page the edit
+  // was opened from, never to a form pre-filled with "Passport".
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/items/${itemId}$`));
+  await expect(page.getByRole("heading", { level: 1, name: "Passport (renewed)" })).toBeVisible();
+  await expect(page.getByLabel("Name")).toHaveCount(0);
 });
