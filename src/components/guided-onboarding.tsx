@@ -69,6 +69,12 @@ const SKIP_LINK_CLASSES = textLinkClassName({
  * setup", available on every step (AC #2: "the user must always be able to
  * reach the real, un-onboarded app").
  *
+ * After a stash the step shows StashForm's confirmation, which takes focus,
+ * with a Back button that reopens the saved item for editing (an update, not
+ * a second stash). Back only exists there: on a step where nothing was saved
+ * there is no Back to the previous step (that item is already saved and can
+ * be edited from Stuff later).
+ *
  * Between steps, focus moves to the new step's heading and the "Step N of
  * 4" label is a polite live region, so keyboard and screen-reader users
  * aren't left on a button that has just unmounted.
@@ -93,7 +99,10 @@ const SKIP_LINK_CLASSES = textLinkClassName({
 export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [stashedThisStep, setStashedThisStep] = useState(false);
+  // "fresh": nothing saved in this step yet (Skip this step). "stashed": the
+  // item is saved (Continue). "reopened": Back put the saved item back in the
+  // form; the form's own Save changes is the way on, so neither shows.
+  const [stepState, setStepState] = useState<"fresh" | "stashed" | "reopened">("fresh");
   const [isFinishing, setIsFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   // The household's places. The `locations` prop is the snapshot from when
@@ -187,13 +196,13 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
   }
 
   function handleStashed() {
-    setStashedThisStep(true);
+    setStepState("stashed");
     void refreshLocations();
   }
 
   function advance() {
     shouldFocusHeading.current = true;
-    setStashedThisStep(false);
+    setStepState("fresh");
     setStep(step + 1);
   }
 
@@ -249,10 +258,15 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
             locationPlaceholder={ITEM_STEPS[step].locationHint}
             embedded
             onStashed={handleStashed}
+            onReopen={() => {
+              setStepState("reopened");
+            }}
           />
-          <Button type="button" variant={stashedThisStep ? "primary" : "secondary"} onClick={advance}>
-            {stashedThisStep ? "Continue" : "Skip this step"}
-          </Button>
+          {stepState === "reopened" ? null : (
+            <Button type="button" variant={stepState === "stashed" ? "primary" : "secondary"} onClick={advance}>
+              {stepState === "stashed" ? "Continue" : "Skip this step"}
+            </Button>
+          )}
         </>
       )}
     </div>

@@ -64,7 +64,7 @@ test("filling a valid name, an existing location via the autocomplete, and an op
   await page.getByLabel("Detail (optional)").fill("Top shelf, behind the shoebox");
   await page.getByRole("button", { name: "Add item" }).click();
 
-  const status = page.getByRole("status");
+  const status = page.getByRole("group", { name: "Added" });
   await expect(status).toBeVisible();
   await expect(status.getByText(itemName, { exact: true })).toBeVisible();
   await expect(status.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
@@ -99,7 +99,7 @@ test("submitting with an empty name and no location shows specific inline errors
   await expect(page.getByText("Enter a name for this item.")).toBeVisible();
   await expect(page.getByText("Choose a location for this item.")).toBeVisible();
   await expect(page).toHaveURL(/\/items\/new$/);
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Added" })).toHaveCount(0);
 });
 
 test("a place that's typed but never turned into a chip is rejected, not silently dropped", async ({ page }) => {
@@ -113,7 +113,7 @@ test("a place that's typed but never turned into a chip is rejected, not silentl
 
   await expect(page.getByText("Choose a location for this item.")).toBeVisible();
   await expect(page).toHaveURL(/\/items\/new$/);
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Added" })).toHaveCount(0);
 });
 
 test("stashing into a brand-new 3-level path creates every level once and puts the item in the deepest", async ({
@@ -139,7 +139,7 @@ test("stashing into a brand-new 3-level path creates every level once and puts t
 
   await page.getByRole("button", { name: "Add item" }).click();
 
-  const status = page.getByRole("status");
+  const status = page.getByRole("group", { name: "Added" });
   await expect(status).toBeVisible();
   await expect(status.getByText("Office › Cabinet › Top drawer")).toBeVisible();
 
@@ -168,7 +168,7 @@ test("an existing prefix plus one new level reuses the prefix and creates only t
   await expect(page.getByText("1 new place")).toBeVisible();
   await page.getByRole("button", { name: "Add item" }).click();
 
-  const status = page.getByRole("status");
+  const status = page.getByRole("group", { name: "Added" });
   await expect(status.getByText("Garage › Closet › Toolbox")).toBeVisible();
 
   await page.goto("/browse");
@@ -258,8 +258,9 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await expect(page.getByRole("button", { name: "Add item" })).toBeFocused();
   await page.keyboard.press("Enter");
 
-  const status = page.getByRole("status");
-  await expect(status).toBeVisible();
+  const status = page.getByRole("group", { name: "Added" });
+  // Focus moves to the confirmation instead of falling to <body>.
+  await expect(status).toBeFocused();
   await expect(status.getByText("Passport")).toBeVisible();
   await expect(status.getByText("Garage › Closet › Toolbox › Red box")).toBeVisible();
 
