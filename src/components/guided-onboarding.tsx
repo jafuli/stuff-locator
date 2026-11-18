@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { Location } from "@/lib/fixtures/types";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
+import { inviteFromOnboardingHref } from "@/lib/routes";
 
 export interface GuidedOnboardingProps {
   householdId: string;
@@ -53,6 +54,10 @@ const SKIP_LINK_CLASSES = textLinkClassName({
   muted: true,
   className: "-mr-2 px-2 disabled:cursor-not-allowed disabled:opacity-60",
 });
+
+// The per-step skip, under the form: left-aligned, so the -ml-2 lines the
+// text up with the form's edge while keeping the padded touch target.
+const SKIP_STEP_CLASSES = textLinkClassName({ muted: true, className: "-ml-2 px-2" });
 
 /**
  * Guided onboarding — the "ends with inviting your partner... doubles as
@@ -164,7 +169,9 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
       return;
     }
     if (destination === "invite") {
-      router.push("/settings/invite");
+      // `from=onboarding` makes the invite screen offer a way back to Stuff:
+      // the guided flow ends there, and onboarding is already complete.
+      router.push(inviteFromOnboardingHref());
       return;
     }
     // Home is a Server Component — router.refresh() re-runs its data reads
@@ -233,7 +240,8 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
             </h2>
             <p className="text-meta text-muted">Stuff Locator works best shared — invite them to your household.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* Stacked full width at phone width, like steps 1–3's buttons; side by side from sm up. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button type="button" variant="primary" isLoading={isFinishing} onClick={() => void finish("invite")}>
               Invite your partner
             </Button>
@@ -262,11 +270,21 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
               setStepState("reopened");
             }}
           />
-          {stepState === "reopened" ? null : (
-            <Button type="button" variant={stepState === "stashed" ? "primary" : "secondary"} onClick={advance}>
-              {stepState === "stashed" ? "Continue" : "Skip this step"}
+          {stepState === "stashed" ? (
+            <Button type="button" variant="primary" onClick={advance}>
+              Continue
             </Button>
-          )}
+          ) : null}
+          {stepState === "fresh" ? (
+            // A left-aligned text link, like "Skip guided setup", rather than a
+            // full-width button: the floating household button sits at the
+            // right edge above the nav, and on a phone a tall form (errors
+            // shown, place list open) puts this row right under it on first
+            // view. Content-width on the left, it stays clear.
+            <button type="button" onClick={advance} className={SKIP_STEP_CLASSES}>
+              Skip this step
+            </button>
+          ) : null}
         </>
       )}
     </div>

@@ -146,7 +146,7 @@ test("finishing on the invite step persists onboarding_completed_at and refreshe
   expect(refresh).toHaveBeenCalled();
 });
 
-test("clicking 'Invite your partner' also persists onboarding_completed_at, then navigates to /settings/invite", async () => {
+test("clicking 'Invite your partner' also persists onboarding_completed_at, then navigates to the invite screen", async () => {
   const user = userEvent.setup();
   renderOnboarding();
 
@@ -156,7 +156,8 @@ test("clicking 'Invite your partner' also persists onboarding_completed_at, then
   await user.click(screen.getByRole("button", { name: "Invite your partner" }));
 
   expect(updateEq).toHaveBeenCalledWith("id", HOUSEHOLD_ID);
-  expect(push).toHaveBeenCalledWith("/settings/invite");
+  // `from=onboarding`, so the invite screen offers a way back to Stuff.
+  expect(push).toHaveBeenCalledWith("/settings/invite?from=onboarding");
 });
 
 async function stash(user: ReturnType<typeof userEvent.setup>, name: string, location: string) {
