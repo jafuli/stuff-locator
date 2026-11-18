@@ -89,7 +89,8 @@ test("a brand-new household with zero items shows guided onboarding, not the pla
   await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+  // The screen's one display heading asks the onboarding question meanwhile.
+  await expect(page.getByRole("heading", { level: 1, name: "What should we stash first?" })).toBeVisible();
   await expect(page.getByText("Step 1 of 4")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Stash something filed away" })).toBeVisible();
   await expect(page.getByText("No items yet")).toHaveCount(0);
