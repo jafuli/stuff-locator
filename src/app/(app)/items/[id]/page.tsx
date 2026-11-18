@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { FlashNotice } from "@/components/flash-notice";
+import { ItemDeleteButton } from "@/components/item-delete-button";
 import { ItemDetail } from "@/components/item-detail";
 import { displayNameFor } from "@/lib/display-name";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -25,7 +26,8 @@ const INVALID_UUID_ERROR_CODE = "22P02";
 // nonexistent or not-visible-under-RLS id renders this segment's own
 // not-found.tsx (PR #10's pattern), same as the fixture version did.
 //
-// The "Edit" link is unchanged — already wired from the fixture-only task.
+// Edit and Delete sit on the name's line (ItemDetail's `actions`), the way the
+// ⋯ sits beside a place's name in Browse. Delete confirms in a dialog.
 export default async function Page(props: PageProps<"/items/[id]">) {
   const { id } = await props.params;
   // "Saved", when this page was reached from a successful edit.
@@ -108,14 +110,20 @@ export default async function Page(props: PageProps<"/items/[id]">) {
 
   return (
     <main className="flex flex-col gap-4 px-gutter pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <BackLink href={STUFF_PATH} label="Stuff" />
-        <Link href={`/items/${id}/edit`} className={buttonClassName("secondary", "min-h-target-min px-4")}>
-          Edit
-        </Link>
-      </div>
+      <BackLink href={STUFF_PATH} label="Stuff" />
       <FlashNotice message={notice} />
-      <ItemDetail item={item} segments={segments} />
+      <ItemDetail
+        item={item}
+        segments={segments}
+        actions={
+          <>
+            <Link href={`/items/${id}/edit`} className={buttonClassName("secondary", "min-h-target-min px-4")}>
+              Edit
+            </Link>
+            <ItemDeleteButton item={{ id: item.id, name: item.name, locationId: item.locationId }} />
+          </>
+        }
+      />
     </main>
   );
 }
