@@ -58,6 +58,32 @@ test("Escape closes the dialog without deleting", async () => {
   expect(rpc).not.toHaveBeenCalled();
 });
 
+test("a tap on the backdrop closes the dialog without deleting, like the delete-place dialog", async () => {
+  const user = userEvent.setup();
+  render(<ItemDeleteButton item={ITEM} />);
+
+  const trigger = screen.getByRole("button", { name: "Delete Bike pump" });
+  await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "Close dialog" }));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(rpc).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(trigger);
+});
+
+test("the backdrop can't close the dialog while the delete is in flight", async () => {
+  // Never settles: the delete stays in flight for the rest of the test.
+  rpc.mockReturnValueOnce(new Promise(() => undefined));
+  const user = userEvent.setup();
+  render(<ItemDeleteButton item={ITEM} />);
+
+  await user.click(screen.getByRole("button", { name: "Delete Bike pump" }));
+  await user.click(screen.getByRole("button", { name: "Delete" }));
+  await user.click(screen.getByRole("button", { name: "Close dialog" }));
+
+  expect(screen.getByRole("dialog", { name: "Delete “Bike pump”?" })).toBeDefined();
+});
+
 test("confirming calls delete_item and replaces the page with the item's place, naming it", async () => {
   rpc.mockResolvedValueOnce({ data: null, error: null });
   const user = userEvent.setup();

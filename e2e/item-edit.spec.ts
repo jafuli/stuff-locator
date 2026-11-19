@@ -171,7 +171,7 @@ test("moving into a place that doesn't exist yet: tap a chip to go back a level,
   await expect(page.getByText("Garage › Closet › Toolbox › Blue tin")).toBeVisible();
 });
 
-test("delete, from the item page: a trash icon opens a confirm dialog; Cancel keeps the item, Delete lands on its place", async ({
+test("delete, from the item page: a trash icon opens a confirm dialog; Cancel or a click outside keeps the item, Delete lands on its place", async ({
   page,
 }) => {
   const email = await signUpFreshAccount(page);
@@ -195,6 +195,13 @@ test("delete, from the item page: a trash icon opens a confirm dialog; Cancel ke
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await expect(page.getByRole("heading", { level: 1, name: "Passport" })).toBeVisible();
+
+  // A click outside the card closes it too, like the delete-place dialog.
+  await trigger.click();
+  await expect(dialog).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog" }).click({ position: { x: 10, y: 10 } });
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 
   await trigger.click();
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();

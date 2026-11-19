@@ -23,8 +23,9 @@ export interface ItemDeleteButtonProps {
  * carrying a "Deleted <name>" notice (src/lib/flash-notice.ts). `replace`,
  * so Back and reload never land on a page for an item that is gone.
  *
- * A stray tap on the backdrop doesn't close it (the Dialog's own advice for a
- * destructive confirmation); Cancel and Escape do, and focus starts on Cancel.
+ * Cancel, Escape and a tap on the backdrop all close it, matching Browse's
+ * delete-place dialog (Itamar's call: the two delete dialogs behave the same).
+ * Focus starts on Cancel, so nothing is deleted without pressing Delete.
  */
 export function ItemDeleteButton({ item }: ItemDeleteButtonProps) {
   const router = useRouter();
@@ -32,7 +33,7 @@ export function ItemDeleteButton({ item }: ItemDeleteButtonProps) {
   const [error, setError] = useState<string | undefined>();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Escape and Cancel close it, but not while the delete is in flight.
+  // Escape, Cancel and the backdrop close it, but not while the delete is in flight.
   function close() {
     if (isDeleting) {
       return;
@@ -70,7 +71,7 @@ export function ItemDeleteButton({ item }: ItemDeleteButtonProps) {
         <TrashIcon />
       </button>
 
-      <Dialog open={open} onClose={close} title={`Delete “${item.name}”?`} dismissOnBackdrop={false}>
+      <Dialog open={open} onClose={close} title={`Delete “${item.name}”?`}>
         <p className="text-body text-muted">This can&apos;t be undone.</p>
         {error ? (
           <p role="alert" className="text-meta text-signal">
