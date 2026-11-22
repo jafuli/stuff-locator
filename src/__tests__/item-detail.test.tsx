@@ -84,3 +84,13 @@ test("renders no field list when the item has no optional fields set", () => {
   render(<ItemDetail item={bare} segments={[{ id: "garage", name: "Garage" }]} />);
   expect(screen.queryByRole("term")).toBeNull();
 });
+
+test("actions sit on the same line as the name, after the heading", () => {
+  render(<ItemDetail item={fullItem} segments={[]} actions={<button type="button">Edit</button>} />);
+
+  const heading = screen.getByRole("heading", { level: 1, name: "Spare house keys" });
+  const action = screen.getByRole("button", { name: "Edit" });
+  // Same row: the heading and the actions share one parent.
+  expect(heading.parentElement?.contains(action)).toBe(true);
+  expect(heading.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
