@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { damerauLevenshtein, lexicalRank, lexicalTier, normalise, typoBudget } from "@/lib/search/lexical";
 
-const tierOf = (name: string, query: string, detail?: string) => lexicalTier({ name, detail }, normalise(query));
+const tierOf = (name: string, query: string, detail?: string, places?: readonly string[]) =>
+  lexicalTier({ name, detail, places }, normalise(query));
 
 describe("normalise", () => {
   test("lower-cases and collapses whitespace", () => {
@@ -24,6 +25,23 @@ describe("tiers", () => {
     ["Passport", "spare keys", undefined, null],
   ] as const)("%s / %s -> %s", (name, query, detail, tier) => {
     expect(tierOf(name, query, detail)).toBe(tier);
+  });
+
+  test.each([
+    ["of", "place"],
+    ["o", "place"],
+    ["OFF", "place"],
+    ["cabinet", "place"],
+    ["ffic", "place"],
+    ["ofice", "fuzzy-detail"],
+    ["garage", null],
+  ] as const)("an item in Office › Cabinet, queried %s -> %s", (query, tier) => {
+    expect(tierOf("Spare keys", query, undefined, ["Office", "Cabinet"])).toBe(tier);
+  });
+
+  test("an item's own name or detail outranks its place", () => {
+    expect(tierOf("Office chair key", "off", undefined, ["Office"])).toBe("prefix");
+    expect(tierOf("Spare keys", "office", "the office spare", ["Office"])).toBe("detail");
   });
 
   test("whitespace inside the query is normalised too", () => {

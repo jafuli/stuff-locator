@@ -93,12 +93,20 @@ export function StuffSearchResults({ entries, emptyStateAction }: StuffSearchRes
 
   const isSearching = query.trim() !== "";
   const items = entries.map((entry) => entry.item);
+  // The letters match the item's place too ("of" finds things in Office),
+  // not only its name and detail; see lexical.ts.
+  const lexicalDocuments = entries.map(({ item, segments }) => ({
+    id: item.id,
+    name: item.name,
+    detail: item.detail,
+    places: segments.map((segment) => segment.name),
+  }));
   const allIds = items.map((item) => item.id);
 
   // Fused: reciprocal rank fusion of the lexical and semantic rankings, and
   // just the lexical ranking (typo-tolerant) until the model answers.
   const results = isSearching
-    ? fuseRankings(allIds, lexicalRank(items, query), semantic?.order ?? null, {
+    ? fuseRankings(allIds, lexicalRank(lexicalDocuments, query), semantic?.order ?? null, {
         limit: semantic === null ? undefined : SHORTLIST_SIZE,
       })
     : [];

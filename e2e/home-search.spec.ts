@@ -73,3 +73,28 @@ test("searching the home item list filters, shows no-matches, and clears back to
 
   expect(consoleErrors).toEqual([]);
 });
+
+test("one or two letters already find items by their place ('of' -> what's in the Office), on Stuff and on Browse", async ({
+  page,
+}) => {
+  const email = await signUpFreshAccount(page);
+  const tag = randomUUID().slice(0, 8);
+  const keysName = `Spare keys ${tag}`;
+  const pumpName = `Bike pump ${tag}`;
+  const cabinet = await seedLocationChain(email, TEST_PASSWORD, ["Office", "Cabinet"]);
+  const garage = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  await seedItem(email, TEST_PASSWORD, { name: keysName, locationId: cabinet });
+  await seedItem(email, TEST_PASSWORD, { name: pumpName, locationId: garage });
+
+  for (const path of [STUFF_PATH, "/browse"]) {
+    await page.goto(path);
+    const search = page.getByRole("searchbox", { name: "Search your stuff" });
+    await expect(search).toBeEnabled();
+
+    // Two letters: below the model's 3-character minimum, so this is the
+    // letter matching alone, now reaching the place path.
+    await search.fill("of");
+    await expect(page.getByText(keysName)).toBeVisible();
+    await expect(page.getByText(pumpName)).toHaveCount(0);
+  }
+});

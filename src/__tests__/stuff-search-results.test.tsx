@@ -33,6 +33,33 @@ test("typing a query that matches one item narrows the visible list", async () =
   expect(screen.queryByText("Passport")).toBeNull();
 });
 
+test("one or two letters already reach an item's place: 'of' finds what's in the Office", async () => {
+  const user = userEvent.setup();
+  const keys: Item = { id: "keys", locationId: "office-cabinet", name: "Spare keys" };
+  renderUnderStuffHeader(
+    <StuffSearchResults
+      entries={[
+        ...entries,
+        {
+          item: keys,
+          segments: [
+            { id: "office", name: "Office" },
+            { id: "office-cabinet", name: "Cabinet" },
+          ],
+        },
+      ]}
+    />,
+  );
+
+  // Below the model's 3-character minimum: letters are all of Find here.
+  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "of");
+
+  expect(screen.getByText("Spare keys")).toBeDefined();
+  expect(screen.queryByText("Passport")).toBeNull();
+  expect(screen.queryByText("Camping tent")).toBeNull();
+  expect(screen.getByRole("status").textContent).toBe("1 result found");
+});
+
 test("a query matching nothing shows the no-matches empty state", async () => {
   const user = userEvent.setup();
   renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
