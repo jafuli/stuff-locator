@@ -8,7 +8,7 @@ import { Button, buttonClassName } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Location } from "@/lib/fixtures/types";
-import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-picker";
+import { resolvePath, type PathChip } from "@/lib/location-path-picker";
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 import { useItemFieldErrors } from "@/components/use-item-field-errors";
@@ -34,12 +34,6 @@ export interface StashFormProps {
    * can wander out of the guided flow by accident.
    */
   embedded?: boolean;
-  /**
-   * Embedded only: fires when "Back" on the confirmation reopens the saved
-   * item for editing, so the host can hold back its own next action until
-   * the item is saved again.
-   */
-  onReopen?: () => void;
   /** Placeholder for the empty place field, e.g. "Office, then Cabinet…". */
   locationPlaceholder?: string;
 }
@@ -55,14 +49,12 @@ interface CapturedStash {
   name: string;
   segments: LocationBreadcrumbSegment[];
   detail?: string;
-  /** The place the item is in, and the chips that put it there (for Back). */
-  locationId: string;
-  chips: PathChip[];
-  /** "Added" after the first save, "Updated" after a save from Back. */
-  verb: "Added" | "Updated";
 }
 
 const LOCATION_ERROR_ID = "stash-location-error";
+
+/** On the onboarding confirmation: where fixing a mistake happens. */
+export const EMBEDDED_EDIT_HINT = "Open the item from the Stuff list to edit or delete it.";
 
 /**
  * Add-item form, backed by a real Supabase write: submit calls the
@@ -81,12 +73,10 @@ const LOCATION_ERROR_ID = "stash-location-error";
  * "Added <name>": a region that arrives already holding its text is often
  * not read out.
  *
- * Embedded (onboarding), the confirmation has a Back button. The item is
- * already saved by then, so Back reopens it for editing and the next submit
- * calls `update_item` on that item. Calling `stash_item` again would create
- * a second one.
+ * Embedded (onboarding), the confirmation has no actions of its own, only a
+ * hint that the item can be edited or deleted from the Stuff list.
  */
-export function StashForm({ locations, onStashed, embedded = false, onReopen, locationPlaceholder }: StashFormProps) {
+export function StashForm({ locations, onStashed, embedded = false, locationPlaceholder }: StashFormProps) {
   const [name, setName] = useState("");
   const [detail, setDetail] = useState("");
   const [chips, setChips] = useState<PathChip[]>([]);
@@ -95,25 +85,17 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
   const [captured, setCaptured] = useState<CapturedStash | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // Set once the item exists: from then on a submit edits it instead of
-  // stashing a new one (only reachable through Back, in embedded mode).
-  const [savedItemId, setSavedItemId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
   const confirmationLabelId = useId();
   const confirmationRef = useRef<HTMLDivElement>(null);
-  // Set by a save or by Back, consumed by the effect below: focus only moves
-  // in response to those, never on first render.
-  const pendingFocus = useRef<"confirmation" | "name" | null>(null);
+  // Focus moves to the confirmation when a save puts it on screen, never on
+  // first render.
   useEffect(() => {
-    if (pendingFocus.current === "confirmation") {
+    if (captured) {
       confirmationRef.current?.focus();
-    } else if (pendingFocus.current === "name") {
-      nameInputRef.current?.focus();
     }
-    pendingFocus.current = null;
-    // nameInputRef is a stable ref object from useItemFieldErrors.
-  }, [captured, nameInputRef]);
+  }, [captured]);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,19 +117,13 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
 
     const supabase = createClient();
 
-    // Optional arguments are left out rather than sent as null. For
-    // update_item an omitted detail clears it, which is what an emptied
-    // field means.
-    const args = {
+    // Optional arguments are left out rather than sent as null.
+    const { data, error } = await supabase.rpc("stash_item", {
       p_name: name.trim(),
       ...(trimmedDetail === "" ? {} : { p_detail: trimmedDetail }),
       ...(path.locationId === null ? {} : { p_location_id: path.locationId }),
       ...(path.newPath.length === 0 ? {} : { p_new_path: path.newPath }),
-    };
-    const { data, error } =
-      savedItemId === null
-        ? await supabase.rpc("stash_item", args)
-        : await supabase.rpc("update_item", { p_item_id: savedItemId, ...args });
+    });
 
     setIsSubmitting(false);
 
@@ -167,19 +143,13 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
       name: chip.name,
     }));
 
-    const verb = savedItemId === null ? "Added" : "Updated";
-    pendingFocus.current = "confirmation";
-    setSavedItemId(data.id);
     setCaptured({
       id: data.id,
       name: data.name,
       segments,
       detail: data.detail ?? undefined,
-      locationId: data.location_id,
-      chips,
-      verb,
     });
-    setAnnouncement(`${verb} ${data.name}`);
+    setAnnouncement(`Added ${data.name}`);
     onStashed?.({ itemId: data.id, locationId: data.location_id });
   }
 
@@ -207,33 +177,9 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
     setChips([]);
     setPendingText("");
     reset();
-    setSavedItemId(null);
     setAnnouncement("");
     setCaptured(null);
   }
-
-  // Back, from the embedded confirmation: the saved item, back in the form.
-  function handleBack(saved: CapturedStash) {
-    setName(saved.name);
-    setDetail(saved.detail ?? "");
-    // The place as it now exists. If the host hasn't re-read its places yet
-    // (a level this save created isn't in `locations`), the chips that were
-    // submitted name the same path: the database resolves an existing name
-    // to the existing place rather than creating a second one.
-    const known = chipsForPlace(saved.locationId, locations);
-    setChips(known.length > 0 ? known : saved.chips);
-    setPendingText("");
-    reset();
-    setSubmitError(null);
-    setAnnouncement("");
-    pendingFocus.current = "name";
-    setCaptured(null);
-    onReopen?.();
-  }
-
-  // Editing an item this form already saved (after Back) says so.
-  const submitLabel =
-    savedItemId === null ? (isSubmitting ? "Adding…" : "Add item") : isSubmitting ? "Saving…" : "Save changes";
 
   function renderBody() {
     if (captured && embedded) {
@@ -246,22 +192,12 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
           className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4 outline-none"
         >
           <p id={confirmationLabelId} className="text-section-label text-muted">
-            {captured.verb}
+            Added
           </p>
           <p className="text-title text-ink">{captured.name}</p>
           <PathTrail segments={captured.segments} printIn />
           {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
-          <div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                handleBack(captured);
-              }}
-            >
-              Back
-            </Button>
-          </div>
+          <p className="text-meta text-muted">{EMBEDDED_EDIT_HINT}</p>
         </div>
       );
     }
@@ -349,7 +285,7 @@ export function StashForm({ locations, onStashed, embedded = false, onReopen, lo
         ) : null}
 
         <Button type="submit" variant="primary" isLoading={isSubmitting}>
-          {submitLabel}
+          {isSubmitting ? "Adding…" : "Add item"}
         </Button>
       </form>
     );
