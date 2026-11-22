@@ -69,11 +69,9 @@ const SKIP_LINK_CLASSES = textLinkClassName({
  * setup", available on every step (AC #2: "the user must always be able to
  * reach the real, un-onboarded app").
  *
- * After a stash the step shows StashForm's confirmation, which takes focus,
- * with a Back button that reopens the saved item for editing (an update, not
- * a second stash). Back only exists there: on a step where nothing was saved
- * there is no Back to the previous step (that item is already saved and can
- * be edited from Stuff later).
+ * After a stash the step shows StashForm's confirmation, which takes focus.
+ * There is no Back to reopen the item: the confirmation says how to edit or
+ * delete it from the Stuff list instead (Itamar's call in review of #85).
  *
  * Between steps, focus moves to the new step's heading and the "Step N of
  * 4" label is a polite live region, so keyboard and screen-reader users
@@ -99,10 +97,7 @@ const SKIP_LINK_CLASSES = textLinkClassName({
 export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  // "fresh": nothing saved in this step yet (Skip this step). "stashed": the
-  // item is saved (Continue). "reopened": Back put the saved item back in the
-  // form; the form's own Save changes is the way on, so neither shows.
-  const [stepState, setStepState] = useState<"fresh" | "stashed" | "reopened">("fresh");
+  const [stashedThisStep, setStashedThisStep] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   // The household's places. The `locations` prop is the snapshot from when
@@ -196,13 +191,13 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
   }
 
   function handleStashed() {
-    setStepState("stashed");
+    setStashedThisStep(true);
     void refreshLocations();
   }
 
   function advance() {
     shouldFocusHeading.current = true;
-    setStepState("fresh");
+    setStashedThisStep(false);
     setStep(step + 1);
   }
 
@@ -258,15 +253,10 @@ export function GuidedOnboarding({ householdId, locations }: GuidedOnboardingPro
             locationPlaceholder={ITEM_STEPS[step].locationHint}
             embedded
             onStashed={handleStashed}
-            onReopen={() => {
-              setStepState("reopened");
-            }}
           />
-          {stepState === "reopened" ? null : (
-            <Button type="button" variant={stepState === "stashed" ? "primary" : "secondary"} onClick={advance}>
-              {stepState === "stashed" ? "Continue" : "Skip this step"}
-            </Button>
-          )}
+          <Button type="button" variant={stashedThisStep ? "primary" : "secondary"} onClick={advance}>
+            {stashedThisStep ? "Continue" : "Skip this step"}
+          </Button>
         </>
       )}
     </div>

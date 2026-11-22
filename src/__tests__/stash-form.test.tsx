@@ -235,6 +235,9 @@ test("embedded: the success panel confirms the item but offers no navigation of 
   expect(screen.queryByRole("link", { name: "View item" })).toBeNull();
   expect(screen.queryByRole("link", { name: "Back to home" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Add another" })).toBeNull();
+  // No Back either: the hint says where editing and deleting happen.
+  expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  expect(status.textContent).toContain("Open the item from the Stuff list to edit or delete it.");
 });
 
 test("the placeholder hint shows while no place is chosen", () => {
@@ -318,11 +321,11 @@ test("on the Stash page too, focus moves to the confirmation and the save is ann
   const confirmation = await screen.findByRole("group", { name: "Added" });
   expect(document.activeElement).toBe(confirmation);
   expect(screen.getByRole("status").textContent).toBe("Added Bike pump");
-  // Back is for the embedded (onboarding) confirmation only.
-  expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  // The onboarding-only edit hint isn't on the Stash page, which has View item.
+  expect(screen.queryByText("Open the item from the Stuff list to edit or delete it.")).toBeNull();
 });
 
-test("'Add another' starts a fresh item: the next save is a new stash_item, not an update", async () => {
+test("'Add another' starts a fresh item: a second stash_item, and the announcement clears in between", async () => {
   rpc.mockResolvedValue({ data: stashedRow(), error: null });
   const user = userEvent.setup();
   renderForm();

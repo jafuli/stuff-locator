@@ -1,4 +1,4 @@
-import type { ChangeEvent, Ref } from "react";
+import type { ChangeEvent } from "react";
 import { cn } from "@/lib/cn";
 
 export interface FormFieldProps {
@@ -10,8 +10,6 @@ export interface FormFieldProps {
   error?: string;
   disabled?: boolean;
   autoComplete?: string;
-  /** The input element, for a form that moves focus to it (React 19 passes `ref` as a prop). */
-  ref?: Ref<HTMLInputElement>;
 }
 
 /**
@@ -27,17 +25,7 @@ export interface FormFieldProps {
  * `required`-adjacent semantics (mobile keyboard, autofill) but the forms
  * that use it decide what counts as valid and when to show it.
  */
-export function FormField({
-  id,
-  label,
-  type,
-  value,
-  onChange,
-  error,
-  disabled = false,
-  autoComplete,
-  ref,
-}: FormFieldProps) {
+export function FormField({ id, label, type, value, onChange, error, disabled = false, autoComplete }: FormFieldProps) {
   const errorId = `${id}-error`;
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -50,7 +38,6 @@ export function FormField({
         {label}
       </label>
       <input
-        ref={ref}
         id={id}
         type={type}
         value={value}

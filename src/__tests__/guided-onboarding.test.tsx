@@ -336,82 +336,19 @@ test("after a stash, focus moves to the confirmation and the live region says 'A
   expect(screen.getByRole("status").textContent).toBe("Added Passport");
 });
 
-test("Back reopens the saved item; saving again is an update_item on that item, never a second stash", async () => {
-  stashRpc
-    .mockResolvedValueOnce({
-      data: { id: "item-1", name: "Pasport", detail: null, location_id: "garage-closet" },
-      error: null,
-    })
-    .mockResolvedValueOnce({
-      data: { id: "item-1", name: "Passport", detail: "blue cover", location_id: "garage-closet" },
-      error: null,
-    });
+test("the Added confirmation has no Back; it says where to edit or delete, and Continue is the way on", async () => {
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "garage-closet" },
+    error: null,
+  });
   const user = userEvent.setup();
   renderOnboarding();
 
-  await stash(user, "Pasport", "Closet");
-  await user.click(await screen.findByRole("button", { name: "Back" }));
+  await stash(user, "Passport", "Closet");
 
-  // The saved values are back in the form, focus is on Name, and the step's
-  // own Continue / Skip is held back until the item is saved again.
-  const nameField = screen.getByLabelText<HTMLInputElement>("Name");
-  expect(nameField.value).toBe("Pasport");
-  expect(document.activeElement).toBe(nameField);
-  expect(screen.getByRole("group", { name: "Location: Garage › Closet" })).toBeDefined();
-  expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Skip this step" })).toBeNull();
-
-  await user.clear(nameField);
-  await user.type(nameField, "Passport");
-  await user.type(screen.getByLabelText("Detail (optional)"), "blue cover");
-  await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-  expect(stashRpc).toHaveBeenCalledTimes(2);
-  expect(stashRpc.mock.calls[0]?.[0]).toBe("stash_item");
-  expect(stashRpc).toHaveBeenLastCalledWith("update_item", {
-    p_item_id: "item-1",
-    p_name: "Passport",
-    p_detail: "blue cover",
-    p_location_id: "garage-closet",
-  });
-
-  const confirmation = await screen.findByRole("group", { name: "Updated" });
-  expect(confirmation.textContent).toContain("Passport");
-  expect(document.activeElement).toBe(confirmation);
-  expect(screen.getByRole("status").textContent).toBe("Updated Passport");
-  expect(screen.getByRole("button", { name: "Continue" })).toBeDefined();
-});
-
-test("a place the stash just created comes back as the same path after Back, not a second new place", async () => {
-  // The re-read of places hasn't caught up: "Attic" isn't known yet.
-  locationsResult.mockResolvedValue({ data: [], error: null });
-  stashRpc
-    .mockResolvedValueOnce({
-      data: { id: "item-1", name: "Tent", detail: null, location_id: "loc-attic" },
-      error: null,
-    })
-    .mockResolvedValueOnce({
-      data: { id: "item-1", name: "Tent", detail: null, location_id: "loc-attic" },
-      error: null,
-    });
-  const user = userEvent.setup();
-  renderOnboarding();
-
-  await stashIntoNewPlace(user, "Tent", "Attic");
-  await user.click(await screen.findByRole("button", { name: "Back" }));
-  expect(screen.getByRole("group", { name: "Location: Attic" })).toBeDefined();
-  await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-  // Sent as the same path; the database resolves an existing name to the
-  // existing place (ensure_location_path), so nothing is duplicated.
-  expect(stashRpc).toHaveBeenLastCalledWith("update_item", {
-    p_item_id: "item-1",
-    p_name: "Tent",
-    p_new_path: ["Attic"],
-  });
-});
-
-test("a step where nothing was saved has no Back", () => {
-  renderOnboarding();
+  const confirmation = await screen.findByRole("group", { name: "Added" });
+  expect(confirmation.textContent).toContain("Open the item from the Stuff list to edit or delete it.");
   expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDefined();
+  expect(stashRpc).toHaveBeenCalledTimes(1);
 });
