@@ -69,6 +69,10 @@ const SKIP_LINK_CLASSES = textLinkClassName({
  * setup", available on every step (AC #2: "the user must always be able to
  * reach the real, un-onboarded app").
  *
+ * After a stash the step shows StashForm's confirmation, which takes focus.
+ * There is no Back to reopen the item: the confirmation says how to edit or
+ * delete it from the Stuff list instead (Itamar's call in review of #85).
+ *
  * Between steps, focus moves to the new step's heading and the "Step N of
  * 4" label is a polite live region, so keyboard and screen-reader users
  * aren't left on a button that has just unmounted.

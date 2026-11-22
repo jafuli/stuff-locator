@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
 import { PathTrail } from "@/components/path-trail";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button, buttonClassName } from "@/components/ui/button";
@@ -57,6 +57,9 @@ interface CapturedStash {
 
 const LOCATION_ERROR_ID = "stash-location-error";
 
+/** On the onboarding confirmation: where fixing a mistake happens. */
+export const EMBEDDED_EDIT_HINT = "Open the item from the Stuff list to edit or delete it.";
+
 /**
  * Add-item form, backed by a real Supabase write: submit calls the
  * `stash_item` RPC, which creates any missing places and the item in ONE
@@ -68,6 +71,14 @@ const LOCATION_ERROR_ID = "stash-location-error";
  *
  * The place is built in LocationPathPicker as a chip path (ADR 0010); dashed
  * chips are written only here, with the item.
+ *
+ * After a save, focus moves to the confirmation (it would otherwise fall to
+ * <body> with the unmounted form), and an always-mounted live region says
+ * "Added <name>": a region that arrives already holding its text is often
+ * not read out.
+ *
+ * Embedded (onboarding), the confirmation has no actions of its own, only a
+ * hint that the item can be edited or deleted from the Stuff list.
  */
 export function StashForm({ locations, onStashed, embedded = false, locationPlaceholder }: StashFormProps) {
   const [name, setName] = useState("");
@@ -78,6 +89,17 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
   const [captured, setCaptured] = useState<CapturedStash | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+
+  const confirmationLabelId = useId();
+  const confirmationRef = useRef<HTMLDivElement>(null);
+  // Focus moves to the confirmation when a save puts it on screen, never on
+  // first render.
+  useEffect(() => {
+    if (captured) {
+      confirmationRef.current?.focus();
+    }
+  }, [captured]);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,6 +154,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
       segments,
       detail: data.detail ?? undefined,
     });
+    setAnnouncement(`Added ${data.name}`);
     onStashed?.({ itemId: data.id, locationId: data.location_id });
   }
 
@@ -150,93 +173,123 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
     setChips([]);
     setPendingText("");
     setFieldErrors({});
+    setAnnouncement("");
     setCaptured(null);
   }
 
-  if (captured && embedded) {
-    return (
-      <div role="status" className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4">
-        <p className="text-section-label text-muted">Added</p>
-        <p className="text-title text-ink">{captured.name}</p>
-        <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
-      </div>
-    );
-  }
-
-  if (captured) {
-    return (
-      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        <div>
-          <p className="text-section-label text-muted">Added</p>
+  function renderBody() {
+    if (captured && embedded) {
+      return (
+        <div
+          ref={confirmationRef}
+          role="group"
+          aria-labelledby={confirmationLabelId}
+          tabIndex={-1}
+          className="flex flex-col gap-2 rounded-panel border border-hairline bg-surface p-4 outline-none"
+        >
+          <p id={confirmationLabelId} className="text-section-label text-muted">
+            Added
+          </p>
           <p className="text-title text-ink">{captured.name}</p>
+          <PathTrail segments={captured.segments} printIn />
+          {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
+          <p className="text-meta text-muted">{EMBEDDED_EDIT_HINT}</p>
         </div>
-        <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
-        <p className="text-meta text-muted">Saved. It shows up on Home and in Browse right away.</p>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/items/${captured.id}`} className={buttonClassName("primary")}>
-            View item
-          </Link>
-          <Button type="button" variant="secondary" onClick={handleAddAnother}>
-            Add another
-          </Button>
-          <Link href={STUFF_PATH} className={textLinkClassName()}>
-            Back to home
-          </Link>
+      );
+    }
+
+    if (captured) {
+      return (
+        <div
+          ref={confirmationRef}
+          role="group"
+          aria-labelledby={confirmationLabelId}
+          tabIndex={-1}
+          className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4 outline-none"
+        >
+          <div>
+            <p id={confirmationLabelId} className="text-section-label text-muted">
+              Added
+            </p>
+            <p className="text-title text-ink">{captured.name}</p>
+          </div>
+          <PathTrail segments={captured.segments} printIn />
+          {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
+          <p className="text-meta text-muted">Saved. It shows up on Home and in Browse right away.</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/items/${captured.id}`} className={buttonClassName("primary")}>
+              View item
+            </Link>
+            <Button type="button" variant="secondary" onClick={handleAddAnother}>
+              Add another
+            </Button>
+            <Link href={STUFF_PATH} className={textLinkClassName()}>
+              Back to home
+            </Link>
+          </div>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
+        <FormField
+          id="stash-name"
+          label="Name"
+          type="text"
+          value={name}
+          onChange={setName}
+          error={fieldErrors.name}
+          disabled={isSubmitting}
+        />
+
+        <div>
+          <LocationPathPicker
+            label="Location"
+            locations={locations}
+            value={chips}
+            onChange={handleChipsChange}
+            onInputChange={setPendingText}
+            placeholder={locationPlaceholder}
+            describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
+            disabled={isSubmitting}
+          />
+          {fieldErrors.location ? (
+            <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
+              {fieldErrors.location}
+            </p>
+          ) : null}
+        </div>
+
+        <FormField
+          id="stash-detail"
+          label="Detail (optional)"
+          type="text"
+          value={detail}
+          onChange={setDetail}
+          disabled={isSubmitting}
+        />
+
+        {submitError ? (
+          <p role="alert" className="text-meta text-signal">
+            {submitError}
+          </p>
+        ) : null}
+
+        <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          {isSubmitting ? "Adding…" : "Add item"}
+        </Button>
+      </form>
     );
   }
 
   return (
-    <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
-      <FormField
-        id="stash-name"
-        label="Name"
-        type="text"
-        value={name}
-        onChange={setName}
-        error={fieldErrors.name}
-        disabled={isSubmitting}
-      />
-
-      <div>
-        <LocationPathPicker
-          label="Location"
-          locations={locations}
-          value={chips}
-          onChange={handleChipsChange}
-          onInputChange={setPendingText}
-          placeholder={locationPlaceholder}
-          describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
-          disabled={isSubmitting}
-        />
-        {fieldErrors.location ? (
-          <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
-            {fieldErrors.location}
-          </p>
-        ) : null}
-      </div>
-
-      <FormField
-        id="stash-detail"
-        label="Detail (optional)"
-        type="text"
-        value={detail}
-        onChange={setDetail}
-        disabled={isSubmitting}
-      />
-
-      {submitError ? (
-        <p role="alert" className="text-meta text-signal">
-          {submitError}
-        </p>
-      ) : null}
-
-      <Button type="submit" variant="primary" isLoading={isSubmitting}>
-        {isSubmitting ? "Adding…" : "Add item"}
-      </Button>
-    </form>
+    <>
+      {renderBody()}
+      {/* Always mounted, so filling it in is announced. */}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
+    </>
   );
 }
