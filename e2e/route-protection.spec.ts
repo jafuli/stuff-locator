@@ -59,7 +59,7 @@ test("signed out, / shows the marketing home without the app's nav", async ({ pa
   await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
 });
 
-test("signed in, / redirects to the Stuff screen and keeps ?q=", async ({ page }) => {
+test("signed in, / redirects to the Stuff screen and keeps the query string", async ({ page }) => {
   const email = await signUpFreshAccount(page);
   // One item, so the Stuff screen shows its search box rather than onboarding.
   const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Hallway"]);
@@ -68,7 +68,9 @@ test("signed in, / redirects to the Stuff screen and keeps ?q=", async ({ page }
   await page.goto(`${MARKETING_PATH}?q=keys`);
   await expect(page).toHaveURL(`${STUFF_PATH}?q=keys`);
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
-  await expect(page.getByRole("searchbox", { name: "Search your stuff" })).toHaveValue("keys");
+  // The Stuff screen no longer applies ?q= (the search lives in the shared
+  // header and starts empty), so only the redirect itself is checked here.
+  await expect(page.getByRole("searchbox", { name: "Search your stuff" })).toHaveValue("");
 });
 
 test("signed in, an unknown URL shows the standalone 404, and its wordmark goes back to Stuff", async ({ page }) => {

@@ -112,9 +112,10 @@ export type RouteDecision =
  * tested without a NextRequest. `search` is the query string including its
  * "?" (or "").
  *
- * - A signed-in "/" goes to the Stuff screen, keeping the query string, so an
- *   old "/?q=keys" link still searches. That's the one cost of the app not
- *   living at "/": a redirect when a signed-in user types the bare domain.
+ * - A signed-in "/" goes to the Stuff screen, carrying the query string
+ *   along (the Stuff screen no longer reads `?q=`; the search starts empty).
+ *   That's the one cost of the app not living at "/": a redirect when a
+ *   signed-in user types the bare domain.
  * - A signed-out "/" is the marketing home, a public page like any other.
  * - Everything else goes through the deny-by-default gate.
  */

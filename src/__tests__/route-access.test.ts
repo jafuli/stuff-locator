@@ -91,7 +91,7 @@ test("route patterns match whole segments, so a lookalike path is never a public
 
 test("signed in, / redirects to the Stuff screen and keeps the query string", () => {
   expect(resolveRoute(MARKETING_PATH, "", true)).toEqual({ kind: "redirect", pathname: STUFF_PATH, search: "" });
-  // An old "/?q=keys" link still searches.
+  // Any query string rides along unchanged.
   expect(resolveRoute(MARKETING_PATH, "?q=keys", true)).toEqual({
     kind: "redirect",
     pathname: STUFF_PATH,

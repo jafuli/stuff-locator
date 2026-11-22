@@ -12,21 +12,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 // Uses `retry` (see items/[id]/error.tsx's comment for why) — the same
 // convention as the other new Browse route segment, /browse/[id]/error.tsx.
 //
-// Renders EmptyState as this page's only content — nothing else in the
-// tree supplies a heading for an error boundary — so titleAs="h1" gives
-// this route a real one. Extends the "Fix missing headings" task's fix to
-// this route too: it merged after that task's AC was written, so it
-// wasn't in the AC's original list, but has the identical gap.
+// Renders under the shared Stuff / Browse header (StuffViewsShell), which
+// supplies the page's h1 and its <main>, so the error's title is an h2 in a
+// plain div: a second h1 or a nested <main> would break the one-heading,
+// one-landmark rule.
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center p-6">
+    <div className="flex flex-col items-center justify-center py-6">
       <EmptyState
         title="Couldn't load rooms"
-        titleAs="h1"
+        titleAs="h2"
         description="Something went wrong. Check your connection and try again."
         action={
           <Button variant="secondary" onClick={retry}>
@@ -34,6 +33,6 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
           </Button>
         }
       />
-    </main>
+    </div>
   );
 }

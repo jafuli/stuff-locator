@@ -1,7 +1,8 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SearchableStuffList, SHORTLIST_SIZE } from "@/components/searchable-stuff-list";
+import { StuffSearchResults, SHORTLIST_SIZE } from "@/components/stuff-search-results";
+import { renderUnderStuffHeader } from "./render-stuff-search";
 import type { StuffListEntry } from "@/components/stuff-list";
 import type { Item } from "@/lib/fixtures/types";
 
@@ -56,7 +57,7 @@ beforeEach(() => {
 });
 
 test("builds each document from the item and its location path", () => {
-  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
   expect(search.lastDocuments).toEqual([
     { id: "passport", name: "Passport", enriched: "Passport · Garage · with the birth certificates" },
     { id: "tent", name: "Camping tent", enriched: "Camping tent · Garage" },
@@ -65,7 +66,7 @@ test("builds each document from the item and its location path", () => {
 
 test("focusing the field, and typing, signal intent so the model can start", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
   expect(search.onIntent).not.toHaveBeenCalled();
 
   await user.click(screen.getByRole("searchbox", { name: "Search your stuff" }));
@@ -78,7 +79,7 @@ test("focusing the field, and typing, signal intent so the model can start", asy
 test("while the model loads and nothing matches by letters, it says it's still looking, not No matches", async () => {
   const user = userEvent.setup();
   search.status = "loading";
-  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
@@ -97,7 +98,7 @@ test.each(["idle", "skipped", "failed"] as const)(
   async (status) => {
     const user = userEvent.setup();
     search.status = status;
-    render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+    renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
 
     await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
@@ -111,7 +112,7 @@ test("rows found by meaning alone say so; rows that match by letters don't", asy
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["tent", "passport", "router"], agreedTop: "tent" };
-  render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent, router)} />);
 
   // "birth" matches Passport's detail; the tent and router are there by meaning only.
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "birth");
@@ -126,7 +127,7 @@ test("with a semantic order, a query sharing no words with the item still finds 
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "router", "tent", "keys"], agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(tent, router, passport, keys)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(tent, router, passport, keys)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
@@ -138,7 +139,7 @@ test("the CLOSEST marker sits on the real top rank, not on the page's first item
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "tent"], agreedTop: "passport" };
-  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(tent, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
@@ -152,7 +153,7 @@ test("a lexical hit is fused with the semantic ranking, not pinned regardless of
   search.status = "ready";
   // By meaning the router is closest to "tent"; by letters only the tent matches.
   search.semantic = { order: ["router", "tent", "passport"], agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(passport, tent, router)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent, router)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
 
@@ -165,7 +166,7 @@ test(`the ranked list is a shortlist of ${SHORTLIST_SIZE.toString()}, cut by ran
   search.status = "ready";
   const many = Array.from({ length: 9 }, (_, i) => item(`i${i.toString()}`, `Thing ${i.toString()}`));
   search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(...many)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(...many)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "zzz");
 
@@ -178,7 +179,7 @@ test("the shortlist cap applies to lexical hits too", async () => {
   search.status = "ready";
   const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
   search.semantic = { order: [...many].reverse().map((i) => i.id), agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(...many)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(...many)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
 
@@ -190,7 +191,7 @@ test("without the model, every lexical hit is kept, best match first and typos f
   const user = userEvent.setup();
   search.status = "failed";
   const many = Array.from({ length: 8 }, (_, i) => item(`i${i.toString()}`, `Box ${i.toString()}`));
-  render(<SearchableStuffList entries={entriesOf(...many, passport)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(...many, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "box");
   expect(rowNames()).toHaveLength(8);
@@ -204,7 +205,7 @@ test("no CLOSEST marker when the top row matched by meaning only and the two rep
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "tent"], agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(tent, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
 
@@ -216,7 +217,7 @@ test("a lexical top row is CLOSEST even without semantic agreement", async () =>
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "tent"], agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(tent, passport)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(tent, passport)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
 
@@ -229,7 +230,7 @@ test("the closing line points to Browse instead of a No matches screen", async (
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "tent"], agreedTop: null };
-  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "xyz nothing like it");
 
@@ -242,7 +243,7 @@ test("a ranked result never shows a score", async () => {
   const user = userEvent.setup();
   search.status = "ready";
   search.semantic = { order: ["passport", "tent"], agreedTop: null };
-  const { container } = render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  const { container } = renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "travel documents");
 
@@ -252,7 +253,7 @@ test("a ranked result never shows a score", async () => {
 test("while the model loads, a quiet note goes to assistive tech only", async () => {
   const user = userEvent.setup();
   search.status = "loading";
-  render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
 
   expect(screen.queryByText(/Loading smarter search/)).toBeNull();
 
@@ -269,7 +270,7 @@ test("a failed or skipped model is silent: falling back is not an error", async 
   const user = userEvent.setup();
   for (const status of ["failed", "skipped"] as const) {
     search.status = status;
-    const { unmount } = render(<SearchableStuffList entries={entriesOf(passport, tent)} />);
+    const { unmount } = renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport, tent)} />);
     await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "pass");
     expect(screen.queryByText(/smarter search/i)).toBeNull();
     expect(screen.getByText("Passport")).toBeDefined();
@@ -279,9 +280,9 @@ test("a failed or skipped model is silent: falling back is not an error", async 
 
 test("warms the model in the background only when there is something to search", () => {
   prefetch.calls.length = 0;
-  const { unmount } = render(<SearchableStuffList entries={entriesOf(passport)} />);
+  const { unmount } = renderUnderStuffHeader(<StuffSearchResults entries={entriesOf(passport)} />);
   expect(prefetch.calls.at(-1)?.enabled).toBe(true);
   unmount();
-  render(<SearchableStuffList entries={[]} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={[]} />);
   expect(prefetch.calls.at(-1)?.enabled).toBe(false);
 });

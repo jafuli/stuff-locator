@@ -1,10 +1,14 @@
-import { expect, test } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { expect, test, vi } from "vitest";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Link from "next/link";
-import { SearchableStuffList } from "@/components/searchable-stuff-list";
+import { StuffSearchResults } from "@/components/stuff-search-results";
+import { renderUnderStuffHeader } from "./render-stuff-search";
 import type { StuffListEntry } from "@/components/stuff-list";
 import type { Item } from "@/lib/fixtures/types";
+
+// The shared header marks the chip for the current route.
+vi.mock("next/navigation", () => ({ usePathname: () => "/stuff" }));
 
 const passport: Item = {
   id: "passport",
@@ -21,7 +25,7 @@ const entries: StuffListEntry[] = [
 
 test("typing a query that matches one item narrows the visible list", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
 
@@ -31,7 +35,7 @@ test("typing a query that matches one item narrows the visible list", async () =
 
 test("a query matching nothing shows the no-matches empty state", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "nonexistent");
 
@@ -42,7 +46,7 @@ test("a query matching nothing shows the no-matches empty state", async () => {
 
 test("clearing the input restores the full list", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   const search = screen.getByRole("searchbox", { name: "Search your stuff" });
   await user.type(search, "tent");
@@ -55,7 +59,7 @@ test("clearing the input restores the full list", async () => {
 
 test("narrowing the list announces the result count via a status region", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   expect(screen.getByRole("status").textContent).toBe("");
 
@@ -65,7 +69,7 @@ test("narrowing the list announces the result count via a status region", async 
 
 test("a query matching nothing announces zero results via the status region", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "nonexistent");
   expect(screen.getByRole("status").textContent).toBe("0 results found");
@@ -73,7 +77,9 @@ test("a query matching nothing announces zero results via the status region", as
 
 test("forwards emptyStateAction to StuffList's zero-entries empty state, not the no-matches one", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={[]} emptyStateAction={<Link href="/items/new">Stash your first item</Link>} />);
+  renderUnderStuffHeader(
+    <StuffSearchResults entries={[]} emptyStateAction={<Link href="/items/new">Stash your first item</Link>} />,
+  );
   // Zero total entries, no query typed — StuffList's own empty state, with
   // the action.
   expect(screen.getByRole("link", { name: "Stash your first item" })).toBeDefined();
@@ -88,7 +94,7 @@ test("forwards emptyStateAction to StuffList's zero-entries empty state, not the
 
 test("shows All (n) with the household total, and the count does not follow the search", async () => {
   const user = userEvent.setup();
-  render(<SearchableStuffList entries={entries} />);
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />, entries.length);
 
   expect(screen.getByRole("link", { name: "All (2)" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("href")).toBe("/browse");
@@ -99,19 +105,8 @@ test("shows All (n) with the household total, and the count does not follow the 
   expect(screen.getByRole("link", { name: "All (2)" })).toBeDefined();
 });
 
-test("an initial query is applied, and the field is focused with the caret at the end", () => {
-  render(<SearchableStuffList entries={entries} initialQuery="tent" />);
-
-  const input = screen.getByRole<HTMLInputElement>("searchbox", { name: "Search your stuff" });
-  expect(input.value).toBe("tent");
-  expect(screen.getByText("Camping tent")).toBeDefined();
-  expect(screen.queryByText("Passport")).toBeNull();
-  expect(document.activeElement).toBe(input);
-  expect(input.selectionStart).toBe(4);
-});
-
-test("without an initial query the field is not focused (no stolen focus on load)", () => {
-  render(<SearchableStuffList entries={entries} />);
+test("the field is not focused on load (no stolen focus)", () => {
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
   expect(document.activeElement).toBe(document.body);
 });

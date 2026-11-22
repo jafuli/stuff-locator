@@ -6,6 +6,8 @@ export interface StuffSearchInputProps {
   onChange: (value: string) => void;
   /** Fired when the field gains focus — Find uses it as the first sign of intent to search. */
   onFocus?: () => void;
+  /** While the list under it is loading there is nothing to search yet. */
+  disabled?: boolean;
   ref?: Ref<HTMLInputElement>;
 }
 
@@ -22,7 +24,7 @@ export interface StuffSearchInputProps {
  * caused a real hydration mismatch against the server-rendered HTML. This
  * sidesteps that while keeping the same accessible role and visual result.
  */
-export function StuffSearchInput({ value, onChange, onFocus, ref }: StuffSearchInputProps) {
+export function StuffSearchInput({ value, onChange, onFocus, disabled = false, ref }: StuffSearchInputProps) {
   return (
     <div role="search" className="relative">
       <label htmlFor="stuff-search" className="sr-only">
@@ -41,7 +43,8 @@ export function StuffSearchInput({ value, onChange, onFocus, ref }: StuffSearchI
           onChange(event.target.value);
         }}
         onFocus={onFocus}
-        className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control placeholder:text-muted focus-visible:border-border-strong focus-ring"
+        disabled={disabled}
+        className="min-h-control-height w-full rounded-control border border-border-control bg-surface pr-4 pl-11 text-body text-ink shadow-control placeholder:text-muted focus-visible:border-border-strong focus-ring disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 
 /**
  * The Stuff screen and the site root are named in exactly one place,
- * src/lib/routes.ts (STUFF_PATH, MARKETING_PATH, stuffSearchHref). Before
+ * src/lib/routes.ts (STUFF_PATH, MARKETING_PATH). Before
  * that, "/" meant both, and moving the app off it meant hunting down every
  * `href="/"` by hand. This keeps a new literal from creeping back in, so the
  * next move is a one-line change plus a folder rename. routes.ts lives in
