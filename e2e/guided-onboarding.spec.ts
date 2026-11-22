@@ -213,49 +213,11 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await expect(page.getByRole("status").filter({ hasText: "Added Passport" })).toHaveCount(1);
 
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Back", exact: true })).toBeFocused();
-  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Continue" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Step 2 of 4")).toBeVisible();
   // Focus lands on the new step's heading instead of being lost to <body>.
   await expect(page.getByRole("heading", { name: "Stash something bulky" })).toBeFocused();
-});
-
-test("Back after 'Added' reopens the saved item; saving again edits it, so there is still exactly one", async ({
-  page,
-}) => {
-  await signUpFreshAccount(page);
-  await page.goto(STUFF_PATH);
-  await page.waitForLoadState("networkidle");
-
-  await stashViaOnboardingStep(page, "Pasport", "Filing box");
-
-  await page.getByRole("button", { name: "Back", exact: true }).click();
-  // The saved values, back in the form, with focus on Name.
-  await expect(page.getByLabel("Name")).toBeFocused();
-  await expect(page.getByLabel("Name")).toHaveValue("Pasport");
-  await expect(page.getByRole("group", { name: "Location: Filing box" })).toBeVisible();
-  // Continue waits until the item is saved again.
-  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
-
-  await page.getByLabel("Name").fill("Passport");
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("group", { name: "Updated" })).toBeFocused({ timeout: 10_000 });
-  await expect(page.getByRole("status").filter({ hasText: "Updated Passport" })).toHaveCount(1);
-
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Step 2 of 4")).toBeVisible();
-  await page.getByRole("button", { name: "Skip guided setup" }).click();
-  await page.waitForLoadState("networkidle");
-
-  // One item, with the edited name — Back never re-submitted the stash.
-  await page.goto("/browse");
-  await page.getByRole("link", { name: "Filing box", exact: true }).click();
-  const items = page.getByRole("region", { name: "Items" });
-  await expect(items.getByRole("link")).toHaveCount(1);
-  await expect(items.getByText("Passport", { exact: true })).toBeVisible();
-  await expect(items.getByText("Pasport", { exact: true })).toHaveCount(0);
 });
 
 test("the onboarding screen has one way forward: no header '+ Add item', no View item / Add another / Back to home", async ({
@@ -270,6 +232,11 @@ test("the onboarding screen has one way forward: no header '+ Add item', no View
   await stashViaOnboardingStep(page, "Passport", "Filing box");
 
   await expect(page.getByRole("group", { name: "Added" }).getByText("Passport")).toBeVisible();
+  // No Back: the confirmation says where to fix a mistake instead.
+  await expect(
+    page.getByRole("group", { name: "Added" }).getByText("Open the item from the Stuff list to edit or delete it."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "View item" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add another" })).toHaveCount(0);
