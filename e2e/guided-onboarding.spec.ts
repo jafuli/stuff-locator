@@ -133,7 +133,7 @@ test("complete-through-invite path: real items added during onboarding show up o
   await expect(page.getByText("Step 4 of 4")).toBeVisible();
 
   await page.getByRole("button", { name: "Invite your partner" }).click();
-  await page.waitForURL("/settings/invite");
+  await page.waitForURL("/settings/invite?from=onboarding");
   await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
 
   await page.goto(STUFF_PATH);
@@ -309,4 +309,91 @@ test("a nested place can be built in one go during onboarding, and the placehold
   await expect(page.getByRole("group", { name: "Added" }).getByText("Office › Cabinet › Top drawer")).toBeVisible({
     timeout: 10_000,
   });
+});
+
+test("during onboarding the one display heading asks about stashing; afterwards it's the usual question", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto(STUFF_PATH);
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1, name: "What should we stash first?" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Skip guided setup" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+});
+
+test("at 375px, step 4's two buttons are full width, like the item steps' buttons", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await signUpFreshAccount(page);
+  await page.goto(STUFF_PATH);
+  await page.waitForLoadState("networkidle");
+
+  const addItem = await page.getByRole("button", { name: "Add item" }).boundingBox();
+  for (let i = 0; i < 3; i += 1) {
+    await page.getByRole("button", { name: "Skip this step" }).click();
+  }
+  await expect(page.getByText("Step 4 of 4")).toBeVisible();
+
+  for (const name of ["Invite your partner", "Finish without inviting"]) {
+    const box = await page.getByRole("button", { name }).boundingBox();
+    expect(box?.width).toBeCloseTo(addItem?.width ?? 0, 0);
+    expect(box?.x).toBeCloseTo(addItem?.x ?? 0, 0);
+  }
+});
+
+for (const height of [667, 740, 812]) {
+  test(`at 375×${String(height)}, the household button doesn't cover 'Skip this step' on first view, even with errors shown`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height });
+    await signUpFreshAccount(page);
+    await page.goto(STUFF_PATH);
+    await page.waitForLoadState("networkidle");
+
+    // The tallest first view: both errors shown, scrolled to the top.
+    await page.getByRole("button", { name: "Add item" }).click();
+    await expect(page.getByText("Choose a location for this item.")).toBeVisible();
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+
+    const skip = await page.getByRole("button", { name: "Skip this step" }).boundingBox();
+    const household = await page.getByRole("button", { name: "Household menu" }).boundingBox();
+    if (!skip || !household) {
+      throw new Error("Skip this step or the household button isn't rendered");
+    }
+    const overlaps =
+      skip.x < household.x + household.width &&
+      household.x < skip.x + skip.width &&
+      skip.y < household.y + household.height &&
+      household.y < skip.y + skip.height;
+    expect(overlaps).toBe(false);
+  });
+}
+
+test("after 'Invite your partner', the invite screen offers 'Go to my stuff', which lands on the real Stuff screen", async ({
+  page,
+}) => {
+  await signUpFreshAccount(page);
+  await page.goto(STUFF_PATH);
+  await page.waitForLoadState("networkidle");
+
+  for (let i = 0; i < 3; i += 1) {
+    await page.getByRole("button", { name: "Skip this step" }).click();
+  }
+  await page.getByRole("button", { name: "Invite your partner" }).click();
+  await page.waitForURL("/settings/invite?from=onboarding");
+
+  await page.getByRole("link", { name: "Go to my stuff" }).click();
+  await page.waitForURL(STUFF_PATH);
+  await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
+  await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+
+  // Reached any other way (the household menu), there's no onboarding exit.
+  await page.goto("/settings/invite");
+  await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to my stuff" })).toHaveCount(0);
 });
