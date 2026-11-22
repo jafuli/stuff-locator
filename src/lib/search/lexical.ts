@@ -12,8 +12,14 @@
  * - word-start:     a later word in the name starts with it ("tent" -> Camping tent)
  * - name-substring: anywhere in the name ("port" -> Passport)
  * - detail:         anywhere in the free-text detail ("birth" -> "with the birth certificates")
+ * - place:          anywhere in a place on the item's path ("of" -> an item in Office)
  * - fuzzy-name:     every query word is within a typo or two of a name word ("pasport")
- * - fuzzy-detail:   the same, allowing the detail's words too
+ * - fuzzy-detail:   the same, allowing the detail's and the places' words too ("ofice")
+ *
+ * Every tier works from the first character typed. The embedding model only
+ * answers from 3 characters (MIN_SEMANTIC_QUERY_LENGTH), so for a 1–2
+ * character query these letters are all of Find, and a place has to be
+ * reachable by them, not only by meaning.
  */
 export const LEXICAL_TIERS = [
   "exact",
@@ -21,6 +27,7 @@ export const LEXICAL_TIERS = [
   "word-start",
   "name-substring",
   "detail",
+  "place",
   "fuzzy-name",
   "fuzzy-detail",
 ] as const;
@@ -30,6 +37,8 @@ export interface LexicalDocument {
   id: string;
   name: string;
   detail?: string;
+  /** The names of the places on the item's path, outermost first ("Office", "Cabinet"). */
+  places?: readonly string[];
 }
 
 export interface LexicalMatch {
@@ -134,6 +143,7 @@ function allWordsMatch(queryWords: readonly string[], words: readonly string[]):
 export function lexicalTier(doc: Omit<LexicalDocument, "id">, query: string): LexicalTier | null {
   const name = normalise(doc.name);
   const detail = normalise(doc.detail ?? "");
+  const places = (doc.places ?? []).map(normalise);
 
   if (name === query) {
     return "exact";
@@ -150,13 +160,16 @@ export function lexicalTier(doc: Omit<LexicalDocument, "id">, query: string): Le
   if (detail.includes(query)) {
     return "detail";
   }
+  if (places.some((place) => place.includes(query))) {
+    return "place";
+  }
 
   const queryWords = wordsOf(query);
   const nameWords = wordsOf(name);
   if (allWordsMatch(queryWords, nameWords)) {
     return "fuzzy-name";
   }
-  if (allWordsMatch(queryWords, [...nameWords, ...wordsOf(detail)])) {
+  if (allWordsMatch(queryWords, [...nameWords, ...wordsOf(detail), ...places.flatMap(wordsOf)])) {
     return "fuzzy-detail";
   }
   return null;

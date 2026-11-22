@@ -144,6 +144,12 @@ search" → Notes → "DECIDED 2026-11-10") changed six things. Each one, and wh
    so the model orders hits of the same tier. The shortlist of 5 caps the
    fused list, with no exemptions. The 3-character minimum and the 150 ms
    debounce are unchanged.
+   _Amended 2026-11-22:_ a **place** tier sits between detail and
+   typo-tolerant: the query found in any place on the item's path ("of" →
+   an item in Office), and place words join the typo-tolerant pool. Before,
+   places were only in the enriched string, so a 1–2 character query (below
+   the model's 3-character minimum) could never reach a place, and neither
+   could any query while the model was loading, skipped or failed.
 3. **The floor is fuzzy.** Plain substring couldn't forgive "pasport". The
    lexical ranking above is also the whole of Find while the model is loading,
    skipped or failed (uncapped there, since every row has a visible reason).

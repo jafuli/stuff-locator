@@ -1,5 +1,5 @@
 // Find's no-model list: the lexical ranking from src/lib/search/lexical.ts
-// (exact > prefix > word start > substring > detail > typo-tolerant), as
+// (exact > prefix > word start > substring > detail > place > typo-tolerant), as
 // items. It is what serves while the embedding model is loading or skipped,
 // and permanently if the model fails. See
 // docs/adr/0012-client-side-embedding-search.md.
