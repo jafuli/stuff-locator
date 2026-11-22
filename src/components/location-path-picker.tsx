@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { useCombobox } from "downshift";
 import { cn } from "@/lib/cn";
 import type { Location } from "@/lib/fixtures/types";
@@ -55,6 +55,8 @@ export interface LocationPathPickerProps {
    * never turned into a chip" apart from a real selection.
    */
   onInputChange?: (value: string) => void;
+  /** The text field, for a form that moves focus to it (e.g. after a failed submit). */
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 const SECTION_CLASS = "border-b border-divider last:border-b-0";
@@ -92,6 +94,7 @@ export function LocationPathPicker({
   pickOnly = false,
   excludeIds,
   onInputChange,
+  inputRef,
 }: LocationPathPickerProps) {
   const [inputValue, setInputValue] = useState("");
   // Explicit so a chip tap can return focus to the field.
@@ -290,6 +293,7 @@ export function LocationPathPicker({
         ))}
         <input
           {...getInputProps({
+            ref: inputRef,
             "aria-describedby": describedBy,
             "aria-invalid": describedBy ? true : undefined,
             disabled,

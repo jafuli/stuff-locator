@@ -352,3 +352,15 @@ test("the Added confirmation has no Back; it says where to edit or delete, and C
   expect(screen.getByRole("button", { name: "Continue" })).toBeDefined();
   expect(stashRpc).toHaveBeenCalledTimes(1);
 });
+
+test("in an onboarding step, an empty Add item focuses Name, and its error clears as you type", async () => {
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+
+  await user.type(screen.getByLabelText("Name"), "Passport");
+  expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+  expect(stashRpc).not.toHaveBeenCalled();
+});

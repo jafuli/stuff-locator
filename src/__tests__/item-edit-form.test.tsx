@@ -249,3 +249,37 @@ test("the save button shows a loading state and disables fields while in flight"
     expect(replace).toHaveBeenCalledTimes(1);
   });
 });
+
+test("edit: an emptied name's error clears as it's retyped, and a failed save focuses the first invalid field", async () => {
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.clear(screen.getByLabelText("Name"));
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+
+  await user.type(screen.getByLabelText("Name"), "B");
+  expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+});
+
+test("edit: text left in the place field focuses that field on save, and its error clears when the text changes", async () => {
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.type(screen.getByRole("combobox"), "Attic");
+  // Escape so the open list doesn't sit over the button.
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+  expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+  expect(document.activeElement).toBe(screen.getByRole("combobox"));
+
+  await user.keyboard("{Backspace}");
+  expect(screen.queryByText("Choose a location for this item.")).toBeNull();
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+test("edit: the Name field has autocomplete off", () => {
+  renderForm();
+  expect(screen.getByLabelText("Name").getAttribute("autocomplete")).toBe("off");
+});
