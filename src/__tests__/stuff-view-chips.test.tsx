@@ -24,6 +24,11 @@ test("By place is the current page on Browse, and only it", () => {
   expect(screen.getByRole("link", { name: "All (3)" }).hasAttribute("aria-current")).toBe(false);
 });
 
+test("while the count is loading, the chip reads All (…) and still links to the All view", () => {
+  render(<StuffViewChips total={null} active="place" />);
+  expect(screen.getByRole("link", { name: "All (…)" }).getAttribute("href")).toBe(STUFF_PATH);
+});
+
 test("an empty household reads All (0), not a missing count", () => {
   render(<StuffViewChips total={0} active="all" />);
   expect(screen.getByRole("link", { name: "All (0)" })).toBeDefined();

@@ -1,9 +1,10 @@
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
-import { STUFF_HEADING } from "@/lib/stuff-heading";
+import { StuffHeaderPlaceholder } from "@/components/stuff-header-placeholder";
 
 /**
- * The Stuff screen while its items load: the display heading, the search
- * field, then a ResultList panel of skeleton rows.
+ * The Stuff screen while its items load: the real header (heading, search
+ * row with Stash, chips; see StuffHeaderPlaceholder), then a ResultList
+ * panel of skeleton rows.
  *
  * Deliberately not src/app/loading.tsx any more. A root loading.tsx is the
  * fallback for every route without its own, so this Stuff-shaped skeleton
@@ -15,11 +16,7 @@ import { STUFF_HEADING } from "@/lib/stuff-heading";
 export function StuffScreenSkeleton() {
   return (
     <main className="flex flex-col gap-4 px-gutter pt-6" aria-busy="true" aria-live="polite">
-      <h1 className="text-display text-ink">{STUFF_HEADING}</h1>
-      <div
-        className="h-control-height animate-pulse rounded-control border border-border-control bg-surface"
-        aria-hidden="true"
-      />
+      <StuffHeaderPlaceholder active="all" />
       <div className="overflow-hidden rounded-panel border border-hairline bg-surface">
         <ItemCardSkeleton />
         <ItemCardSkeleton />

@@ -5,8 +5,11 @@ import { STUFF_PATH } from "@/lib/routes";
 export type StuffView = "all" | "place";
 
 export interface StuffViewChipsProps {
-  /** The household's total item count — not the number of search results. */
-  total: number;
+  /**
+   * The household's total item count — not the number of search results.
+   * `null` while the page is still loading it: the chip reads "All (…)".
+   */
+  total: number | null;
   /** Which view the current page is. */
   active: StuffView;
 }
@@ -38,7 +41,7 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
         aria-current={active === "all" ? "page" : undefined}
         className={cn(CHIP_BASE, active === "all" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
-        All ({total})
+        All ({total ?? "…"})
       </Link>
       <Link
         href="/browse"
