@@ -87,3 +87,16 @@ export function MoreIcon(props: SVGProps<SVGSVGElement>) {
     </LineIcon>
   );
 }
+
+/** Lucide "trash-2" — delete an item, on the item's own page. */
+export function TrashIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <LineIcon {...props}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </LineIcon>
+  );
+}
