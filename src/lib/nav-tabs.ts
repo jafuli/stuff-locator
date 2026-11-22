@@ -10,6 +10,8 @@ import { STUFF_PATH } from "@/lib/routes";
 // Single source of truth: both the real app shell (src/components/site-nav.tsx)
 // and the /~components catalog page import this, so they can't drift apart.
 export const NAV_TABS: NavTab[] = [
-  { href: STUFF_PATH, label: "Stuff", icon: "box" },
+  // Browse is Stuff by place (the All / By place chips), so Stuff stays
+  // selected there. Item pages (/items/...) belong to neither tab.
+  { href: STUFF_PATH, label: "Stuff", icon: "box", matches: ["/browse"] },
   { href: "/activity", label: "Activity", icon: "clock" },
 ];

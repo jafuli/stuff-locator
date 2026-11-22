@@ -1,14 +1,26 @@
-import Link from "next/link";
+"use client";
+
+import Link, { useLinkStatus } from "next/link";
+import { useEffect } from "react";
 import { cn } from "@/lib/cn";
 import { STUFF_PATH } from "@/lib/routes";
 
 export type StuffView = "all" | "place";
 
 export interface StuffViewChipsProps {
-  /** The household's total item count — not the number of search results. */
-  total: number;
-  /** Which view the current page is. */
-  active: StuffView;
+  /**
+   * The household's total item count — not the number of search results.
+   * `null` until the first page has loaded it: the chip reads "All (…)".
+   */
+  total: number | null;
+  /** Which view is selected. */
+  active: StuffView | null;
+  /**
+   * Fires when a chip's navigation starts waiting on the server, and again
+   * when it lands. Only when the route wasn't prefetched: Next skips the
+   * pending phase for a prefetched one, whose loading.tsx shows at once.
+   */
+  onPendingChange?: (view: StuffView, pending: boolean) => void;
 }
 
 // Chips press down 1px on tap (brand book); the transform is dropped under
@@ -21,16 +33,26 @@ const CHIP_ACTIVE = "border-ink bg-ink text-paper";
 // A chip's only edge is its border, so it's border-strong, not border-control.
 const CHIP_INACTIVE = "border-border-strong bg-surface text-muted [font-weight:400]";
 
+/** Reports its Link's pending state; renders nothing (useLinkStatus must sit inside the Link). */
+function PendingReporter({ view, onChange }: { view: StuffView; onChange?: StuffViewChipsProps["onPendingChange"] }) {
+  const { pending } = useLinkStatus();
+  useEffect(() => {
+    onChange?.(view, pending);
+  }, [view, pending, onChange]);
+  return null;
+}
+
 /**
  * The "All (n)" / "By place" toggle under the Stuff search (wireframes 02 and
  * C1). Two real links, not buttons: each is a different route, so they work
  * without scripting and the current one is marked with `aria-current` rather
  * than a state only sighted users can see.
  *
- * Shared by `/` and the top level of `/browse`, so the two read as one view
- * with a toggle. "Recent" from the v1 wireframes is deliberately not here.
+ * Rendered once, by the persistent header both views share
+ * (StuffViewsShell), so it never unmounts on a switch. "Recent" from the v1
+ * wireframes is deliberately not here.
  */
-export function StuffViewChips({ total, active }: StuffViewChipsProps) {
+export function StuffViewChips({ total, active, onPendingChange }: StuffViewChipsProps) {
   return (
     <nav aria-label="Stuff view" className="flex flex-wrap gap-2">
       <Link
@@ -38,7 +60,8 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
         aria-current={active === "all" ? "page" : undefined}
         className={cn(CHIP_BASE, active === "all" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
-        All ({total})
+        All ({total ?? "…"})
+        <PendingReporter view="all" onChange={onPendingChange} />
       </Link>
       <Link
         href="/browse"
@@ -46,6 +69,7 @@ export function StuffViewChips({ total, active }: StuffViewChipsProps) {
         className={cn(CHIP_BASE, active === "place" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
         By place
+        <PendingReporter view="place" onChange={onPendingChange} />
       </Link>
     </nav>
   );

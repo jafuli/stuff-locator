@@ -22,7 +22,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const target = new URL(decision.pathname, request.url);
-  // Signed-in "/" → the Stuff screen: keep the query, so "/?q=keys" still searches.
+  // Signed-in "/" → the Stuff screen, carrying any query string along.
   if (decision.search !== undefined) {
     target.search = decision.search;
   }

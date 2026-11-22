@@ -14,7 +14,7 @@
 /**
  * The Stuff screen: the signed-in home, and where sign-in lands by default.
  *
- * The folder src/app/(app)/stuff/ IS this route — Next derives URLs from the
+ * The folder src/app/(app)/(stuff-views)/stuff/ IS this route — Next derives URLs from the
  * file system — so changing this value means renaming that folder too.
  * route-access.test.ts ("every listed route is a real page") fails if the two
  * drift, because PROTECTED_ROUTES lists this constant.
@@ -33,9 +33,4 @@ export const FROM_ONBOARDING = "onboarding";
 /** The invite screen, reached from the end of guided onboarding (it then links back to Stuff). */
 export function inviteFromOnboardingHref(): string {
   return `/settings/invite?from=${FROM_ONBOARDING}`;
-}
-
-/** The Stuff screen with a search already applied, as Browse's search box builds it. */
-export function stuffSearchHref(query: string): string {
-  return `${STUFF_PATH}?q=${encodeURIComponent(query)}`;
 }

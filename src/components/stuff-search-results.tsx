@@ -1,11 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { StuffList, type StuffListEntry } from "@/components/stuff-list";
-import { StuffSearchInput } from "@/components/stuff-search-input";
-import { StuffViewChips } from "@/components/stuff-view-chips";
+import { useStuffViews } from "@/components/stuff-views-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { lexicalRank } from "@/lib/search/lexical";
 import { enrichedText, fuseRankings } from "@/lib/search/rank";
@@ -22,24 +21,18 @@ import { useSemanticSearch, type SearchDocument } from "@/lib/search/use-semanti
  */
 export const SHORTLIST_SIZE = 5;
 
-export interface SearchableStuffListProps {
+export interface StuffSearchResultsProps {
   /** Every item's already-resolved entry (item + breadcrumb segments) — the page's full, unfiltered list. */
   entries: readonly StuffListEntry[];
   /** Forwarded to StuffList's zero-entries empty state — see its own doc comment. Never shown for the "no search matches" case, which is a different, unrelated empty state below. */
   emptyStateAction?: ReactNode;
-  /**
-   * A query to start with, e.g. one carried over from the search box on
-   * Browse. When set, the field is focused with the caret at the end so the
-   * person can keep typing where they left off.
-   */
-  initialQuery?: string;
-  /** Sits beside the search field — the Stuff screen puts its Stash button here. */
-  searchAction?: ReactNode;
 }
 
 /**
- * Owns the home page's search input state and ranks `entries` against it
- * client-side — no network call for the query, no URL param.
+ * Ranks `entries` against the search query client-side — no network call for
+ * the query, no URL param. The query and its field belong to the header both
+ * views share (StuffViewsShell); this is only the list under it, used by the
+ * Stuff screen always and by Browse while something is typed.
  *
  * Find degrades, it never blocks. The embedding model is warmed in the
  * background once this screen is idle, if it is already cached or the
@@ -53,14 +46,8 @@ export interface SearchableStuffListProps {
  * (entries) is still resolved server-side in page.tsx and passed down —
  * this component only ranks an already-computed list, it doesn't fetch.
  */
-export function SearchableStuffList({
-  entries,
-  emptyStateAction,
-  initialQuery = "",
-  searchAction,
-}: SearchableStuffListProps) {
-  const [query, setQuery] = useState(initialQuery);
-  const inputRef = useRef<HTMLInputElement>(null);
+export function StuffSearchResults({ entries, emptyStateAction }: StuffSearchResultsProps) {
+  const { query, registerIntent } = useStuffViews();
 
   const documents = useMemo<SearchDocument[]>(
     () =>
@@ -81,16 +68,28 @@ export function SearchableStuffList({
   const hasItems = entries.length > 0;
   useIdlePrefetch(undefined, { enabled: hasItems });
 
-  // Arriving with a query means the person was typing: put them back in the
-  // field, caret at the end, instead of leaving them on a page they must
-  // click into. Only on arrival, never on later edits.
+  // Focus and keystrokes happen in the header's field: hand it this list's
+  // "start the model" callback. Browse mounts this list on the first
+  // keystroke, after that keystroke's intent already went nowhere, so a list
+  // that mounts with a query starts the model itself.
   useEffect(() => {
-    if (initialQuery !== "") {
-      const input = inputRef.current;
-      input?.focus();
-      input?.setSelectionRange(input.value.length, input.value.length);
+    registerIntent(onIntent);
+    return () => {
+      registerIntent(null);
+    };
+  }, [registerIntent, onIntent]);
+  // Only on mount: later keystrokes reach onIntent through the header.
+  const checkedMountQuery = useRef(false);
+  const hasQuery = query.trim() !== "";
+  useEffect(() => {
+    if (checkedMountQuery.current) {
+      return;
     }
-  }, [initialQuery]);
+    checkedMountQuery.current = true;
+    if (hasQuery) {
+      onIntent();
+    }
+  }, [hasQuery, onIntent]);
 
   const isSearching = query.trim() !== "";
   const items = entries.map((entry) => entry.item);
@@ -124,25 +123,6 @@ export function SearchableStuffList({
 
   return (
     <>
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <StuffSearchInput
-            ref={inputRef}
-            value={query}
-            onChange={(value) => {
-              setQuery(value);
-              onIntent();
-            }}
-            onFocus={onIntent}
-          />
-        </div>
-        {searchAction}
-      </div>
-
-      {/* The household's total, not the filtered count: the chip names the
-          whole view, the live region below reports the search. */}
-      <StuffViewChips total={entries.length} active="all" />
-
       {/*
         Narrowing the list (or swapping to the "No matches" empty state) is
         otherwise a silent DOM change — a screen reader user typing a query

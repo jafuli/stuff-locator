@@ -8,6 +8,11 @@ export interface NavTab {
   href: string;
   label: string;
   icon: NavTabIcon;
+  /**
+   * Other sections this tab stands for, highlighted as well as `href` and
+   * everything under it, e.g. Stuff for /browse (Browse is Stuff, by place).
+   */
+  matches?: readonly string[];
 }
 
 export interface TabCapsuleProps {
@@ -18,15 +23,23 @@ export interface TabCapsuleProps {
 }
 
 /**
- * Whether `tabHref` should read as active for `activePath` — an exact match,
- * or `activePath` nested under `tabHref` (e.g. "/browse/42" under "/browse").
- * Guards against "/browse" false-matching a sibling like "/browser".
+ * Whether `activePath` is `base` or nested under it (e.g. "/browse/42" under
+ * "/browse"). Guards against "/browse" false-matching a sibling like
+ * "/browser".
  */
-export function isTabActive(tabHref: string, activePath: string): boolean {
-  if (activePath === tabHref) {
+function isUnder(base: string, activePath: string): boolean {
+  if (activePath === base) {
     return true;
   }
-  return tabHref !== "/" && activePath.startsWith(`${tabHref}/`);
+  return base !== "/" && activePath.startsWith(`${base}/`);
+}
+
+/**
+ * Whether `tab` should read as active for `activePath`: its own `href`, or any
+ * path it `matches`, each with the same exact-or-nested rule.
+ */
+export function isTabActive(tab: Pick<NavTab, "href" | "matches">, activePath: string): boolean {
+  return [tab.href, ...(tab.matches ?? [])].some((base) => isUnder(base, activePath));
 }
 
 const ICONS: Record<NavTabIcon, () => React.JSX.Element> = {
@@ -50,7 +63,7 @@ export function TabCapsule({ tabs, activePath }: TabCapsuleProps) {
     <nav aria-label="Primary" className="rounded-capsule border border-hairline bg-surface p-1 shadow-float">
       <div className="flex gap-1">
         {tabs.map((tab) => {
-          const active = isTabActive(tab.href, activePath);
+          const active = isTabActive(tab, activePath);
           const Icon = ICONS[tab.icon];
           return (
             <Link
