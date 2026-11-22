@@ -10,7 +10,7 @@ import { SearchableStuffList } from "@/components/searchable-stuff-list";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { firstNameOf } from "@/lib/display-name";
-import { STUFF_HEADING } from "@/lib/stuff-heading";
+import { ONBOARDING_HEADING, STUFF_HEADING } from "@/lib/stuff-heading";
 import { buttonClassName } from "@/components/ui/button";
 import { createClient } from "@/server/db/server";
 import { fetchDisplayNames } from "@/server/services/profiles";
@@ -160,7 +160,7 @@ async function StuffScreen({ userId, initialQuery }: StuffScreenProps) {
 
   return (
     <main className="flex flex-col gap-4 px-gutter pt-6">
-      <h1 className="text-display text-ink">{STUFF_HEADING}</h1>
+      <h1 className="text-display text-ink">{showOnboarding ? ONBOARDING_HEADING : STUFF_HEADING}</h1>
 
       {showOnboarding ? (
         <GuidedOnboarding householdId={membership.household_id} locations={locations} />

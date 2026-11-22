@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { useCombobox } from "downshift";
 import { cn } from "@/lib/cn";
 import type { Location } from "@/lib/fixtures/types";
@@ -55,6 +55,8 @@ export interface LocationPathPickerProps {
    * never turned into a chip" apart from a real selection.
    */
   onInputChange?: (value: string) => void;
+  /** The text field, for a form that moves focus to it (e.g. after a failed submit). */
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 const SECTION_CLASS = "border-b border-divider last:border-b-0";
@@ -92,6 +94,7 @@ export function LocationPathPicker({
   pickOnly = false,
   excludeIds,
   onInputChange,
+  inputRef,
 }: LocationPathPickerProps) {
   const [inputValue, setInputValue] = useState("");
   // Explicit so a chip tap can return focus to the field.
@@ -146,6 +149,10 @@ export function LocationPathPicker({
       // for text in the input. Returning "" is also what stops downshift from
       // writing the picked text back into the field after we cleared it.
       itemToString: () => "",
+      // The first option is highlighted whenever the list is open, so typing
+      // a name and pressing Enter picks it: the existing place when one
+      // matches first, otherwise "+ New …". Arrows still move the highlight.
+      defaultHighlightedIndex: 0,
       onInputValueChange: ({ inputValue: nextValue }) => {
         setText(nextValue);
       },
@@ -167,15 +174,18 @@ export function LocationPathPicker({
     // effect after the render, so a fast Tab/Enter right after the pick could
     // submit the form with the chips still unset. React flushes this update at
     // the end of the keydown, before the next key event is dispatched.
-    if (event.key === "Enter" && isOpen && highlightedIndex >= 0) {
-      const item = items.at(highlightedIndex);
+    if (event.key === "Enter") {
+      const item = isOpen && highlightedIndex >= 0 ? items.at(highlightedIndex) : undefined;
+      // Enter in this field only ever picks. With nothing to pick (an empty
+      // field, no matches) it does nothing, rather than falling through to
+      // submit the surrounding form by accident.
+      event.preventDefault();
+      Object.assign(event.nativeEvent, { preventDownshiftDefault: true });
       if (item) {
-        event.preventDefault();
-        Object.assign(event.nativeEvent, { preventDownshiftDefault: true });
         handleSelect(item);
         closeMenu();
-        return;
       }
+      return;
     }
 
     if (event.key === "Backspace" && inputValue === "" && value.length > 0) {
@@ -283,6 +293,7 @@ export function LocationPathPicker({
         ))}
         <input
           {...getInputProps({
+            ref: inputRef,
             "aria-describedby": describedBy,
             "aria-invalid": describedBy ? true : undefined,
             disabled,

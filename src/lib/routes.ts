@@ -27,6 +27,14 @@ export const STUFF_PATH = "/stuff";
  */
 export const MARKETING_PATH = "/";
 
+/** `?from=` value the invite screen checks to offer "Go to my stuff". */
+export const FROM_ONBOARDING = "onboarding";
+
+/** The invite screen, reached from the end of guided onboarding (it then links back to Stuff). */
+export function inviteFromOnboardingHref(): string {
+  return `/settings/invite?from=${FROM_ONBOARDING}`;
+}
+
 /** The Stuff screen with a search already applied, as Browse's search box builds it. */
 export function stuffSearchHref(query: string): string {
   return `${STUFF_PATH}?q=${encodeURIComponent(query)}`;

@@ -99,7 +99,7 @@ test("a real stash reveals Continue; clicking it advances without completing onb
 
   await user.type(screen.getByLabelText("Name"), "Passport");
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
   const continueButton = await screen.findByRole("button", { name: "Continue" });
@@ -146,7 +146,7 @@ test("finishing on the invite step persists onboarding_completed_at and refreshe
   expect(refresh).toHaveBeenCalled();
 });
 
-test("clicking 'Invite your partner' also persists onboarding_completed_at, then navigates to /settings/invite", async () => {
+test("clicking 'Invite your partner' also persists onboarding_completed_at, then navigates to the invite screen", async () => {
   const user = userEvent.setup();
   renderOnboarding();
 
@@ -156,13 +156,14 @@ test("clicking 'Invite your partner' also persists onboarding_completed_at, then
   await user.click(screen.getByRole("button", { name: "Invite your partner" }));
 
   expect(updateEq).toHaveBeenCalledWith("id", HOUSEHOLD_ID);
-  expect(push).toHaveBeenCalledWith("/settings/invite");
+  // `from=onboarding`, so the invite screen offers a way back to Stuff.
+  expect(push).toHaveBeenCalledWith("/settings/invite?from=onboarding");
 });
 
 async function stash(user: ReturnType<typeof userEvent.setup>, name: string, location: string) {
   await user.type(screen.getByLabelText("Name"), name);
   await user.type(screen.getByRole("combobox"), location);
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 }
 
@@ -177,7 +178,7 @@ test("a stash shows a plain confirmation with only Continue — no competing Vie
   await stash(user, "Passport", "Closet");
 
   await screen.findByRole("button", { name: "Continue" });
-  expect(screen.getByRole("status").textContent).toContain("Passport");
+  expect(screen.getByRole("group", { name: "Added" }).textContent).toContain("Passport");
   expect(screen.queryByRole("link", { name: "View item" })).toBeNull();
   expect(screen.queryByRole("link", { name: "Back to home" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Add another" })).toBeNull();
@@ -187,7 +188,7 @@ test("a stash shows a plain confirmation with only Continue — no competing Vie
 async function stashIntoNewPlace(user: ReturnType<typeof userEvent.setup>, name: string, place: string) {
   await user.type(screen.getByLabelText("Name"), name);
   await user.type(screen.getByRole("combobox"), place);
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 }
 
@@ -319,4 +320,48 @@ test("a failed save on the invite step does not navigate to /settings/invite", a
 
   expect(await screen.findByRole("alert")).toBeDefined();
   expect(push).not.toHaveBeenCalled();
+});
+
+test("after a stash, focus moves to the confirmation and the live region says 'Added <name>'", async () => {
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "garage-closet" },
+    error: null,
+  });
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await stash(user, "Passport", "Closet");
+
+  const confirmation = await screen.findByRole("group", { name: "Added" });
+  expect(document.activeElement).toBe(confirmation);
+  expect(screen.getByRole("status").textContent).toBe("Added Passport");
+});
+
+test("the Added confirmation has no Back; it says where to edit or delete, and Continue is the way on", async () => {
+  stashRpc.mockResolvedValueOnce({
+    data: { id: "item-1", name: "Passport", detail: null, location_id: "garage-closet" },
+    error: null,
+  });
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await stash(user, "Passport", "Closet");
+
+  const confirmation = await screen.findByRole("group", { name: "Added" });
+  expect(confirmation.textContent).toContain("Open the item from the Stuff list to edit or delete it.");
+  expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDefined();
+  expect(stashRpc).toHaveBeenCalledTimes(1);
+});
+
+test("in an onboarding step, an empty Add item focuses Name, and its error clears as you type", async () => {
+  const user = userEvent.setup();
+  renderOnboarding();
+
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+
+  await user.type(screen.getByLabelText("Name"), "Passport");
+  expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+  expect(stashRpc).not.toHaveBeenCalled();
 });

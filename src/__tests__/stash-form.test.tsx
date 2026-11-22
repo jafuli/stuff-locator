@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StashForm } from "@/components/stash-form";
@@ -41,10 +41,10 @@ function renderForm(props: Partial<React.ComponentProps<typeof StashForm>> = {})
   return render(<StashForm locations={LOCATIONS} {...props} />);
 }
 
-/** Picks "Garage › Closet" the way a person would: type, arrow, Enter. */
+/** Picks "Garage › Closet" the way a person would: type, then Enter on the highlighted first match. */
 async function pickCloset(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
 }
 
 test("submitting with nothing shows both specific inline errors, associated to their fields", async () => {
@@ -75,7 +75,7 @@ test("text typed into the place field that never became a chip is rejected, not 
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
   expect(screen.getByText("Choose a location for this item.")).toBeDefined();
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByRole("group", { name: "Added" })).toBeNull();
   expect(rpc).not.toHaveBeenCalled();
 });
 
@@ -112,7 +112,7 @@ test("a valid fill-and-submit calls stash_item with the place id and shows the r
   await user.type(screen.getByLabelText("Detail (optional)"), "Top shelf, behind the shoebox");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  const status = await screen.findByRole("status");
+  const status = await screen.findByRole("group", { name: "Added" });
   expect(status.textContent).toContain("Bike pump");
   expect(status.textContent).toContain("Garage");
   expect(status.textContent).toContain("Closet");
@@ -141,7 +141,7 @@ test("an empty detail is left out of the call rather than sent as an empty strin
   await user.type(screen.getByLabelText("Detail (optional)"), "   ");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  await screen.findByRole("status");
+  await screen.findByRole("group", { name: "Added" });
   expect(rpc).toHaveBeenCalledWith("stash_item", { p_name: "Bike pump", p_location_id: "garage-closet" });
 });
 
@@ -167,7 +167,7 @@ test("a nested new path is one call: the deepest existing place plus the new lev
   await user.click(screen.getByRole("option", { name: "New place 'Red box' inside Garage › Closet › Toolbox" }));
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  const status = await screen.findByRole("status");
+  const status = await screen.findByRole("group", { name: "Added" });
   // One call, not "create the places, then the item": that pair is what let
   // a retry create the places twice.
   expect(rpc).toHaveBeenCalledTimes(1);
@@ -197,7 +197,7 @@ test("a brand-new household builds its whole path from nothing: no location id, 
   await user.click(screen.getByRole("option", { name: "New place 'Cabinet' inside Office" }));
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  await screen.findByRole("status");
+  await screen.findByRole("group", { name: "Added" });
   expect(rpc).toHaveBeenCalledWith("stash_item", { p_name: "Passport", p_new_path: ["Office", "Cabinet"] });
 });
 
@@ -212,7 +212,7 @@ test("onStashed fires once, right after a real stash succeeds", async () => {
   await pickCloset(user);
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  await screen.findByRole("status");
+  await screen.findByRole("group", { name: "Added" });
   expect(onStashed).toHaveBeenCalledTimes(1);
   expect(onStashed).toHaveBeenCalledWith({
     itemId: "44444444-4444-4444-4444-444444444444",
@@ -230,11 +230,14 @@ test("embedded: the success panel confirms the item but offers no navigation of 
   await pickCloset(user);
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
-  const status = await screen.findByRole("status");
+  const status = await screen.findByRole("group", { name: "Added" });
   expect(status.textContent).toContain("Bike pump");
   expect(screen.queryByRole("link", { name: "View item" })).toBeNull();
   expect(screen.queryByRole("link", { name: "Back to home" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Add another" })).toBeNull();
+  // No Back either: the hint says where editing and deleting happen.
+  expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+  expect(status.textContent).toContain("Open the item from the Stuff list to edit or delete it.");
 });
 
 test("the placeholder hint shows while no place is chosen", () => {
@@ -271,7 +274,7 @@ test("a rejected stash shows a specific error and leaves the form populated for 
   const error = await screen.findByText("stash_item: location not found or not accessible");
   expect(error.getAttribute("role")).toBe("alert");
   // Never silently drops into the success panel on failure.
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByRole("group", { name: "Added" })).toBeNull();
 
   // Entered values survive the failed submit — the user can just retry.
   expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Bike pump");
@@ -303,5 +306,105 @@ test("the button shows a loading state and disables fields while the stash is in
 
   resolveInsert({ data: stashedRow(), error: null });
 
-  await screen.findByRole("status");
+  await screen.findByRole("group", { name: "Added" });
+});
+
+test("on the Stash page too, focus moves to the confirmation and the save is announced", async () => {
+  rpc.mockResolvedValueOnce({ data: stashedRow(), error: null });
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await pickCloset(user);
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  const confirmation = await screen.findByRole("group", { name: "Added" });
+  expect(document.activeElement).toBe(confirmation);
+  expect(screen.getByRole("status").textContent).toBe("Added Bike pump");
+  // The onboarding-only edit hint isn't on the Stash page, which has View item.
+  expect(screen.queryByText("Open the item from the Stuff list to edit or delete it.")).toBeNull();
+});
+
+test("'Add another' starts a fresh item: a second stash_item, and the announcement clears in between", async () => {
+  rpc.mockResolvedValue({ data: stashedRow(), error: null });
+  const user = userEvent.setup();
+  renderForm();
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await pickCloset(user);
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+  await user.click(await screen.findByRole("button", { name: "Add another" }));
+
+  expect(screen.getByRole("status").textContent).toBe("");
+  await user.type(screen.getByLabelText("Name"), "Tyre levers");
+  await pickCloset(user);
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  await screen.findByRole("group", { name: "Added" });
+  expect(rpc).toHaveBeenCalledTimes(2);
+  expect(rpc).toHaveBeenNthCalledWith(1, "stash_item", expect.anything());
+  expect(rpc).toHaveBeenNthCalledWith(2, "stash_item", expect.anything());
+});
+
+describe("errors clear as you fix them, and focus goes to the first problem", () => {
+  test("after an empty submit, focus moves to Name, the first invalid field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+    expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe("true");
+  });
+
+  test("with a valid name, focus moves to the place field instead", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Name"), "Bike pump");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
+  });
+
+  test("a second failed submit moves focus back to the first invalid field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+  });
+
+  test("the Name error clears on the first keystroke, leaving the place error until the place changes", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.type(screen.getByLabelText("Name"), "B");
+
+    expect(screen.queryByText("Enter a name for this item.")).toBeNull();
+    expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBeNull();
+    expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+  });
+
+  test("the place error clears as soon as you type in the place field", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Name"), "Bike pump");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    expect(screen.getByText("Choose a location for this item.")).toBeDefined();
+
+    await user.type(screen.getByRole("combobox"), "C");
+
+    expect(screen.queryByText("Choose a location for this item.")).toBeNull();
+    expect(screen.getByRole("combobox").getAttribute("aria-invalid")).toBeNull();
+  });
+
+  test("the Name field has autocomplete off, so browsers don't offer the person's own name", () => {
+    renderForm();
+    expect(screen.getByLabelText("Name").getAttribute("autocomplete")).toBe("off");
+  });
 });

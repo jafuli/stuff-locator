@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { InvitePanel } from "@/components/invite-panel";
 import { findReusableInvite } from "@/lib/invite-reuse";
 import { createClient } from "@/server/db/server";
+import { buttonClassName } from "@/components/ui/button";
+import { FROM_ONBOARDING, STUFF_PATH } from "@/lib/routes";
 
 // Invite-partner UI: generate (or reuse) an invite code and display a
 // shareable /join/[code] link. Plain direct reads/writes against the
@@ -16,7 +19,12 @@ import { createClient } from "@/server/db/server";
 // natural future home for account/household-level actions beyond just
 // invites, whereas /household/invite reads as if it could only ever be
 // this one thing).
-export default async function Page() {
+export default async function Page(props: PageProps<"/settings/invite">) {
+  // Arriving from the end of guided onboarding: the flow ends here, and
+  // onboarding is already marked complete, so offer the way on to Stuff.
+  const { from } = await props.searchParams;
+  const fromOnboarding = from === FROM_ONBOARDING;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -91,6 +99,11 @@ export default async function Page() {
       <h1 className="text-display text-ink">Invite your partner</h1>
       <p className="text-meta text-muted">Share this code or link — anyone with it can join your household.</p>
       <InvitePanel code={code} />
+      {fromOnboarding ? (
+        <Link href={STUFF_PATH} className={buttonClassName("secondary", "w-full sm:w-fit")}>
+          Go to my stuff
+        </Link>
+      ) : null}
     </main>
   );
 }
