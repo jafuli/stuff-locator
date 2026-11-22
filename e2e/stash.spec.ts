@@ -57,7 +57,6 @@ test("filling a valid name, an existing location via the autocomplete, and an op
 
   await page.getByRole("combobox").fill("Red box");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox › Red box" })).toBeVisible();
 
@@ -130,7 +129,6 @@ test("stashing into a brand-new 3-level path creates every level once and puts t
     await page.getByRole("combobox").fill(level);
     // A brand-new level: the "+ New" row is the only option on offer.
     await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
-    await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
   }
 
@@ -202,10 +200,8 @@ test("a brand-new path can be built keyboard-only, including backing out of a le
   await expect(page.getByRole("combobox")).toBeFocused();
 
   await page.keyboard.type("Hallway", { delay: 20 });
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Shelf", { delay: 20 });
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Location: Hallway › Shelf" })).toBeVisible();
 
@@ -214,7 +210,6 @@ test("a brand-new path can be built keyboard-only, including backing out of a le
   await expect(page.getByRole("group", { name: "Location: Hallway" })).toBeVisible();
 
   await page.keyboard.type("Key hook", { delay: 20 });
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Location: Hallway › Key hook" })).toBeVisible();
 });
@@ -244,7 +239,7 @@ test("the whole form, including the autocomplete, is operable keyboard-only", as
   await expect(page.getByRole("option")).toHaveCount(0);
   await expect(page.getByRole("combobox")).toBeFocused();
 
-  // Reopen with the arrow key, arrow onto the match, select it.
+  // Reopen with the arrow key; the match is highlighted, so Enter selects it.
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("option", { name: "Garage › Closet › Toolbox › Red box" })).toBeVisible();
   await page.keyboard.press("Enter");

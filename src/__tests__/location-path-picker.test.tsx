@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type SubmitEvent } from "react";
 import { describe, expect, test, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -61,7 +61,7 @@ describe("finding places", () => {
     render(<Harness />);
 
     await user.type(screen.getByRole("combobox"), "offi");
-    await user.keyboard("{ArrowDown}{Enter}");
+    await user.keyboard("{Enter}");
 
     expect(screen.getByRole<HTMLInputElement>("combobox").value).toBe("");
     await user.type(screen.getByRole("combobox"), "cab");
@@ -274,5 +274,118 @@ describe("accessibility wiring", () => {
     );
     expect(screen.getByRole("button", { name: /^Cabinet/ }).className).toContain("bg-tape");
     expect(screen.getByRole("button", { name: /^Office/ }).className).not.toContain("bg-tape");
+  });
+});
+
+describe("Enter chooses the first option", () => {
+  const highlighted = () =>
+    screen.getAllByRole("option").filter((option) => option.getAttribute("aria-selected") === "true");
+
+  test("the first option is highlighted as soon as the list opens, and Enter picks the existing place", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole("combobox"), "cab");
+
+    // Two existing matches, then "+ New place 'cab'".
+    expect(screen.getAllByRole("option").map((option) => option.getAttribute("aria-label"))).toEqual([
+      "Kitchen › Spice cabinet",
+      "Office › Cabinet",
+      "New place 'cab' at the top level",
+    ]);
+    expect(highlighted().map((option) => option.getAttribute("aria-label"))).toEqual(["Kitchen › Spice cabinet"]);
+    expect(screen.getByRole("combobox").getAttribute("aria-activedescendant")).toBe(highlighted()[0]?.id);
+
+    await user.keyboard("{Enter}");
+    expect(group().getAttribute("aria-label")).toBe("Location: Kitchen › Spice cabinet");
+  });
+
+  test("when '+ New place …' is the only option, type-then-Enter adds it", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole("combobox"), "Attic");
+    await user.keyboard("{Enter}");
+
+    expect(group().getAttribute("aria-label")).toBe("Location: Attic");
+    expect(within(group()).getByRole("button", { name: "Attic, new place. Go back to this level" })).toBeDefined();
+  });
+
+  test("the highlight follows the typing: it is back on the first option after every keystroke", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole("combobox"), "ca");
+    await user.keyboard("{ArrowDown}");
+    await user.type(screen.getByRole("combobox"), "b");
+
+    expect(highlighted().map((option) => option.getAttribute("aria-label"))).toEqual(["Kitchen › Spice cabinet"]);
+  });
+
+  test("arrow keys still move the highlight, and Enter picks what is highlighted", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole("combobox"), "cab");
+    await user.keyboard("{ArrowDown}");
+    expect(highlighted().map((option) => option.getAttribute("aria-label"))).toEqual(["Office › Cabinet"]);
+    await user.keyboard("{ArrowUp}");
+    expect(highlighted().map((option) => option.getAttribute("aria-label"))).toEqual(["Kitchen › Spice cabinet"]);
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(group().getAttribute("aria-label")).toBe("Location: Office › Cabinet");
+  });
+
+  test("Escape closes the list without choosing anything", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Harness onChangeSpy={onChange} />);
+
+    await user.type(screen.getByRole("combobox"), "cab");
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("option")).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(group().getAttribute("aria-label")).toBe("Location: none chosen");
+  });
+
+  test("Enter with an empty field and no options does nothing and never submits the surrounding form", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onSubmit = vi.fn((event: SubmitEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+    render(
+      <form onSubmit={onSubmit}>
+        <Harness locations={[]} onChangeSpy={onChange} />
+        <button type="submit">Save</button>
+      </form>,
+    );
+
+    await user.click(screen.getByRole("combobox"));
+    expect(screen.queryByRole("option")).toBeNull();
+    await user.keyboard("{Enter}");
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  test("Enter that picks an option doesn't submit the surrounding form either", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: SubmitEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+    render(
+      <form onSubmit={onSubmit}>
+        <Harness />
+        <button type="submit">Save</button>
+      </form>,
+    );
+
+    await user.type(screen.getByRole("combobox"), "Attic");
+    await user.keyboard("{Enter}");
+
+    expect(group().getAttribute("aria-label")).toBe("Location: Attic");
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

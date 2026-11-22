@@ -99,7 +99,7 @@ test("a real stash reveals Continue; clicking it advances without completing onb
 
   await user.type(screen.getByLabelText("Name"), "Passport");
   await user.type(screen.getByRole("combobox"), "Closet");
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
   const continueButton = await screen.findByRole("button", { name: "Continue" });
@@ -162,7 +162,7 @@ test("clicking 'Invite your partner' also persists onboarding_completed_at, then
 async function stash(user: ReturnType<typeof userEvent.setup>, name: string, location: string) {
   await user.type(screen.getByLabelText("Name"), name);
   await user.type(screen.getByRole("combobox"), location);
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 }
 
@@ -187,7 +187,7 @@ test("a stash shows a plain confirmation with only Continue — no competing Vie
 async function stashIntoNewPlace(user: ReturnType<typeof userEvent.setup>, name: string, place: string) {
   await user.type(screen.getByLabelText("Name"), name);
   await user.type(screen.getByRole("combobox"), place);
-  await user.keyboard("{ArrowDown}{Enter}");
+  await user.keyboard("{Enter}");
   await user.click(screen.getByRole("button", { name: "Add item" }));
 }
 
