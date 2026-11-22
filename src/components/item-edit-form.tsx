@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState, type SubmitEvent } from "react";
-import { PathTrail } from "@/components/path-trail";
+import { useRouter } from "next/navigation";
+import { useState, type SubmitEvent } from "react";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { getBreadcrumbSegments, type LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-picker";
 // Reused directly rather than duplicated: the validation rules for editing
@@ -16,8 +14,7 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
 import { useItemFieldErrors } from "@/components/use-item-field-errors";
-import { textLinkClassName } from "@/components/ui/text-link";
-import { STUFF_PATH } from "@/lib/routes";
+import { itemSavedHref } from "@/lib/flash-notice";
 
 export interface ItemEditFormProps {
   item: Item;
@@ -25,15 +22,7 @@ export interface ItemEditFormProps {
   locations: readonly Location[];
 }
 
-interface CapturedEdit {
-  name: string;
-  segments: LocationBreadcrumbSegment[];
-  detail?: string;
-}
-
 const LOCATION_ERROR_ID = "item-edit-location-error";
-
-type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
 
 /**
  * Edit form for an existing item, backed by real Supabase writes: mirrors
@@ -46,13 +35,15 @@ type Mode = "editing" | "confirming-delete" | "edited" | "deleted";
  * `move_item` followed by a plain UPDATE, which could leave an item moved but
  * not renamed; direct writes on `items` are now revoked, so that path is gone.
  *
- * Delete calls `delete_item` (it records the "deleted" event and what the
- * item's place was). Uses a plain two-step inline confirmation (Delete →
- * Cancel/confirm), an inline panel replacing the form rather than an overlay.
- * Browse's place deletion uses the shared Dialog instead (components/ui/
- * dialog.tsx); moving this one over is a reasonable follow-up, not done here.
+ * A save isn't shown inside this form: it replaces the history entry with
+ * the item's own page, carrying a one-off "Saved" notice (src/lib/
+ * flash-notice.ts). `replace`, not `push`, so browser Back can't return to
+ * this form showing the values from before the save.
+ *
+ * Deleting lives on the item's own page (ItemDeleteButton), not here.
  */
 export function ItemEditForm({ item, locations }: ItemEditFormProps) {
+  const router = useRouter();
   const [name, setName] = useState(item.name);
   const [detail, setDetail] = useState(item.detail ?? "");
   // Starts as the item's current place, as solid chips. Tapping a chip goes
@@ -62,33 +53,8 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
   // Raw text in the picker's field, to catch text that never became a chip.
   const [pendingText, setPendingText] = useState("");
   const { fieldErrors, report, clear, nameRef, locationRef } = useItemFieldErrors();
-  const [mode, setMode] = useState<Mode>("editing");
-  const [captured, setCaptured] = useState<CapturedEdit | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
-  const deleteHeadingRef = useRef<HTMLHeadingElement>(null);
-  const cameFromConfirmRef = useRef(false);
-
-  // Moves focus into the confirmation panel when it appears (so a screen
-  // reader announces it rather than leaving focus on a now-unmounted
-  // button), and back to the "Delete item" trigger when Cancel returns to
-  // the ordinary form — mirrors this doc comment's own "not a new
-  // interaction model" stance by keeping the mechanics plain (no focus
-  // trap, no modal role), just making sure focus actually goes somewhere
-  // sensible on both transitions instead of falling back to <body>.
-  useEffect(() => {
-    if (mode === "confirming-delete") {
-      cameFromConfirmRef.current = true;
-      deleteHeadingRef.current?.focus();
-    } else if (mode === "editing" && cameFromConfirmRef.current) {
-      cameFromConfirmRef.current = false;
-      deleteTriggerRef.current?.focus();
-    }
-  }, [mode]);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -120,47 +86,17 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
       ...(path.newPath.length === 0 ? {} : { p_new_path: path.newPath }),
     });
 
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setSubmitError(error.message);
       return;
     }
 
-    // A just-created place isn't in the `locations` snapshot, so name the
-    // levels from the chips the person built.
-    const knownSegments = getBreadcrumbSegments(data.location_id, locations);
-    setCaptured({
-      name: data.name,
-      segments:
-        knownSegments.length > 0
-          ? knownSegments
-          : chips.map((chip, index) => ({
-              id:
-                index === chips.length - 1
-                  ? data.location_id
-                  : chip.kind === "existing"
-                    ? chip.id
-                    : `new-${String(index)}`,
-              name: chip.name,
-            })),
-      detail: data.detail ?? undefined,
-    });
-    setMode("edited");
-  }
-
-  async function handleConfirmDelete() {
-    setDeleteError(null);
-    setIsDeleting(true);
-    const supabase = createClient();
-    const { error } = await supabase.rpc("delete_item", { p_item_id: item.id });
-    setIsDeleting(false);
-
-    if (error) {
-      setDeleteError(error.message);
-      return;
-    }
-    setMode("deleted");
+    // Left disabled while the navigation lands, so a second tap can't save
+    // twice. replace + refresh: the item page is a Server Component, and
+    // refresh makes sure it re-reads rather than reusing a cached payload.
+    router.replace(itemSavedHref(data.id));
+    router.refresh();
   }
 
   // A field's error clears as soon as that field changes, not at the next submit.
@@ -179,136 +115,57 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
     clear("location");
   }
 
-  if (mode === "deleted") {
-    return (
-      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        <div>
-          <p className="text-section-label text-muted">Deleted</p>
-          <p className="text-title text-ink">{item.name}</p>
-        </div>
-        <Link href={STUFF_PATH} className={textLinkClassName()}>
-          Back to home
-        </Link>
-      </div>
-    );
-  }
-
-  if (mode === "edited" && captured) {
-    return (
-      <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        <div>
-          <p className="text-section-label text-muted">Updated</p>
-          <p className="text-title text-ink">{captured.name}</p>
-        </div>
-        <PathTrail segments={captured.segments} printIn />
-        {captured.detail ? <p className="text-meta text-muted">{captured.detail}</p> : null}
-        <Link href={`/items/${item.id}`} className={textLinkClassName()}>
-          Back to item
-        </Link>
-      </div>
-    );
-  }
-
-  if (mode === "confirming-delete") {
-    return (
-      <div className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
-        {/* tabIndex={-1}: programmatically focusable (see the effect above)
-            without joining the regular tab order — the heading itself
-            isn't an action, the two buttons below it are. */}
-        <h2 ref={deleteHeadingRef} tabIndex={-1} className="text-title text-ink outline-none">
-          Delete this item?
-        </h2>
-        <p className="text-meta text-muted">{item.name} will be removed. This can&apos;t be undone.</p>
-        {deleteError ? (
-          <p role="alert" className="text-meta text-signal">
-            {deleteError}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isDeleting}
-            onClick={() => {
-              setDeleteError(null);
-              setMode("editing");
-            }}
-          >
-            Cancel
-          </Button>
-          <Button type="button" variant="primary" isLoading={isDeleting} onClick={() => void handleConfirmDelete()}>
-            {isDeleting ? "Deleting…" : "Delete item"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-3">
-      <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
-        <FormField
-          ref={nameRef}
-          id="item-edit-name"
-          label="Name"
-          type="text"
-          value={name}
-          onChange={handleNameChange}
-          error={fieldErrors.name}
-          // An item's name, not the person's: no browser autofill.
-          autoComplete="off"
+    <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
+      <FormField
+        ref={nameRef}
+        id="item-edit-name"
+        label="Name"
+        type="text"
+        value={name}
+        onChange={handleNameChange}
+        error={fieldErrors.name}
+        // An item's name, not the person's: no browser autofill.
+        autoComplete="off"
+        disabled={isSubmitting}
+      />
+
+      <div>
+        <LocationPathPicker
+          label="Location"
+          locations={locations}
+          value={chips}
+          onChange={handleChipsChange}
+          onInputChange={handlePendingTextChange}
+          inputRef={locationRef}
+          describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
           disabled={isSubmitting}
         />
-
-        <div>
-          <LocationPathPicker
-            label="Location"
-            locations={locations}
-            value={chips}
-            onChange={handleChipsChange}
-            onInputChange={handlePendingTextChange}
-            inputRef={locationRef}
-            describedBy={fieldErrors.location ? LOCATION_ERROR_ID : undefined}
-            disabled={isSubmitting}
-          />
-          {fieldErrors.location ? (
-            <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
-              {fieldErrors.location}
-            </p>
-          ) : null}
-        </div>
-
-        <FormField
-          id="item-edit-detail"
-          label="Detail (optional)"
-          type="text"
-          value={detail}
-          onChange={setDetail}
-          disabled={isSubmitting}
-        />
-
-        {submitError ? (
-          <p role="alert" className="text-meta text-signal">
-            {submitError}
+        {fieldErrors.location ? (
+          <p id={LOCATION_ERROR_ID} role="alert" className="mt-1 text-meta text-signal">
+            {fieldErrors.location}
           </p>
         ) : null}
+      </div>
 
-        <Button type="submit" variant="primary" isLoading={isSubmitting}>
-          {isSubmitting ? "Saving…" : "Save changes"}
-        </Button>
-      </form>
-
-      <Button
-        ref={deleteTriggerRef}
-        type="button"
-        variant="secondary"
+      <FormField
+        id="item-edit-detail"
+        label="Detail (optional)"
+        type="text"
+        value={detail}
+        onChange={setDetail}
         disabled={isSubmitting}
-        onClick={() => {
-          setMode("confirming-delete");
-        }}
-      >
-        Delete item
+      />
+
+      {submitError ? (
+        <p role="alert" className="text-meta text-signal">
+          {submitError}
+        </p>
+      ) : null}
+
+      <Button type="submit" variant="primary" isLoading={isSubmitting}>
+        {isSubmitting ? "Saving…" : "Save changes"}
       </Button>
-    </div>
+    </form>
   );
 }

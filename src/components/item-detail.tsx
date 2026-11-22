@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatRelativeLong } from "@/lib/format-relative-time";
 import type { Item } from "@/lib/fixtures/types";
 import { PathTrail, type LocationBreadcrumbSegment } from "@/components/path-trail";
@@ -6,6 +7,11 @@ export interface ItemDetailProps {
   item: Item;
   /** Already-resolved path for item.locationId — see PathTrail. */
   segments: LocationBreadcrumbSegment[];
+  /**
+   * Controls on the same line as the name (Edit, Delete), aligned like the
+   * ⋯ on a place's page in Browse.
+   */
+  actions?: ReactNode;
 }
 
 interface Field {
@@ -47,13 +53,16 @@ function fieldsFor(item: Item): Field[] {
  * so it's directly unit-testable — mirrors the split StuffList already makes
  * for the home route's list.
  */
-export function ItemDetail({ item, segments }: ItemDetailProps) {
+export function ItemDetail({ item, segments, actions }: ItemDetailProps) {
   const fields = fieldsFor(item);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        <h1 className="text-display break-words text-ink">{item.name}</h1>
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="min-w-0 text-display break-words text-ink">{item.name}</h1>
+          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        </div>
         <PathTrail segments={segments} />
       </div>
 
