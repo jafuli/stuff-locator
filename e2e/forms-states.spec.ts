@@ -65,7 +65,7 @@ test("the Stash success panel passes axe in both themes and shows the path on ta
 
   await page.getByLabel("Name").fill("Camping stove");
   await page.getByRole("combobox").fill("Shed");
-  await page.getByRole("option", { name: /New place 'Shed'/ }).click();
+  await page.getByRole("option", { name: /^New place “Shed”/ }).click();
   await page.getByRole("button", { name: "Add item" }).click();
 
   const status = page.getByRole("group", { name: "Added" });

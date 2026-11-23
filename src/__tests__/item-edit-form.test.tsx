@@ -100,7 +100,7 @@ test("moving into a place that doesn't exist yet sends the new level along, in t
   renderForm();
 
   await user.type(screen.getByRole("combobox"), "Attic");
-  await user.click(screen.getByRole("option", { name: "New place 'Attic' inside Garage" }));
+  await user.click(screen.getByRole("option", { name: "New “Attic” inside Garage, new place" }));
   expect(screen.getByRole("group", { name: "Location: Garage › Attic" })).toBeDefined();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
 

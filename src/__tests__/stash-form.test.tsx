@@ -162,9 +162,9 @@ test("a nested new path is one call: the deepest existing place plus the new lev
   await user.type(screen.getByLabelText("Name"), "Camping tent");
   await pickCloset(user);
   await user.type(screen.getByRole("combobox"), "Toolbox");
-  await user.click(screen.getByRole("option", { name: "New place 'Toolbox' inside Garage › Closet" }));
+  await user.click(screen.getByRole("option", { name: "New “Toolbox” inside Garage › Closet, new place" }));
   await user.type(screen.getByRole("combobox"), "Red box");
-  await user.click(screen.getByRole("option", { name: "New place 'Red box' inside Garage › Closet › Toolbox" }));
+  await user.click(screen.getByRole("option", { name: "New “Red box” inside Garage › Closet › Toolbox, new place" }));
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
   const status = await screen.findByRole("group", { name: "Added" });
@@ -192,9 +192,9 @@ test("a brand-new household builds its whole path from nothing: no location id, 
 
   await user.type(screen.getByLabelText("Name"), "Passport");
   await user.type(screen.getByRole("combobox"), "Office");
-  await user.click(screen.getByRole("option", { name: "New place 'Office' at the top level" }));
+  await user.click(screen.getByRole("option", { name: "New place “Office”, top level" }));
   await user.type(screen.getByRole("combobox"), "Cabinet");
-  await user.click(screen.getByRole("option", { name: "New place 'Cabinet' inside Office" }));
+  await user.click(screen.getByRole("option", { name: "New “Cabinet” inside Office, new place" }));
   await user.click(screen.getByRole("button", { name: "Add item" }));
 
   await screen.findByRole("group", { name: "Added" });

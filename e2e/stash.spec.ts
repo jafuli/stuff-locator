@@ -128,7 +128,7 @@ test("stashing into a brand-new 3-level path creates every level once and puts t
   for (const level of ["Office", "Cabinet", "Top drawer"]) {
     await page.getByRole("combobox").fill(level);
     // A brand-new level: the "+ New" row is the only option on offer.
-    await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
+    await expect(page.getByRole("option", { name: new RegExp(`^New( place)? “${level}”`) })).toBeVisible();
     await page.keyboard.press("Enter");
   }
 
@@ -161,7 +161,7 @@ test("an existing prefix plus one new level reuses the prefix and creates only t
   await page.getByRole("combobox").fill("Closet");
   await page.getByRole("option", { name: "Garage › Closet" }).click();
   await page.getByRole("combobox").fill("Toolbox");
-  await page.getByRole("option", { name: "New place 'Toolbox' inside Garage › Closet" }).click();
+  await page.getByRole("option", { name: "New “Toolbox” inside Garage › Closet, new place" }).click();
 
   await expect(page.getByText("1 new place")).toBeVisible();
   await page.getByRole("button", { name: "Add item" }).click();

@@ -222,7 +222,7 @@ test("add item with the path picker open and chips built has no critical or seri
   await page.getByRole("combobox").fill("Office");
   await page.getByRole("option", { name: "Office, already here" }).click();
   await page.getByRole("combobox").fill("Shelf");
-  await page.getByRole("option", { name: "New place 'Shelf' inside Office" }).click();
+  await page.getByRole("option", { name: "New “Shelf” inside Office, new place" }).click();
   await page.getByRole("combobox").fill("cab");
   await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
 
