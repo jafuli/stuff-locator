@@ -99,7 +99,7 @@ describe("creating places", () => {
     );
 
     await user.type(screen.getByRole("combobox"), "Top drawer");
-    const create = screen.getByRole("option", { name: "New place 'Top drawer' inside Office › Cabinet" });
+    const create = screen.getByRole("option", { name: "New “Top drawer” inside Office › Cabinet, new place" });
     await user.click(create);
 
     expect(onChange).toHaveBeenLastCalledWith([
@@ -116,9 +116,9 @@ describe("creating places", () => {
     render(<Harness locations={[]} />);
 
     await user.type(screen.getByRole("combobox"), "Office");
-    await user.click(screen.getByRole("option", { name: "New place 'Office' at the top level" }));
+    await user.click(screen.getByRole("option", { name: "New place “Office”, top level" }));
     await user.type(screen.getByRole("combobox"), "Cabinet");
-    await user.click(screen.getByRole("option", { name: "New place 'Cabinet' inside Office" }));
+    await user.click(screen.getByRole("option", { name: "New “Cabinet” inside Office, new place" }));
 
     expect(group().getAttribute("aria-label")).toBe("Location: Office › Cabinet");
     expect(screen.getByText(/2 new places$/)).toBeDefined();
@@ -275,6 +275,57 @@ describe("accessibility wiring", () => {
     expect(screen.getByRole("button", { name: /^Cabinet/ }).className).toContain("bg-tape");
     expect(screen.getByRole("button", { name: /^Office/ }).className).not.toContain("bg-tape");
   });
+
+  // WCAG 2.5.3 Label in Name: an option's accessible name must contain its
+  // visible words, in order, so a voice-control user can say what they see.
+  // axe 4.14 made its label-content-name-mismatch rule a default one; this
+  // compares the same way (letters and digits only, case-insensitive), so a
+  // regression shows up here, not only in the e2e axe run.
+  describe("every option's accessible name contains its visible text", () => {
+    const words = (text: string) =>
+      text
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+    const expectLabelInName = () => {
+      const options = screen.getAllByRole("option");
+      expect(options.length).toBeGreaterThan(0);
+      for (const option of options) {
+        expect(words(option.getAttribute("aria-label") ?? "")).toContain(words(option.textContent));
+      }
+    };
+
+    test("existing matches and '+ New place …' at the top level", async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.type(screen.getByRole("combobox"), "cab");
+      expect(screen.getByRole("option", { name: "New place “cab”, top level" })).toBeDefined();
+      expectLabelInName();
+    });
+
+    test("'+ New …' inside a place", async () => {
+      const user = userEvent.setup();
+      render(
+        <Harness
+          initial={[
+            { kind: "existing", id: "office", name: "Office" },
+            { kind: "existing", id: "cabinet", name: "Cabinet" },
+          ]}
+        />,
+      );
+      await user.type(screen.getByRole("combobox"), "Top drawer");
+      expect(screen.getByRole("option", { name: "New “Top drawer” inside Office › Cabinet, new place" })).toBeDefined();
+      expectLabelInName();
+    });
+
+    test("an existing sibling listed as 'already here'", async () => {
+      const user = userEvent.setup();
+      render(<Harness initial={[{ kind: "existing", id: "garage", name: "Garage" }]} />);
+      await user.type(screen.getByRole("combobox"), "closet");
+      expect(screen.getByRole("option", { name: "Garage › Closet, already here" })).toBeDefined();
+      expectLabelInName();
+    });
+  });
 });
 
 describe("Enter chooses the first option", () => {
@@ -287,11 +338,11 @@ describe("Enter chooses the first option", () => {
 
     await user.type(screen.getByRole("combobox"), "cab");
 
-    // Two existing matches, then "+ New place 'cab'".
+    // Two existing matches, then "+ New place “cab”".
     expect(screen.getAllByRole("option").map((option) => option.getAttribute("aria-label"))).toEqual([
       "Kitchen › Spice cabinet",
       "Office › Cabinet",
-      "New place 'cab' at the top level",
+      "New place “cab”, top level",
     ]);
     expect(highlighted().map((option) => option.getAttribute("aria-label"))).toEqual(["Kitchen › Spice cabinet"]);
     expect(screen.getByRole("combobox").getAttribute("aria-activedescendant")).toBe(highlighted()[0]?.id);

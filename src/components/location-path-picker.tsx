@@ -203,18 +203,24 @@ export function LocationPathPicker({
     const isHighlighted = highlightedIndex === index;
     const base = "flex min-h-12 items-center justify-between gap-3 px-4 py-2";
     if (item.kind === "create") {
-      const where = rows.createInside === null ? "at the top level" : `inside ${rows.createInside}`;
+      const label = rows.createInside === null ? `+ New place “${item.name}”` : `+ New “${item.name}”`;
+      const where = rows.createInside === null ? "top level" : `inside ${rows.createInside}`;
+      // WCAG 2.5.3 (Label in Name): the accessible name must contain the
+      // visible words, in order, so a voice-control user can say what they
+      // see. So the name starts with exactly the visible text and only adds
+      // context after it. The "+" is a symbol axe ignores when comparing.
+      const accessibleName =
+        rows.createInside === null ? `New place “${item.name}”, top level` : `New “${item.name}” ${where}, new place`;
       return (
         <li
           key="__create__"
           {...getItemProps({ item, index })}
-          aria-label={`New place '${item.name}' ${where}`}
+          aria-label={accessibleName}
           className={cn(base, "text-body font-medium text-ink", isHighlighted && "bg-divider")}
         >
-          <span>{rows.createInside === null ? `+ New place “${item.name}”` : `+ New “${item.name}”`}</span>
-          <span className="shrink-0 text-meta font-normal text-muted">
-            {rows.createInside === null ? "top level" : `inside ${rows.createInside}`}
-          </span>
+          {/* The space keeps the two spans' words apart in the computed
+              visible text; a flex container doesn't render it. */}
+          <span>{label}</span> <span className="shrink-0 text-meta font-normal text-muted">{where}</span>
         </li>
       );
     }
@@ -232,7 +238,14 @@ export function LocationPathPicker({
         <span>
           <MatchedPath path={text} query={inputValue} />
         </span>
-        {row.isExactSibling ? <span className="shrink-0 text-meta text-muted">already here</span> : null}
+        {/* The space keeps "Box" and "already here" apart in the visible
+            text, so it stays inside the accessible name (WCAG 2.5.3). */}
+        {row.isExactSibling ? (
+          <>
+            {" "}
+            <span className="shrink-0 text-meta text-muted">already here</span>
+          </>
+        ) : null}
       </li>
     );
   }

@@ -158,7 +158,7 @@ test("moving into a place that doesn't exist yet: tap a chip to go back a level,
   await page.getByRole("button", { name: "Toolbox. Go back to this level" }).click();
   await expect(page.getByRole("group", { name: "Location: Garage › Closet › Toolbox" })).toBeVisible();
   await page.getByRole("combobox").fill("Blue tin");
-  await page.getByRole("option", { name: "New place 'Blue tin' inside Garage › Closet › Toolbox" }).click();
+  await page.getByRole("option", { name: "New “Blue tin” inside Garage › Closet › Toolbox, new place" }).click();
   await expect(page.getByText("1 new place")).toBeVisible();
 
   await page.getByRole("button", { name: "Save changes" }).click();

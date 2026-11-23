@@ -191,7 +191,7 @@ test("the guided sequence, including the location autocomplete, is operable keyb
   await page.keyboard.press("Tab");
   await expect(page.getByRole("combobox")).toBeFocused();
   await page.keyboard.type("Filing box", { delay: 20 });
-  await expect(page.getByRole("option", { name: "New place 'Filing box' at the top level" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "New place “Filing box”, top level" })).toBeVisible();
   await page.keyboard.press("Enter");
   // The pick really happened (a chip), rather than Enter falling through to
   // the form — checked here so a miss fails here, not later as "no Continue".
@@ -300,7 +300,7 @@ test("a nested place can be built in one go during onboarding, and the placehold
   await page.getByLabel("Name").fill("Passport");
   for (const level of ["Office", "Cabinet", "Top drawer"]) {
     await page.getByRole("combobox").fill(level);
-    await expect(page.getByRole("option", { name: new RegExp(`^New place '${level}'`) })).toBeVisible();
+    await expect(page.getByRole("option", { name: new RegExp(`^New( place)? “${level}”`) })).toBeVisible();
     await page.keyboard.press("Enter");
   }
   await expect(page.getByText("3 new places")).toBeVisible();
