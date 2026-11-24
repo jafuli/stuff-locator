@@ -117,3 +117,12 @@ anticipated needing a privileged RPC for, just not yet named there.
   (joining an *existing* household) remains a separate future task; the
   rest of the app (`/`, `/browse`, `/items/[id]`, `/activity`) still runs on
   fixtures until later tasks wire it to real household data.
+
+## Amendment, 2026-11-24: one household per user
+
+`create_household` now refuses a caller who already belongs to a household,
+with SQLSTATE `SL004` (ADR 0015), so "multi-household membership is
+intentionally unrestricted" above no longer holds for this function. A
+per-user advisory lock serialises two concurrent calls, and the bootstrap
+service treats `SL004` as "already has one". `redeem_invite` keeps its
+ADR 0008 behaviour.

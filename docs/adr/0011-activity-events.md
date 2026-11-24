@@ -150,3 +150,13 @@ wrong. A move without a `from_text` renders as "to *path*".
 - **A `SECURITY DEFINER` helper that invoker functions call.** Does not work:
   `EXECUTE` is checked against the calling role, so the helper would have to
   be granted to `authenticated`, which is a direct write path again.
+
+## Amendment, 2026-11-24: the newest 500 events per household are kept
+
+"Every move is kept" above now holds only within a household's newest 500
+events (ADR 0015). `record_activity_event`, which every writer already calls,
+deletes anything older in the same transaction, so no writer can skip it;
+the migration pruned existing households once. The feed shows the newest
+100 (`ACTIVITY_FEED_LIMIT`), so nothing a person can see is lost. Without a
+bound the log was the one table that grew forever: about 80% of a maxed-out
+household's estimated size.

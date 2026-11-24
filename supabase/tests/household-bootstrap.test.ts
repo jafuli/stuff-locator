@@ -13,16 +13,17 @@
 //   - a fresh authenticated user with no household ends up with exactly
 //     one after ensureHousehold runs
 //   - running ensureHousehold again for that same now-has-a-household user
-//     does not create a second one (create_household itself is NOT
-//     idempotent — this membership check is the only thing preventing a
-//     duplicate on a repeat call, see the RPC's own migration)
+//     does not create a second one
+//   - two concurrent runs for a brand-new user still end in exactly one
+//     household: create_household refuses the slower one (SL004, ADR 0015)
+//     and ensureHousehold reports it as "already had one"
 //   - an unauthenticated (anon-key, no session) call is rejected and
 //     creates nothing
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { ensureHousehold } from "@/server/services/household";
+import { deriveHouseholdName, ensureHousehold } from "@/server/services/household";
 
 // Duplicated from create-household-rpc.test.ts / rls-household-isolation.test.ts
 // rather than extracted — see those files' own comments on why, with only
@@ -131,9 +132,40 @@ describe("ensureHousehold", () => {
     // part) is unique per run — confirming no row with that name exists
     // proves the RPC never ran, not just that ensureHousehold reported
     // failure.
-    const derivedName = anonEmail.split("@")[0];
+    const derivedName = deriveHouseholdName(anonEmail);
     const { data: rows, error } = await serviceClient.from("households").select("id").eq("name", derivedName);
     expect(error).toBeNull();
     expect(rows).toHaveLength(0);
+  });
+
+  test("two concurrent runs for a brand-new user end in exactly one household", async () => {
+    const raceEmail = `household-bootstrap-race-${randomUUID()}@example.com`;
+    const { data: raceUser, error: raceUserError } = await serviceClient.auth.admin.createUser({
+      email: raceEmail,
+      password,
+      email_confirm: true,
+    });
+    if (raceUserError) {
+      throw new Error(`failed to create race test user: ${raceUserError.message}`);
+    }
+    const raceClient = await signInAs(raceEmail, password);
+
+    try {
+      const results = await Promise.all([
+        ensureHousehold(raceClient, raceUser.user.id, raceEmail),
+        ensureHousehold(raceClient, raceUser.user.id, raceEmail),
+      ]);
+      expect(results.every((result) => result.ok)).toBe(true);
+
+      const { data: memberships, error } = await serviceClient
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", raceUser.user.id);
+      expect(error).toBeNull();
+      expect(memberships).toHaveLength(1);
+      createdHouseholdIds.push(...(memberships ?? []).map((row) => row.household_id));
+    } finally {
+      await serviceClient.auth.admin.deleteUser(raceUser.user.id);
+    }
   });
 });

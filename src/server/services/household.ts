@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { clampToLength, LIMIT_ERROR_CODES, TEXT_LIMITS } from "@/lib/limits";
 
 // Used when a user's email has no usable local-part to derive a name from
 // (shouldn't happen in practice — Supabase Auth requires an email — but
@@ -12,9 +13,13 @@ export const DEFAULT_HOUSEHOLD_NAME = "Our household";
  * user's email local-part (the bit before "@"), e.g. "jane@example.com" ->
  * "jane". Falls back to DEFAULT_HOUSEHOLD_NAME if the local-part is empty
  * or whitespace-only once trimmed.
+ *
+ * Clamped to the household-name limit (ADR 0015): an email's local part may
+ * be 64 characters, and an unclamped one would fail households' length CHECK
+ * and with it the whole bootstrap.
  */
 export function deriveHouseholdName(email: string | null | undefined): string {
-  const localPart = email?.split("@")[0]?.trim() ?? "";
+  const localPart = clampToLength(email?.split("@")[0]?.trim() ?? "", TEXT_LIMITS.householdName);
   return localPart.length > 0 ? localPart : DEFAULT_HOUSEHOLD_NAME;
 }
 
@@ -25,10 +30,10 @@ export type EnsureHouseholdResult =
  * Makes sure `userId` belongs to at least one household, creating one via
  * the create_household RPC if they don't already.
  *
- * create_household is intentionally NOT idempotent (see its migration) —
- * calling it twice as the same user creates two independent households.
- * The membership read below is the only thing preventing that on a repeat
- * call, so this function's whole job is "read, then conditionally write."
+ * create_household refuses a caller who already belongs to a household
+ * (SL004, ADR 0015), but the membership read below still comes first so the
+ * common repeat call costs one read and no failed write — this function's
+ * job is "read, then conditionally write."
  * That's why it lives here rather than as a bare read in the route
  * handler: src/server/services/README.md scopes this layer to
  * "orchestration for anything that isn't a plain read," and a read used
@@ -39,12 +44,12 @@ export type EnsureHouseholdResult =
  * a hand-built fake `{ from, rpc }` client, or from an integration test
  * with a real signed-in/anon client — no module mocking needed either way.
  *
- * Known accepted limitation: the read and the write are two separate
- * PostgREST requests (each its own transaction), not one atomic operation.
- * Two concurrent calls for the same brand-new user (e.g. two tabs
- * finishing sign-in near-simultaneously) can each observe zero households
- * and each create one, producing two. No schema/RPC change is in scope
- * here to close that gap — see the PR description.
+ * The read and the write are two separate PostgREST requests, so two
+ * concurrent calls for the same brand-new user (e.g. two tabs finishing
+ * sign-in near-simultaneously) can both observe zero households. Since
+ * ADR 0015, create_household itself refuses a caller who already belongs
+ * to a household (SL004, serialised per user), so the slower call loses
+ * that race and is reported here as "already had one", not as an error.
  */
 export async function ensureHousehold(
   supabase: SupabaseClient<Database>,
@@ -67,6 +72,9 @@ export async function ensureHousehold(
   const { error: createError } = await supabase.rpc("create_household", {
     p_name: deriveHouseholdName(email),
   });
+  if (createError?.code === LIMIT_ERROR_CODES.alreadyInHousehold) {
+    return { ok: true, created: false };
+  }
   if (createError) {
     return { ok: false, error: createError.message };
   }

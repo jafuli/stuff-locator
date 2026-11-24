@@ -16,6 +16,13 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { clampToLength, TEXT_LIMITS } from "@/lib/limits";
+
+// The seeded display name is the email's local part, clamped to the
+// display-name limit (ADR 0015) — these test emails are longer than that.
+function seededName(email: string): string {
+  return clampToLength(email.split("@")[0] ?? "", TEXT_LIMITS.displayName);
+}
 import type { Database } from "@/lib/database.types";
 
 function requireEnv(name: string): string {
@@ -90,7 +97,7 @@ test("signing up seeds a profile whose display name is the email local-part", as
   expect(error).toBeNull();
   // The trigger fires on the auth.users insert — no application code ran
   // here at all, only admin.createUser.
-  expect(data?.display_name).toBe(email.split("@")[0]);
+  expect(data?.display_name).toBe(seededName(email));
 });
 
 test("a household member can read their partner's display name", async () => {
@@ -106,7 +113,7 @@ test("a household member can read their partner's display name", async () => {
     .maybeSingle();
 
   expect(error).toBeNull();
-  expect(data?.display_name).toBe(partner.email.split("@")[0]);
+  expect(data?.display_name).toBe(seededName(partner.email));
 });
 
 test("a stranger's display name is invisible, even knowing their exact user id", async () => {
@@ -137,7 +144,7 @@ test("a user can always read their own profile", async () => {
   const { data, error } = await myClient.from("profiles").select("display_name").eq("user_id", me.userId).maybeSingle();
 
   expect(error).toBeNull();
-  expect(data?.display_name).toBe(me.email.split("@")[0]);
+  expect(data?.display_name).toBe(seededName(me.email));
 });
 
 test("a user can rename themselves but not their partner", async () => {
@@ -159,7 +166,7 @@ test("a user can rename themselves but not their partner", async () => {
     .select("display_name")
     .eq("user_id", partner.userId)
     .maybeSingle();
-  expect(partnerRow?.display_name).toBe(partner.email.split("@")[0]);
+  expect(partnerRow?.display_name).toBe(seededName(partner.email));
 
   const { data: myRow } = await serviceClient
     .from("profiles")

@@ -285,6 +285,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_place_capacity: {
+        Args: { p_household_id: string; p_new_places: number }
+        Returns: undefined
+      }
+      assert_place_depth: { Args: { p_depth: number }; Returns: undefined }
       create_household: {
         Args: { p_name: string }
         Returns: {
@@ -360,7 +365,12 @@ export type Database = {
         Args: { target_household_id: string }
         Returns: boolean
       }
+      location_depth: { Args: { p_location_id: string }; Returns: number }
       location_path_text: { Args: { p_location_id: string }; Returns: string }
+      location_subtree_height: {
+        Args: { p_location_id: string }
+        Returns: number
+      }
       location_subtree_items: {
         Args: { p_location_id: string }
         Returns: {
@@ -381,6 +391,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      lock_household: { Args: { p_household_id: string }; Returns: undefined }
       move_container: {
         Args: { p_location_id: string; p_new_parent_id?: string }
         Returns: {

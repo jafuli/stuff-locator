@@ -96,3 +96,14 @@ button. Empty places are allowed and stay until someone deletes them.
 - **Auto-deleting empty places.** Surprising: a place made on purpose
   disappears when its last item is moved, and the person who made it never
   asked.
+
+## Amendment, 2026-11-24: depth is capped at 8
+
+"Arbitrary depth" above is now "up to 8 places per path" (ADR 0015). A path
+of 8 is far deeper than any real home needs (`Garage › Closet › Toolbox ›
+Red box` is 4), and without a cap the stored path strings in
+`activity_events`, and the recursive reads, had no upper bound. The cap is
+enforced wherever depth can grow: `ensure_location_path` (Stash, item edit,
+move with a new path), `create_location` ("+ Add a place here") and
+`move_container`, which refuses a move that would push any place inside the
+moved one past 8. Capture still never *requires* more than one level.
