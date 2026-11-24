@@ -6,6 +6,7 @@ import {
   ITEM_LIMIT_MESSAGE,
   PLACE_LIMIT_ADD_NOTE,
   PLACE_LIMIT_PICKER_NOTE,
+  PLACE_NAME_SEPARATOR_MESSAGE,
   TOO_LONG_MESSAGE,
   friendlyRpcError,
 } from "@/lib/limit-errors";
@@ -70,5 +71,18 @@ describe("friendlyRpcError", () => {
       "stash_item: location not found",
     );
     expect(friendlyRpcError({ message: "network down" }, "stash")).toBe("network down");
+  });
+});
+
+describe("the path-separator CHECK", () => {
+  test("23514 from locations_name_no_path_separator gets its own copy, not the length message", () => {
+    const separator = error(
+      "23514",
+      'new row for relation "locations" violates check constraint "locations_name_no_path_separator"',
+    );
+    expect(friendlyRpcError(separator, "addPlace", "A › B")).toBe(PLACE_NAME_SEPARATOR_MESSAGE);
+    expect(friendlyRpcError(error("23514", 'violates check constraint "locations_name_length"'), "addPlace")).toBe(
+      TOO_LONG_MESSAGE,
+    );
   });
 });

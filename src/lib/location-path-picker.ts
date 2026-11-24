@@ -3,6 +3,7 @@
 // `stash_item` / `update_item`. No React, no I/O — the component is a thin
 // shell around these so the tricky rules are unit-testable.
 import type { Location } from "@/lib/fixtures/types";
+import { PATH_SEPARATOR } from "@/lib/limit-errors";
 import { DEPTH_LIMIT, PLACE_LIMIT } from "@/lib/limits";
 
 /**
@@ -219,7 +220,10 @@ export function buildRows({
           .sort(byPath);
 
   const hasExactSibling = inside.some((row) => row.isExactSibling);
-  const wouldCreate = !pickOnly && normalizedQuery !== "" && !hasExactSibling;
+  // Typing "›" means typing a path ("Garage › Box"), which "Matches
+  // anywhere" already finds by full path; it is never a new place's name.
+  const wouldCreate =
+    !pickOnly && normalizedQuery !== "" && !hasExactSibling && !normalizedQuery.includes(PATH_SEPARATOR);
   const createBlocked = wouldCreate ? createLimit(locations.length, chips) : null;
 
   return {

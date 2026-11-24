@@ -27,6 +27,16 @@ export const MOVE_DESTINATION_LIMIT = "Limit reached";
 /** A text field's maxLength was bypassed (only a client that skipped the form can get here). */
 export const TOO_LONG_MESSAGE = "That's longer than this field allows. Shorten it and try again.";
 
+/**
+ * The path separator. Paths are stored and shown as names joined with
+ * " › ", and Activity splits them back on it, so a place name can't contain
+ * it (CHECK locations_name_no_path_separator).
+ */
+export const PATH_SEPARATOR = "›";
+
+/** A place name with "›" in it (validated in the forms; the database refuses it too). */
+export const PLACE_NAME_SEPARATOR_MESSAGE = "Place names can't contain “›”: it separates the places in a path.";
+
 /** Joining a household that already has its two people. */
 export const HOUSEHOLD_FULL_MESSAGE =
   "This household already has two people in it, so this invite can't add anyone else.";
@@ -75,7 +85,10 @@ export function friendlyRpcError(error: RpcErrorLike, context: RpcErrorContext, 
       }
       return error.message;
     case CHECK_VIOLATION:
-      return TOO_LONG_MESSAGE;
+      // The same SQLSTATE covers every CHECK; the constraint name says which.
+      return error.message.includes("locations_name_no_path_separator")
+        ? PLACE_NAME_SEPARATOR_MESSAGE
+        : TOO_LONG_MESSAGE;
     default:
       if (context === "movePlace" && /own descendant|under itself/i.test(error.message)) {
         return `“${name}” can't go inside itself or a place within it.`;

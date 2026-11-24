@@ -171,3 +171,12 @@ describe("LocationPathPicker at a limit", () => {
     expect(field.value).toHaveLength(60);
   });
 });
+describe("the path separator", () => {
+  test("typing '›' never offers '+ New': it is a path, found under 'Matches anywhere'", () => {
+    const locations = chain(2);
+    const rows = buildRows({ locations, chips: [], query: "Level 1 › Level 2" });
+    expect(rows.createName).toBeNull();
+    expect(rows.createBlocked).toBeNull();
+    expect(rows.anywhere.map((row) => row.place.id)).toContain("level-2");
+  });
+});

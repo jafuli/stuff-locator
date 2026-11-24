@@ -74,7 +74,8 @@ export function toActivityEntry(row: EventRow, actor: string): ActivityEntry | n
 
 /**
  * Splits one of an event's path snapshots ("Garage › Closet › Toolbox") into
- * PathTrail segments. The snapshot is only text — the places may have been
+ * PathTrail segments. Splitting on "›" is safe because a place name can't
+ * contain it (CHECK locations_name_no_path_separator). The snapshot is only text — the places may have been
  * renamed, moved or deleted since — so the segments carry synthetic ids and
  * the trail is never linked.
  */
