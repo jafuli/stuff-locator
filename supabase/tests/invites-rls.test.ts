@@ -12,11 +12,10 @@
 // rls-household-isolation.test.ts for the same shortcut) if you've written
 // one; otherwise export them yourself before running this.
 //
-// This is a schema-only task — there is no redeem_invite RPC yet, so every
-// call here goes straight through PostgREST against the `invites` table,
-// not `.rpc()`. Covers:
-//   - a member of household A can INSERT and SELECT an invite row scoped
-//     to household A
+// Invites are created only through create_invite (ADR 0015); authenticated
+// keeps SELECT and has no INSERT. Covers:
+//   - a member of household A can SELECT the invite create_invite made for
+//     household A
 //   - a member of household A is DENIED — with real evidence of denial,
 //     not just an empty/error result that could also mean something else —
 //     both inserting and selecting an invite row scoped to household B
@@ -127,14 +126,10 @@ describe("invites RLS", () => {
     await serviceClient.auth.admin.deleteUser(householdB.userId);
   });
 
-  test("a member can insert and select an invite scoped to their own household", async () => {
-    const { data, error } = await clientA
-      .from("invites")
-      .insert({ household_id: householdA.householdId, created_by: householdA.userId })
-      .select()
-      .single();
+  test("a member can select the invite create_invite made for their own household", async () => {
+    const { data, error } = await clientA.rpc("create_invite");
     expect(error).toBeNull();
-    const invite = assertNotNull(data, "invites insert returned no data");
+    const invite = assertNotNull(data, "create_invite returned no data");
     expect(invite.household_id).toBe(householdA.householdId);
     expect(invite.created_by).toBe(householdA.userId);
     expect(invite.code).toBeTruthy(); // the gen_random_bytes() default fired
@@ -158,7 +153,7 @@ describe("invites RLS", () => {
       .single();
     expect(data).toBeNull();
     expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501"); // insufficient_privilege — RLS WITH CHECK violation
+    expect(error?.code).toBe("42501"); // insufficient_privilege — no INSERT grant at all since create_invite
 
     const { data: rows, error: checkError } = await serviceClient
       .from("invites")
@@ -199,7 +194,7 @@ describe("invites RLS", () => {
     // on their own household's own row.
     //
     // What makes that true is 20260927140000_revoke_implicit_data_api_grants
-    // .sql, not this table's own `grant select, insert` line: a GRANT only
+    // .sql, not this table's own grant line: a GRANT only
     // adds, and Supabase's default privileges had already handed
     // authenticated full DML on every table in `public`. Until that revoke
     // landed, this update reached RLS, matched no UPDATE policy, was filtered

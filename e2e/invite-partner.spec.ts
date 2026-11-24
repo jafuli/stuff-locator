@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { addSeededPartnerFor } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -17,13 +18,14 @@ test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 const TEST_PASSWORD = "correct-horse-battery-1";
 
-async function signUpFreshAccount(page: Page): Promise<void> {
+async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-invite-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(STUFF_PATH);
+  return email;
 }
 
 test("the household button is a keyboard-reachable entry point into the invite flow", async ({ page }) => {
@@ -110,4 +112,15 @@ test("the invite panel, including the copy button, is operable keyboard-only", a
   expect(await tabUntilFocused(page, "Copy link", 10)).toBe(true);
   await page.keyboard.press("Enter");
   await expect(page.getByText("Copied!")).toBeVisible();
+});
+
+test("a household that already has two people shows a notice instead of a code", async ({ page }) => {
+  const email = await signUpFreshAccount(page);
+  await addSeededPartnerFor(email, TEST_PASSWORD);
+
+  await page.goto("/settings/invite");
+
+  await expect(page.getByRole("heading", { level: 1, name: "Invite your partner" })).toBeVisible();
+  await expect(page.getByText("Your household is complete")).toBeVisible();
+  await expect(page.getByRole("button", { name: /copy/i })).toHaveCount(0);
 });

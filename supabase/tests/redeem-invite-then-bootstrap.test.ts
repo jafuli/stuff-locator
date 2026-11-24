@@ -24,7 +24,7 @@
 // skips creating a second household — not a re-implementation of that
 // logic, the real function.
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { ensureHousehold } from "@/server/services/household";
@@ -79,7 +79,11 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
   beforeAll(async () => {
     inviter = await createTestUser("inviter");
     createdUserIds.push(inviter.userId);
+  }, 30_000);
 
+  beforeEach(async () => {
+    // A fresh inviter household per test: households hold at most two
+    // members (ADR 0015), so joiners from different tests can't share one.
     const { data: household, error: householdError } = await serviceClient
       .from("households")
       .insert({ name: "The inviter's real home" })
@@ -97,7 +101,7 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
     if (memberError) {
       throw new Error(`failed to seed owner membership: ${memberError.message}`);
     }
-  }, 30_000);
+  });
 
   afterAll(async () => {
     await serviceClient.from("households").delete().in("id", createdHouseholdIds);

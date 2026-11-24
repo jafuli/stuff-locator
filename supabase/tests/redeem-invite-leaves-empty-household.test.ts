@@ -6,7 +6,7 @@
 // partner who already had an account lands in the shared household and Home
 // shows it. Households with any data in them are never touched.
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -104,8 +104,13 @@ describe("redeem_invite leaves the caller's empty household", () => {
   beforeAll(async () => {
     inviter = await createTestUser("inviter");
     userIds.push(inviter.id);
-    sharedHouseholdId = await seedHousehold("cleanup shared", [inviter]);
   }, 30_000);
+
+  beforeEach(async () => {
+    // A fresh inviter household per test: households hold at most two
+    // members (ADR 0015), so joiners from different tests can't share one.
+    sharedHouseholdId = await seedHousehold("cleanup shared", [inviter]);
+  });
 
   afterAll(async () => {
     await serviceClient.from("households").delete().in("id", householdIds);
