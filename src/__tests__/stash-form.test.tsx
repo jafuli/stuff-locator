@@ -408,3 +408,22 @@ describe("errors clear as you fix them, and focus goes to the first problem", ()
     expect(screen.getByLabelText("Name").getAttribute("autocomplete")).toBe("off");
   });
 });
+
+test("if the item cap is hit while the form is open, saving explains it inline and keeps what was typed", async () => {
+  const user = userEvent.setup();
+  rpc.mockResolvedValue({ data: null, error: { code: "SL001", message: "stash_item: item limit reached" } });
+  renderForm();
+
+  await user.type(screen.getByLabelText("Name"), "Bike pump");
+  await pickCloset(user);
+  await user.click(screen.getByRole("button", { name: "Add item" }));
+
+  expect(screen.getByRole("alert").textContent).toMatch(/^Limit reached: your household holds 100 things\./);
+  expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Bike pump");
+});
+
+test("the name stops at 80 characters and the detail at 500", () => {
+  renderForm();
+  expect(screen.getByLabelText<HTMLInputElement>("Name").maxLength).toBe(80);
+  expect(screen.getByLabelText<HTMLInputElement>("Detail (optional)").maxLength).toBe(500);
+});

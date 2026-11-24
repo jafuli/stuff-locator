@@ -38,3 +38,38 @@ export function clampToLength(text: string, max: number): string {
   const codePoints = Array.from(text);
   return codePoints.length <= max ? text : codePoints.slice(0, max).join("").trimEnd();
 }
+
+/**
+ * Where a count stands against its limit. The one rule for every counter
+ * and count line in the app, so the threshold can never differ between
+ * screens: "near" from 90% of the limit, "reached" at the limit.
+ */
+export type LimitStatus = "normal" | "near" | "reached";
+
+export function limitStatus(count: number, max: number): LimitStatus {
+  if (count >= max) {
+    return "reached";
+  }
+  return count >= Math.ceil(max * 0.9) ? "near" : "normal";
+}
+
+export interface Noun {
+  one: string;
+  other: string;
+}
+
+export const THINGS: Noun = { one: "thing", other: "things" };
+export const PLACES: Noun = { one: "place", other: "places" };
+
+/**
+ * The quiet line above a list: "37 things", then "92 of 100 things" from
+ * 90%, then "Limit reached: 100 of 100 things".
+ */
+export function countLine(count: number, max: number, noun: Noun): string {
+  const status = limitStatus(count, max);
+  if (status === "normal") {
+    return `${String(count)} ${count === 1 ? noun.one : noun.other}`;
+  }
+  const ofMax = `${String(count)} of ${String(max)} ${noun.other}`;
+  return status === "reached" ? `Limit reached: ${ofMax}` : ofMax;
+}

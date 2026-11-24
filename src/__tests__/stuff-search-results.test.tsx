@@ -119,17 +119,11 @@ test("forwards emptyStateAction to StuffList's zero-entries empty state, not the
   expect(screen.queryByRole("link", { name: "Stash your first item" })).toBeNull();
 });
 
-test("shows All (n) with the household total, and the count does not follow the search", async () => {
-  const user = userEvent.setup();
-  renderUnderStuffHeader(<StuffSearchResults entries={entries} />, entries.length);
+test("the All chip is current on the Stuff screen and the count is not in it any more", () => {
+  renderUnderStuffHeader(<StuffSearchResults entries={entries} />);
 
-  expect(screen.getByRole("link", { name: "All (2)" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "All" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("href")).toBe("/browse");
-
-  await user.type(screen.getByRole("searchbox", { name: "Search your stuff" }), "tent");
-
-  // One result, but still the whole household's count.
-  expect(screen.getByRole("link", { name: "All (2)" })).toBeDefined();
 });
 
 test("the field is not focused on load (no stolen focus)", () => {

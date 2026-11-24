@@ -35,6 +35,19 @@ export function FormFieldDemo() {
   );
 }
 
+/** Text fields near and at their limits: the counter from 90%, typing stopped at the limit. */
+export function CharacterCounterDemo() {
+  const id = useId();
+  const [near, setNear] = useState("A spare key for the shed, the bike lock and the old garage padlock");
+  const [full, setFull] = useState("x".repeat(60));
+  return (
+    <div className="flex flex-col gap-4">
+      <FormField id={`${id}-near`} label="Name (80)" type="text" value={near} onChange={setNear} maxLength={80} />
+      <FormField id={`${id}-full`} label="Place name (60)" type="text" value={full} onChange={setFull} maxLength={60} />
+    </div>
+  );
+}
+
 export function DialogDemo({ label }: { label: string }) {
   const [open, setOpen] = useState(false);
   return (

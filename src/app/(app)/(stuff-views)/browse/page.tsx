@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { AddPlaceHere } from "@/components/add-place-here";
 import { BrowseContent } from "@/components/browse-content";
 import { LocationList } from "@/components/location-list";
+import { CountLine } from "@/components/count-line";
 import { RegisterStuffView } from "@/components/stuff-views-shell";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PLACE_LIMIT, PLACES } from "@/lib/limits";
+import { addPlaceLimit } from "@/lib/location-path-picker";
 import { createClient } from "@/server/db/server";
 import { loadStuffEntries } from "@/server/services/stuff-entries";
 
@@ -47,7 +50,8 @@ export default async function Page() {
 
   return (
     <>
-      <RegisterStuffView total={entries.length} mode="list" />
+      <RegisterStuffView mode="list" />
+      <CountLine count={locations.length} max={PLACE_LIMIT} noun={PLACES} />
       <BrowseContent
         entries={entries}
         places={
@@ -57,7 +61,7 @@ export default async function Page() {
             ) : (
               <LocationList locations={roots} />
             )}
-            <AddPlaceHere parentId={null} />
+            <AddPlaceHere parentId={null} blocked={addPlaceLimit(locations.length, 0)} />
           </>
         }
       />

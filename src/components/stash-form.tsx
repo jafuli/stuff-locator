@@ -14,6 +14,8 @@ import { createClient } from "@/server/db/client";
 import { useItemFieldErrors } from "@/components/use-item-field-errors";
 import { textLinkClassName } from "@/components/ui/text-link";
 import { STUFF_PATH } from "@/lib/routes";
+import { friendlyRpcError } from "@/lib/limit-errors";
+import { TEXT_LIMITS } from "@/lib/limits";
 
 export interface StashFormProps {
   /** Every place in the household — the picker searches and descends through these. */
@@ -128,10 +130,11 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
     setIsSubmitting(false);
 
     if (error) {
-      // Surfaced verbatim (matches sign-in-form.tsx's precedent for
-      // Supabase-originated messages) — field values are left exactly as
-      // typed so the user can just hit submit again, not re-enter anything.
-      setSubmitError(error.message);
+      // Limit codes get their own copy (a partner may have taken the last
+      // slot while this form was open); anything else is surfaced verbatim.
+      // Field values are left exactly as typed so the user can just hit
+      // submit again, not re-enter anything.
+      setSubmitError(friendlyRpcError(error, "stash"));
       return;
     }
 
@@ -247,6 +250,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
           error={fieldErrors.name}
           // An item's name, not the person's: no browser autofill.
           autoComplete="off"
+          maxLength={TEXT_LIMITS.itemName}
           disabled={isSubmitting}
         />
 
@@ -275,6 +279,7 @@ export function StashForm({ locations, onStashed, embedded = false, locationPlac
           type="text"
           value={detail}
           onChange={setDetail}
+          maxLength={TEXT_LIMITS.detail}
           disabled={isSubmitting}
         />
 

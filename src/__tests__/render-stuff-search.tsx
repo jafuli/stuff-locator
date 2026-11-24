@@ -8,10 +8,10 @@ import { RegisterStuffView, StuffViewsShell } from "@/components/stuff-views-she
  * registered, so the search field is enabled and typing in it drives the
  * list, as on /stuff and /browse.
  */
-export function renderUnderStuffHeader(ui: ReactElement, total = 0): RenderResult {
+export function renderUnderStuffHeader(ui: ReactElement): RenderResult {
   return render(
     <StuffViewsShell>
-      <RegisterStuffView total={total} mode="list" />
+      <RegisterStuffView mode="list" />
       {ui}
     </StuffViewsShell>,
   );

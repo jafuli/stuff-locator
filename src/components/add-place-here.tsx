@@ -4,15 +4,21 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { DEPTH_LIMIT_ADD_NOTE, PLACE_LIMIT_ADD_NOTE, friendlyRpcError } from "@/lib/limit-errors";
+import { TEXT_LIMITS } from "@/lib/limits";
+import type { CreateBlocked } from "@/lib/location-path-picker";
 import { validatePlaceName } from "@/lib/location-validation";
 import { createClient } from "@/server/db/client";
 
 export interface AddPlaceHereProps {
   /** The place the new one goes inside; null adds a top-level place. */
   parentId: string | null;
+  /**
+   * Set when a limit means no place can be added here (addPlaceLimit): the
+   * button is replaced by a note saying so. The database refuses anyway.
+   */
+  blocked?: CreateBlocked | null;
 }
-
-const UNIQUE_VIOLATION = "23505";
 
 /**
  * "+ Add a place here": a name-only shortcut for making a place where you
@@ -23,7 +29,7 @@ const UNIQUE_VIOLATION = "23505";
  * duplicate raises 23505 so the person is told, rather than being silently
  * pointed at the existing one.
  */
-export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
+export function AddPlaceHere({ parentId, blocked = null }: AddPlaceHereProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
@@ -89,12 +95,20 @@ export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
     setIsSaving(false);
 
     if (rpcError) {
-      setError(rpcError.code === UNIQUE_VIOLATION ? `You already have “${trimmed}” here.` : rpcError.message);
+      setError(friendlyRpcError(rpcError, "addPlace", trimmed));
       return;
     }
 
     close();
     router.refresh();
+  }
+
+  if (blocked !== null) {
+    return (
+      <p className="rounded-panel border border-dashed border-hairline px-4 py-3 text-meta text-muted">
+        {blocked === "depthLimit" ? DEPTH_LIMIT_ADD_NOTE : PLACE_LIMIT_ADD_NOTE}
+      </p>
+    );
   }
 
   if (!isOpen) {
@@ -124,6 +138,7 @@ export function AddPlaceHere({ parentId }: AddPlaceHereProps) {
         type="text"
         value={name}
         onChange={setName}
+        maxLength={TEXT_LIMITS.placeName}
         error={error}
         disabled={isSaving}
       />

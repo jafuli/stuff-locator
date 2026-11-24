@@ -117,3 +117,19 @@ test("a collapsed linked path keeps its first and last segments as links", () =>
   const links = screen.getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(["Garage", "Red box"]);
 });
+
+test("collapseFrom collapses a long path at any width, and '…' expands it in place", async () => {
+  stubViewport(false);
+  const user = userEvent.setup();
+  const { container } = render(<PathTrail segments={segments} collapseFrom={4} />);
+
+  expect(container.textContent).toBe("Garage › … › Red box");
+  await user.click(screen.getByRole("button", { name: /Show the full path/ }));
+  expect(container.textContent).toBe("Garage › Closet › Toolbox › Red box");
+});
+
+test("collapseFrom leaves a shorter path whole, even on a narrow screen", () => {
+  stubViewport(true);
+  const { container } = render(<PathTrail segments={segments.slice(0, 3)} collapseFrom={4} />);
+  expect(container.textContent).toBe("Garage › Closet › Toolbox");
+});

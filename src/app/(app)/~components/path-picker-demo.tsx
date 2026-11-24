@@ -10,11 +10,19 @@ export interface PathPickerDemoProps {
   locations: readonly Location[];
   pickOnly?: boolean;
   excludeIds?: readonly string[];
+  disabledIds?: readonly string[];
   placeholder?: string;
 }
 
 /** The one interactive leaf on the demo route — everything else on the page is a Server Component. */
-export function PathPickerDemo({ label, locations, pickOnly, excludeIds, placeholder }: PathPickerDemoProps) {
+export function PathPickerDemo({
+  label,
+  locations,
+  pickOnly,
+  excludeIds,
+  disabledIds,
+  placeholder,
+}: PathPickerDemoProps) {
   const [chips, setChips] = useState<PathChip[]>([]);
 
   const newCount = newChipCount(chips);
@@ -27,6 +35,7 @@ export function PathPickerDemo({ label, locations, pickOnly, excludeIds, placeho
         onChange={setChips}
         pickOnly={pickOnly}
         excludeIds={excludeIds}
+        disabledIds={disabledIds}
         placeholder={placeholder}
       />
       <p className="mt-2 text-meta text-muted">

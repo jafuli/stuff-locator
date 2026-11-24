@@ -19,8 +19,6 @@ import { ONBOARDING_HEADING, STUFF_HEADING } from "@/lib/stuff-heading";
 export type StuffViewMode = "list" | "onboarding" | "setup";
 
 export interface RegisteredStuffView {
-  /** The household's item count, for "All (n)". */
-  total: number;
   mode: StuffViewMode;
 }
 
@@ -74,7 +72,7 @@ export function StuffViewsShell({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const [view, setViewState] = useState<RegisteredStuffView | null>(null);
   // The last view any page registered. Kept while the next one loads, so the
-  // heading and the "All (n)" count don't blink between two views.
+  // heading doesn't blink between two views.
   const [lastView, setLastView] = useState<RegisteredStuffView | null>(null);
   const [pendingView, setPendingView] = useState<StuffView | null>(null);
   const intentRef = useRef<(() => void) | null>(null);
@@ -121,11 +119,7 @@ export function StuffViewsShell({ children }: { children: ReactNode }) {
               </div>
               <StashLink />
             </div>
-            <StuffViewChips
-              total={lastView?.total ?? null}
-              active={isSwitching ? pendingView : currentView}
-              onPendingChange={onPendingChange}
-            />
+            <StuffViewChips active={isSwitching ? pendingView : currentView} onPendingChange={onPendingChange} />
           </>
         ) : null}
         {isSwitching ? <StuffListSkeleton /> : children}
@@ -136,17 +130,16 @@ export function StuffViewsShell({ children }: { children: ReactNode }) {
 
 /**
  * Rendered by a page under the shell once its data is loaded: tells the
- * header the count, which header to show, and that the search field can be
- * used. Unmounting (the page being replaced) puts the header back into its
+ * header which header to show, and that the search field can be used. Unmounting (the page being replaced) puts the header back into its
  * loading state.
  */
-export function RegisterStuffView({ total, mode }: RegisteredStuffView) {
+export function RegisterStuffView({ mode }: RegisteredStuffView) {
   const { setView } = useStuffViews();
   useEffect(() => {
-    setView({ total, mode });
+    setView({ mode });
     return () => {
       setView(null);
     };
-  }, [setView, total, mode]);
+  }, [setView, mode]);
   return null;
 }

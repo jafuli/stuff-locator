@@ -8,11 +8,6 @@ import { STUFF_PATH } from "@/lib/routes";
 export type StuffView = "all" | "place";
 
 export interface StuffViewChipsProps {
-  /**
-   * The household's total item count — not the number of search results.
-   * `null` until the first page has loaded it: the chip reads "All (…)".
-   */
-  total: number | null;
   /** Which view is selected. */
   active: StuffView | null;
   /**
@@ -43,8 +38,10 @@ function PendingReporter({ view, onChange }: { view: StuffView; onChange?: Stuff
 }
 
 /**
- * The "All (n)" / "By place" toggle under the Stuff search (wireframes 02 and
- * C1). Two real links, not buttons: each is a different route, so they work
+ * The "All" / "By place" toggle under the Stuff search (wireframes 02 and
+ * C1). The item count that used to sit in "All (n)" moved to a quiet line
+ * above the list (CountLine), where it can also say how close the household
+ * is to its limit (ADR 0015). Two real links, not buttons: each is a different route, so they work
  * without scripting and the current one is marked with `aria-current` rather
  * than a state only sighted users can see.
  *
@@ -52,7 +49,7 @@ function PendingReporter({ view, onChange }: { view: StuffView; onChange?: Stuff
  * (StuffViewsShell), so it never unmounts on a switch. "Recent" from the v1
  * wireframes is deliberately not here.
  */
-export function StuffViewChips({ total, active, onPendingChange }: StuffViewChipsProps) {
+export function StuffViewChips({ active, onPendingChange }: StuffViewChipsProps) {
   return (
     <nav aria-label="Stuff view" className="flex flex-wrap gap-2">
       <Link
@@ -60,7 +57,7 @@ export function StuffViewChips({ total, active, onPendingChange }: StuffViewChip
         aria-current={active === "all" ? "page" : undefined}
         className={cn(CHIP_BASE, active === "all" ? CHIP_ACTIVE : CHIP_INACTIVE)}
       >
-        All ({total ?? "…"})
+        All
         <PendingReporter view="all" onChange={onPendingChange} />
       </Link>
       <Link

@@ -1,5 +1,6 @@
 import type { ChangeEvent, Ref } from "react";
 import { cn } from "@/lib/cn";
+import { CharacterCounter, counterDescribedBy } from "@/components/ui/character-counter";
 
 export interface FormFieldProps {
   id: string;
@@ -10,6 +11,11 @@ export interface FormFieldProps {
   error?: string;
   disabled?: boolean;
   autoComplete?: string;
+  /**
+   * Typing stops here, and a counter appears under the field from 90% of it
+   * (CharacterCounter). Matches the column's CHECK constraint (src/lib/limits.ts).
+   */
+  maxLength?: number;
   /** The input element, for a form that moves focus to it (React 19 passes `ref` as a prop). */
   ref?: Ref<HTMLInputElement>;
 }
@@ -36,9 +42,14 @@ export function FormField({
   error,
   disabled = false,
   autoComplete,
+  maxLength,
   ref,
 }: FormFieldProps) {
   const errorId = `${id}-error`;
+  const counterId = `${id}-counter`;
+  const describedBy = [error ? errorId : null, counterDescribedBy(counterId, value, maxLength)]
+    .filter(Boolean)
+    .join(" ");
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onChange(event.target.value);
@@ -57,8 +68,9 @@ export function FormField({
         onChange={handleChange}
         disabled={disabled}
         autoComplete={autoComplete}
+        maxLength={maxLength}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={describedBy === "" ? undefined : describedBy}
         className={cn(
           "min-h-control-height w-full rounded-control border bg-surface px-4 text-body text-ink shadow-control",
           "placeholder:text-muted disabled:opacity-60",
@@ -66,6 +78,7 @@ export function FormField({
           error ? "border-border-strong" : "border-border-control",
         )}
       />
+      {maxLength === undefined ? null : <CharacterCounter id={counterId} value={value} max={maxLength} />}
       {error ? (
         <p id={errorId} role="alert" className="mt-1 text-meta text-signal">
           {error}

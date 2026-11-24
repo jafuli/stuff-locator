@@ -3,6 +3,7 @@
 // `stash_item` / `update_item`. No React, no I/O — the component is a thin
 // shell around these so the tricky rules are unit-testable.
 import type { Location } from "@/lib/fixtures/types";
+import { DEPTH_LIMIT, PLACE_LIMIT } from "@/lib/limits";
 
 /**
  * One level of the path. A solid chip is a place that already exists; a
@@ -109,7 +110,16 @@ export interface PickerRow {
   path: string;
   /** Same name as what was typed, under the same parent: "already here". */
   isExactSibling: boolean;
+  /** Shown, but can't be picked or descended into (a Move destination past the depth limit). */
+  disabled: boolean;
 }
+
+/**
+ * Why "+ New" is replaced by a note: the household is at the place cap, or
+ * the path is already as long as a path can be (ADR 0015). Existing places
+ * stay pickable either way.
+ */
+export type CreateBlocked = "placeLimit" | "depthLimit";
 
 export interface PickerRows {
   /** Children of the last existing chip (or the top level), matching the query. */
@@ -120,6 +130,8 @@ export interface PickerRows {
   createName: string | null;
   /** Where a new level would be created, for the row's label. */
   createInside: string | null;
+  /** Set when "+ New" would be offered but a limit is reached; the row becomes a note. */
+  createBlocked: CreateBlocked | null;
 }
 
 export interface RowsInput {
@@ -130,6 +142,8 @@ export interface RowsInput {
   pickOnly?: boolean;
   /** Places (and everything below them) that can't be chosen. */
   excludeIds?: readonly string[];
+  /** Places listed but not choosable (see PickerRow.disabled). */
+  disabledIds?: readonly string[];
 }
 
 function byPath(a: PickerRow, b: PickerRow): number {
@@ -147,9 +161,17 @@ function byPath(a: PickerRow, b: PickerRow): number {
  *    that sibling is listed (tagged "already here") instead. This is what
  *    makes typing an existing name, in any case, impossible to duplicate.
  */
-export function buildRows({ locations, chips, query, pickOnly = false, excludeIds = [] }: RowsInput): PickerRows {
+export function buildRows({
+  locations,
+  chips,
+  query,
+  pickOnly = false,
+  excludeIds = [],
+  disabledIds = [],
+}: RowsInput): PickerRows {
   const byId = indexLocations(locations);
   const excluded = new Set(excludeIds);
+  const disabled = new Set(disabledIds);
 
   const isExcluded = (id: string): boolean => {
     const seen = new Set<string>();
@@ -175,6 +197,7 @@ export function buildRows({ locations, chips, query, pickOnly = false, excludeId
     place,
     path: pathForPlace(place.id, locations),
     isExactSibling,
+    disabled: disabled.has(place.id),
   });
 
   const inside: PickerRow[] = lastIsNew
@@ -196,14 +219,81 @@ export function buildRows({ locations, chips, query, pickOnly = false, excludeId
           .sort(byPath);
 
   const hasExactSibling = inside.some((row) => row.isExactSibling);
-  const createName = pickOnly || normalizedQuery === "" || hasExactSibling ? null : normalizedQuery;
+  const wouldCreate = !pickOnly && normalizedQuery !== "" && !hasExactSibling;
+  const createBlocked = wouldCreate ? createLimit(locations.length, chips) : null;
 
   return {
     inside,
     anywhere,
-    createName,
+    createName: wouldCreate && createBlocked === null ? normalizedQuery : null,
     createInside: chips.length === 0 ? null : chipsPath(chips),
+    createBlocked,
   };
+}
+
+/**
+ * Whether one more new place could be added at the end of `chips`. The
+ * chips are the whole root→leaf path, so their count is its depth; the
+ * household's places are what exists plus the new chips already queued.
+ * Depth comes first: at both limits, "pick a place higher up" is the
+ * more useful hint.
+ */
+export function createLimit(placeCount: number, chips: readonly PathChip[]): CreateBlocked | null {
+  if (chips.length >= DEPTH_LIMIT) {
+    return "depthLimit";
+  }
+  if (placeCount + newChipCount(chips) >= PLACE_LIMIT) {
+    return "placeLimit";
+  }
+  return null;
+}
+
+/**
+ * Whether "+ Add a place here" can add one more place inside a place
+ * `parentDepth` places in (0 at the top level). Same order as createLimit.
+ */
+export function addPlaceLimit(placeCount: number, parentDepth: number): CreateBlocked | null {
+  if (parentDepth >= DEPTH_LIMIT) {
+    return "depthLimit";
+  }
+  return placeCount >= PLACE_LIMIT ? "placeLimit" : null;
+}
+
+/** How many places a path to `locationId` holds (1 for a top-level place). Cycle-safe. */
+export function placeDepth(locationId: string, locations: readonly Location[]): number {
+  return chipsForPlace(locationId, locations).length;
+}
+
+/** How many levels `locationId` and everything inside it span (1 for a place with nothing inside). */
+export function subtreeHeight(locationId: string, locations: readonly Location[]): number {
+  const children = new Map<string, string[]>();
+  for (const location of locations) {
+    if (location.parentId !== null) {
+      children.set(location.parentId, [...(children.get(location.parentId) ?? []), location.id]);
+    }
+  }
+  let height = 0;
+  let level = [locationId];
+  const seen = new Set<string>();
+  while (level.length > 0) {
+    height += 1;
+    level.forEach((id) => seen.add(id));
+    level = level.flatMap((id) => children.get(id) ?? []).filter((id) => !seen.has(id));
+  }
+  return height;
+}
+
+/**
+ * "Move into…" destinations that would push `placeId` or anything inside it
+ * past the depth limit: the destination's depth plus the moved subtree's
+ * height must stay within DEPTH_LIMIT — the same rule move_container
+ * enforces.
+ */
+export function moveDestinationsPastDepthLimit(placeId: string, locations: readonly Location[]): string[] {
+  const height = subtreeHeight(placeId, locations);
+  return locations
+    .filter((location) => placeDepth(location.id, locations) + height > DEPTH_LIMIT)
+    .map((location) => location.id);
 }
 
 /** Case-insensitive split of `text` around the first occurrence of `query`, for match highlighting. */
