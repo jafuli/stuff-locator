@@ -29,10 +29,13 @@ household (CLAUDE.md), so limits well above real use cost nobody anything.
 | Item name / detail | 80 / 500 characters | CHECK constraints | `23514` |
 | Place name | 60 characters | CHECK constraint | `23514` |
 | Household name / display name | 50 / 50 characters | CHECK constraints | `23514` |
-| Activity events kept per household | newest 500 | `record_activity_event` | — |
+| Activity events kept per household | newest 200 | `record_activity_event` | — |
 
 The place cap was 200 until 2026-11-24. Itamar: a household doesn't need more
-places than things.
+places than things. Retention was 500 until later the same day. It became
+200 when the Activity feed learned to page back through everything kept
+("Show earlier activity", 50 at a time; ADR 0011 amendment), so what is
+kept is what someone can see.
 
 ### How they are enforced
 
@@ -70,7 +73,7 @@ places than things.
 - **Retention prunes inside `record_activity_event`**, the one function every
   writer already calls, in the same transaction. It takes no household lock,
   because that would deadlock against `rename_location`. So two writes
-  committing at the same instant can briefly leave 501 events; the next
+  committing at the same instant can briefly leave 201 events; the next
   write trims them.
 - **One household per user.** `create_household` takes a per-user advisory
   lock and refuses a caller who already belongs to a household.
@@ -79,55 +82,68 @@ places than things.
 
 ### Capacity: estimates and measurements
 
-The estimates come from the schema (2026-11-17, at a 200-place cap). The
-measurements come from `npm run measure:db` (`scripts/measure-db.mts`) on
-local Supabase, 2026-11-24. Two consecutive runs agreed within about 1%.
+The estimates come from the schema (2026-11-17, at a 200-place cap and
+500 events). The measurements come from `npm run measure:db`
+(`scripts/measure-db.mts`) on local Supabase, 2026-11-24, at 100 places and
+200 events. Two consecutive runs agreed within about 1%.
 
-"Live" is the row itself (`pg_column_size`). "On disk" is file growth
-divided by rows, so it includes the dead versions that moves and edits leave
-behind. VACUUM makes that space reusable but doesn't give it back. The
-500 MB limit counts files, so the per-household figures are on disk.
+Three ways of counting a row's bytes:
 
-| Quantity | Estimate | Measured, live | Measured, on disk |
+- **Live** is the row itself (`pg_column_size`).
+- **As written** is file growth after the writes and a plain VACUUM. This is
+  the shape autovacuum leaves a table in: dead versions' space is reused,
+  not returned. Every change is its own transaction, as in the app.
+- **Compacted** is after VACUUM FULL: the data alone.
+
+The 500 MB limit counts files, so the projection uses **as written**.
+
+| Quantity | Estimate | Live | As written |
 |---|---|---:|---:|
-| Item row, typical / maxed | ~280 B / ~800 B | 176 B / 712 B | ~1.1 KB / ~4.2 KB |
-| Place row, typical / maxed | ~250 B / ~350 B | 86 B / 141 B | ~380 B / ~390 B |
-| Event row, typical / maxed | ~270 B / ~1.3 KB | 199 B / 1.2 KB | ~310 B / ~2.0 KB |
+| Item row, typical / maxed | ~280 B / ~800 B | 176 B / 712 B | ~1.1 KB / ~1.0 KB |
+| Place row, typical / maxed | ~250 B / ~350 B | 86 B / 141 B | ~415 B / ~500 B |
+| Event row, typical / maxed | ~270 B / ~1.3 KB | 199 B / 1.2 KB | ~310 B / ~1.7 KB |
 | Auth rows per person (users, identities, sessions, refresh tokens, audit log) | — | | ~7 KB |
-| Typical household (30 items, 15 places, 150 events; 2 people) | ~60 KB | | **~104 KB** |
-| Maxed-out household (100 items, 100 places, depth 8, 500 events) | ~780 KB (200 places) | | **~1.44 MB** |
-| Churn on a maxed household (200 moves, 10 deletes + re-stashes) | — | | +~58 KB |
 
-Where a maxed-out household's space goes: activity events about 69%
-(~990 KB), items about 29% (~416 KB), places about 3%.
+| Per household, 2 people included | Estimate | As written | Compacted |
+|---|---|---:|---:|
+| Typical (30 items, 15 places, 150 events) | ~60 KB | **~101 KB** | ~56 KB |
+| Maxed out (100 items, 100 places, depth 8, 200 events) | ~780 KB (200 places, 500 events) | **~527 KB** | ~396 KB |
+| Churn on a maxed household (200 moves, 10 deletes + re-stashes) | — | +~45–77 KB | |
 
-On disk is well above live for items, because every move and edit writes a
-new row version. `location_id` is indexed, so these aren't HOT updates.
+Where a maxed-out household's space goes, as written: activity events about
+63% (~330 KB), items about 19%, places about 9%. Item rows on disk are well
+above live, because every move and edit writes a new row version
+(`location_id` is indexed, so these aren't HOT updates).
+
+**Correction to the first measurement.** The first version of this section,
+at 500 events, put a maxed-out household at ~1.44 MB. That figure measured
+the script, not the app: it wrote each household's 600 moves in one
+transaction, so nothing pruned could be reclaimed until the end, and the file
+grew to hold all 700 events. The script now writes in batches with a VACUUM
+between them, which is what autovacuum does for a table this small. At 500
+events the corrected method would give roughly ~1.0 MB: 300 more events at
+~1.7 KB each. That's an estimate; the 500 case wasn't re-run.
 
 **500 households:**
 
-| Mix | Database (on disk) |
+| Mix | Database (as written) |
 |---|---:|
-| All typical | ~51 MB |
-| 90% typical, 10% maxed out | ~118 MB |
-| All maxed out | ~705 MB |
+| All typical | ~50 MB |
+| 90% typical, 10% maxed out | ~70 MB |
+| All maxed out | ~256 MB |
 
 The budget is 500 MB minus Supabase's baseline. Locally that baseline was
-~28–31 MB including dev/test leftovers, leaving ~470 MB. At most about
-**330** maxed-out households fit in it.
+~20–36 MB including dev/test leftovers, leaving ~465 MB. About **900**
+maxed-out households fit in it.
 
-**Verdict.** The 500-household target holds for any realistic mix: all
-typical is about a tenth of the budget, and even one household in ten maxed
-out is about a quarter. The theoretical worst case, every household at every
-cap, does not fit (~705 MB). The 300 MB upgrade trigger fires long before
-that in every case, so no limit has to move for the target as stated. If the
-all-maxed worst case must fit too, the number to move is activity
-retention, because events are most of a maxed household. That is Itamar's
-call, not taken here.
+**Verdict.** The 500-household target holds in every case, including the
+theoretical worst one where every household is at every cap (~256 MB, about
+55% of the budget). It also stays under the 300 MB upgrade trigger. No
+limit has to move.
 
 Production's own baseline (`select pg_database_size(current_database())`
 right after the first `supabase db push`) is a manual step. It replaces the
-local ~28 MB above.
+local figure above.
 
 **Upgrade triggers** (2026-11-17): database over 300 MB, or Vercel function
 invocations over 70% of quota. Then move to Supabase Pro + Vercel Pro.

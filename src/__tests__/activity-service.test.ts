@@ -6,7 +6,8 @@ import type { Database } from "@/lib/database.types";
 // takes its client as a parameter, so a stub import is all that's needed.
 vi.mock("server-only", () => ({}));
 
-import { ACTIVITY_FEED_LIMIT, fetchActivityEntries } from "@/server/services/activity";
+import { ACTIVITY_PAGE_SIZE, fetchActivityPage } from "@/lib/activity-page";
+import { fetchActivityEntries } from "@/server/services/activity";
 
 interface Result {
   data: unknown;
@@ -20,7 +21,7 @@ type Builder = Record<string, unknown>;
 // calling maybeSingle) resolves to the table's canned result.
 function query(result: Result): Builder {
   const builder: Builder = {};
-  for (const method of ["select", "eq", "order", "limit", "in"]) {
+  for (const method of ["select", "eq", "order", "limit", "in", "or"]) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.maybeSingle = vi.fn().mockResolvedValue(result);
@@ -87,7 +88,7 @@ describe("fetchActivityEntries", () => {
       ]),
     });
 
-    const entries = await fetchActivityEntries(client, "u-itamar");
+    const { entries } = await fetchActivityEntries(client, "u-itamar");
 
     expect(entries.map((entry) => [entry.id, entry.kind, entry.actor])).toEqual([
       ["e2", "item_moved", "Maayan"],
@@ -102,7 +103,7 @@ describe("fetchActivityEntries", () => {
     expect(entries[0]?.at).toEqual(new Date("2026-10-06T10:00:00Z"));
   });
 
-  test("reads only activity_events, scoped to the caller's household, newest first, capped", async () => {
+  test("reads only activity_events, scoped to the caller's household, newest first, one page", async () => {
     const { client, from, builders } = fakeClient({
       household_members: MEMBERSHIP,
       profiles: PROFILES,
@@ -117,8 +118,10 @@ describe("fetchActivityEntries", () => {
     const events = builders.activity_events;
     expect(events?.eq).toHaveBeenCalledWith("household_id", "h1");
     expect(events?.order).toHaveBeenCalledWith("created_at", { ascending: false });
-    expect(events?.limit).toHaveBeenCalledWith(ACTIVITY_FEED_LIMIT);
-    expect(ACTIVITY_FEED_LIMIT).toBe(100);
+    expect(events?.order).toHaveBeenCalledWith("id", { ascending: false });
+    // One row past the page, to know whether an older page exists.
+    expect(events?.limit).toHaveBeenCalledWith(ACTIVITY_PAGE_SIZE + 1);
+    expect(events?.or).not.toHaveBeenCalled();
   });
 
   test("uses the caller's oldest membership, the same rule as Home", async () => {
@@ -138,7 +141,7 @@ describe("fetchActivityEntries", () => {
       activity_events: ok([eventRow({ id: "e1", actor_id: "u-gone" }), eventRow({ id: "e2", actor_id: null })]),
     });
 
-    const entries = await fetchActivityEntries(client, "u-itamar");
+    const { entries } = await fetchActivityEntries(client, "u-itamar");
 
     expect(entries.map((entry) => entry.actor)).toEqual(["Someone", "Someone"]);
     expect(JSON.stringify(entries)).not.toContain("u-gone");
@@ -151,7 +154,7 @@ describe("fetchActivityEntries", () => {
       activity_events: ok([eventRow({ id: "e1", kind: "item_teleported" }), eventRow({ id: "e2" })]),
     });
 
-    const entries = await fetchActivityEntries(client, "u-itamar");
+    const { entries } = await fetchActivityEntries(client, "u-itamar");
 
     expect(entries.map((entry) => entry.id)).toEqual(["e2"]);
   });
@@ -167,14 +170,14 @@ describe("fetchActivityEntries", () => {
       ]),
     });
 
-    const entries = await fetchActivityEntries(client, "u-itamar");
+    const { entries } = await fetchActivityEntries(client, "u-itamar");
 
     expect(entries.map((entry) => `${entry.fromText ?? ""}→${entry.toText ?? ""}`)).toEqual(["C→D", "B→C", "A→B"]);
   });
 
   test("a household with no events yields an empty feed", async () => {
     const { client } = fakeClient({ household_members: MEMBERSHIP, activity_events: ok([]) });
-    expect(await fetchActivityEntries(client, "u-itamar")).toEqual([]);
+    expect(await fetchActivityEntries(client, "u-itamar")).toEqual({ householdId: "h1", entries: [], next: null });
   });
 
   test("throws when the caller has no household", async () => {
@@ -195,4 +198,39 @@ describe("fetchActivityEntries", () => {
       await expect(fetchActivityEntries(client, "u-itamar")).rejects.toThrow(`${table} failed`);
     },
   );
+});
+
+describe("fetchActivityPage (paging back through what's kept)", () => {
+  const rows = (count: number) =>
+    Array.from({ length: count }, (_, index) =>
+      eventRow({ id: `e${String(index)}`, created_at: `2026-10-05T10:00:00.${String(100000 + index)}+00:00` }),
+    );
+
+  test("a full page plus one row means there's more: the cursor is the last row shown, microseconds and all", async () => {
+    const { client } = fakeClient({ profiles: PROFILES, activity_events: ok(rows(4)) });
+
+    const page = await fetchActivityPage(client, "h1", null, 3);
+
+    expect(page.entries.map((entry) => entry.id)).toEqual(["e0", "e1", "e2"]);
+    expect(page.next).toEqual({ createdAt: "2026-10-05T10:00:00.100002+00:00", id: "e2" });
+  });
+
+  test("a short page is the last one", async () => {
+    const { client } = fakeClient({ profiles: PROFILES, activity_events: ok(rows(2)) });
+
+    const page = await fetchActivityPage(client, "h1", null, 3);
+
+    expect(page.entries).toHaveLength(2);
+    expect(page.next).toBeNull();
+  });
+
+  test("an older page starts strictly after the cursor: earlier time, or the same time and a smaller id", async () => {
+    const { client, builders } = fakeClient({ profiles: PROFILES, activity_events: ok(rows(1)) });
+
+    await fetchActivityPage(client, "h1", { createdAt: "2026-10-05T10:00:00.5+00:00", id: "e9" }, 3);
+
+    expect(builders.activity_events?.or).toHaveBeenCalledWith(
+      'created_at.lt."2026-10-05T10:00:00.5+00:00",and(created_at.eq."2026-10-05T10:00:00.5+00:00",id.lt.e9)',
+    );
+  });
 });

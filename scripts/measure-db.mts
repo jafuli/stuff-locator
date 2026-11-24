@@ -20,7 +20,7 @@
 //      exactly as in the app, and the caps are exercised:
 //        - typical:   30 items, 15 places at depth 1–3, ~150 events
 //        - maxed out: 100 items (80-char names, 500-char details), 100 places
-//                     (60-char names, 12 chains 8 deep), 600+ moves → 500 events
+//                     (60-char names, 12 chains 8 deep), 600+ moves → 200 events
 //                     kept; then the 101st item / place and a 9th level must
 //                     fail with SL001 / SL002 / SL003
 //        - many:      50 typical + 10 maxed-out households, measured together
@@ -376,11 +376,27 @@ end $$;`,
   );
 
   // 600 moves between the deepest places: the longest from → to strings an
-  // event can hold, and far past the 500 that are kept.
-  asUser(partner.userId, movesSql(householdId, 600));
+  // event can hold, and far past the 200 that are kept.
+  moveInBatches(partner.userId, householdId, 600);
 }
 
-function movesSql(householdId: string, count: number): string {
+/**
+ * `count` moves, 100 per transaction with a VACUUM in between: in the app
+ * every change is its own transaction and autovacuum reclaims what pruning
+ * deletes (a table this small is vacuumed after ~50 dead rows), so the file
+ * holds about the retention window. One huge transaction would instead grow
+ * it to hold every event ever written, and measure the script, not the app.
+ */
+function moveInBatches(userId: string, householdId: string, count: number): void {
+  for (let done = 0; done < count; done += MOVE_BATCH) {
+    asUser(userId, movesSql(householdId, Math.min(MOVE_BATCH, count - done), done));
+    psql("vacuum public.activity_events, public.items;");
+  }
+}
+
+const MOVE_BATCH = 100;
+
+function movesSql(householdId: string, count: number, offset = 0): string {
   return `do $$
 declare
   v_items uuid[];
@@ -390,7 +406,7 @@ begin
   select array_agg(id order by added_at) into v_items from public.items where household_id = ${lit(householdId)};
   select array_agg(id order by name) into v_deepest from public.locations
   where household_id = ${lit(householdId)} and name like 'Chain % level 8%';
-  for i in 1..${String(count)} loop
+  for i in ${String(offset + 1)}..${String(offset + count)} loop
     perform public.move_item(
       v_items[1 + (i % array_length(v_items, 1))],
       v_deepest[1 + ((i * 5) % array_length(v_deepest, 1))]
@@ -401,7 +417,7 @@ end $$;`;
 
 /** Churn: more moves, ten deletes and ten re-stashes per maxed-out household. */
 function churn({ householdId, owner }: Couple): void {
-  asUser(owner.userId, movesSql(householdId, 200));
+  moveInBatches(owner.userId, householdId, 200);
   asUser(
     owner.userId,
     `do $$
@@ -485,12 +501,17 @@ try {
   console.error(`measure-db: ${String(TYPICAL_HOUSEHOLDS)} typical households…`);
   const typical = await inBatches(TYPICAL_HOUSEHOLDS, 10, (index) => newCouple(`t${String(index)}`));
   typical.forEach(seedTypical);
+  // Each phase is measured as written (after a plain VACUUM, as autovacuum
+  // leaves it), then compacted (VACUUM FULL), so the next phase starts with
+  // no free space to fill and its growth is its own.
   const afterTypical = measure();
+  const typicalCompact = measure("full");
 
   console.error(`measure-db: ${String(MAXED_HOUSEHOLDS)} maxed-out households…`);
   const maxed = await inBatches(MAXED_HOUSEHOLDS, 5, (index) => newCouple(`m${String(index)}`));
   maxed.forEach(seedMaxed);
   const afterMaxed = measure();
+  const maxedCompact = measure("full");
   const liveTypical = liveRowBytes(typical.map((household) => household.householdId));
   const liveMaxed = liveRowBytes(maxed.map((household) => household.householdId));
 
@@ -500,14 +521,18 @@ try {
   const afterChurn = measure();
 
   const typicalDelta = delta(baseline, afterTypical);
-  const maxedDelta = delta(afterTypical, afterMaxed);
-  const churnBloat = delta(afterMaxed, afterChurnNoVacuum);
-  const churnVacuumed = delta(afterMaxed, afterChurn);
+  const typicalCompactDelta = delta(baseline, typicalCompact);
+  const maxedDelta = delta(typicalCompact, afterMaxed);
+  const maxedCompactDelta = delta(typicalCompact, maxedCompact);
+  const churnBloat = delta(maxedCompact, afterChurnNoVacuum);
+  const churnVacuumed = delta(maxedCompact, afterChurn);
 
   const usersPerHousehold = 2;
   const authPerUser = sum(typicalDelta, "auth.") / (TYPICAL_HOUSEHOLDS * usersPerHousehold);
   const typicalPerHousehold = sum(typicalDelta) / TYPICAL_HOUSEHOLDS;
   const maxedPerHousehold = sum(maxedDelta) / MAXED_HOUSEHOLDS;
+  const typicalCompactPerHousehold = sum(typicalCompactDelta) / TYPICAL_HOUSEHOLDS;
+  const maxedCompactPerHousehold = sum(maxedCompactDelta) / MAXED_HOUSEHOLDS;
   const events = (rows: readonly TableSize[]): number =>
     rows.find((row) => row.table === "public.activity_events")?.rows ?? 0;
 
@@ -520,11 +545,13 @@ try {
     "",
     `Local database before the run: ${mb(baseline.databaseBytes)} (Supabase's own schemas plus leftover dev/test data; production's baseline is measured separately).`,
     "",
-    "| Per household | Measured | Incl. auth for 2 people |",
+    "| Per household, incl. auth for 2 people | As written | Compacted |",
     "|---|---:|---:|",
-    `| Typical (30 items, 15 places, ${String(Math.round(events(typicalDelta) / TYPICAL_HOUSEHOLDS))} events) | ${kb(typicalPerHousehold - authPerUser * 2)} | ${kb(typicalPerHousehold)} |`,
-    `| Maxed out (100 items, 100 places, depth 8, ${String(Math.round(events(maxedDelta) / MAXED_HOUSEHOLDS))} events kept) | ${kb(maxedPerHousehold - authPerUser * 2)} | ${kb(maxedPerHousehold)} |`,
+    `| Typical (30 items, 15 places, ${String(Math.round(events(typicalDelta) / TYPICAL_HOUSEHOLDS))} events) | ${kb(typicalPerHousehold)} | ${kb(typicalCompactPerHousehold)} |`,
+    `| Maxed out (100 items, 100 places, depth 8, ${String(Math.round(events(maxedDelta) / MAXED_HOUSEHOLDS))} events kept) | ${kb(maxedPerHousehold)} | ${kb(maxedCompactPerHousehold)} |`,
     `| Auth rows per person (users, identities, sessions, refresh tokens, audit log) | ${kb(authPerUser)} | |`,
+    "",
+    "As written = after the writes and a plain VACUUM, the way autovacuum leaves a table (changes are written one transaction at a time; dead rows' space is reused, not returned). Compacted = after VACUUM FULL: the data itself. The projection below uses as written.",
     "",
     "| Bytes per row | Typical, live | Typical, on disk | Maxed out, live | Maxed out, on disk |",
     "|---|---:|---:|---:|---:|",
@@ -536,7 +563,7 @@ try {
       return `| ${key} | ${live(liveTypical[key])} | ${t ? perRow(t) : "—"} | ${live(liveMaxed[key])} | ${m ? perRow(m) : "—"} |`;
     }),
     "",
-    "Live = the row itself (pg_column_size); on disk = file growth ÷ rows, which includes the space updates and moves leave behind (reused after VACUUM, not returned). The 500 MB limit counts files, so the per-household figures above are on-disk.",
+    "Live = the row itself (pg_column_size); on disk = file growth ÷ rows as written, which includes the space updates and moves leave behind. The 500 MB limit counts files.",
     "",
     `Churn (200 more moves, 10 deletes + re-stashes per maxed household): +${kb(sum(churnBloat) / MAXED_HOUSEHOLDS)} per household before VACUUM, +${kb(sum(churnVacuumed) / MAXED_HOUSEHOLDS)} after.`,
     "",
@@ -550,7 +577,7 @@ try {
     "",
     tableReport("Typical households (Δ over the baseline)", typicalDelta),
     "",
-    tableReport("Maxed-out households (Δ over the typical step)", maxedDelta),
+    tableReport("Maxed-out households (Δ over the compacted typical step)", maxedDelta),
     "",
     tableReport("Churn, before VACUUM", churnBloat),
   ].join("\n");
