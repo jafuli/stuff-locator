@@ -51,3 +51,11 @@ next-env.d.ts
 
 # onnxruntime-web wasm, copied from node_modules by scripts/copy-ort.mjs
 /public/ort/
+
+# Claude Code: per-machine settings, the scheduled-task lock and agent worktrees
+/.claude/settings.local.json
+/.claude/scheduled_tasks.lock
+/.claude/worktrees/
+
+# Supabase Studio's saved SQL snippets (local scratch queries)
+/supabase/snippets/
