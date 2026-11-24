@@ -9,6 +9,7 @@ const TEST_PASSWORD = "correct-horse-battery-1";
 async function signUpFreshAccount(page: Page): Promise<void> {
   const email = `e2e-household-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -32,11 +33,17 @@ test("the household sheet opens from the keyboard, traps focus, closes on Escape
   // Focus lands on the first row.
   await expect(sheet.getByRole("link", { name: "Invite partner" })).toBeFocused();
 
-  // Two rows: Tab cycles and never leaves the sheet.
-  const rows = ["Sign out", "Invite partner"];
-  for (const name of rows) {
+  // Your name loads after the sheet opens; wait for its edit button.
+  await expect(sheet.getByRole("button", { name: "Edit your name" })).toBeVisible();
+  // Three stops: Tab cycles and never leaves the sheet.
+  const rows = [
+    sheet.getByRole("button", { name: "Edit your name" }),
+    sheet.getByRole("button", { name: "Sign out" }),
+    sheet.getByRole("link", { name: "Invite partner" }),
+  ];
+  for (const row of rows) {
     await page.keyboard.press("Tab");
-    await expect(sheet.getByRole(name === "Sign out" ? "button" : "link", { name })).toBeFocused();
+    await expect(row).toBeFocused();
   }
   await page.keyboard.press("Shift+Tab");
   await expect(sheet.getByRole("button", { name: "Sign out" })).toBeFocused();

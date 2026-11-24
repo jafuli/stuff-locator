@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { DisplayNameEditor } from "@/components/display-name-editor";
 import { Button } from "@/components/ui/button";
 import { StuffSearchInput } from "@/components/stuff-search-input";
 import { Dialog } from "@/components/ui/dialog";
@@ -134,6 +135,10 @@ export function HouseholdSheetDemo() {
               </button>
             </li>
           ))}
+          <li>
+            {/* The real editor: it reads and renames the signed-in person's own profile. */}
+            <DisplayNameEditor />
+          </li>
           <li>
             <button
               type="button"

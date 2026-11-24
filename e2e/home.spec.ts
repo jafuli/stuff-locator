@@ -15,6 +15,7 @@ const TEST_PASSWORD = "correct-horse-battery-1";
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-home-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();

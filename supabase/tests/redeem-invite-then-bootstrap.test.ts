@@ -137,7 +137,7 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
     // /api/household/bootstrap calls. If the ordering fix works, this
     // finds the membership redemption just created and returns
     // created: false, never invoking create_household.
-    const result = await ensureHousehold(joinerClient, joiner.userId, joiner.email);
+    const result = await ensureHousehold(joinerClient, joiner.userId);
     expect(result).toEqual({ ok: true, created: false });
 
     // Exactly one household — the inviter's, not a second bootstrap-created
@@ -161,7 +161,7 @@ describe("redeem_invite followed by ensureHousehold (the bootstrap-interaction f
     // user who already has an account (and so already bootstrapped) joins
     // exactly like this. Before ADR 0008 it ended in two households and Home
     // showed the older, empty one.
-    const bootstrapResult = await ensureHousehold(joinerClient, joiner.userId, joiner.email);
+    const bootstrapResult = await ensureHousehold(joinerClient, joiner.userId);
     expect(bootstrapResult).toEqual({ ok: true, created: true });
 
     const { data: before } = await joinerClient

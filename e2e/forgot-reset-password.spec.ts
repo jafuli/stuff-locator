@@ -19,6 +19,7 @@ import { STUFF_PATH } from "@/lib/routes";
 async function signUpFreshAccount(page: Page, password: string): Promise<string> {
   const email = `e2e-reset-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Create account" }).click();

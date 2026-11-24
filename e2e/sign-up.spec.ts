@@ -41,6 +41,7 @@ test("a fresh sign-up reaches / directly, matching this project's configured aut
   await expect(page.getByRole("button", { name: "Household menu" })).toHaveCount(0);
 
   const email = `e2e-signup-${randomUUID()}@example.com`;
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -85,6 +86,7 @@ test("a household-bootstrap failure still reaches / with a visible, keyboard-rea
 
   await page.goto("/sign-up");
   const email = `e2e-signup-bootstrap-fail-${randomUUID()}@example.com`;
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -124,6 +126,7 @@ test("empty fields show real inline errors and never navigate away", async ({ pa
   await page.goto("/sign-up");
   await page.getByRole("button", { name: "Create account" }).click();
 
+  await expect(page.getByText("Enter your name.")).toBeVisible();
   await expect(page.getByText("Enter your email address.")).toBeVisible();
   await expect(page.getByText("Enter a password.")).toBeVisible();
   await expect(page).toHaveURL(/\/sign-up$/);
@@ -131,6 +134,7 @@ test("empty fields show real inline errors and never navigate away", async ({ pa
 
 test("an invalid email format shows a real inline error and never navigates away", async ({ page }) => {
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill("not-an-email");
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -145,7 +149,10 @@ test("the sign-up form is keyboard-reachable in a sensible order with real label
   // getByLabel only matches a real programmatic label association (htmlFor
   // + id, here) — this is the DoD's "real <label>/<input> associations,
   // not placeholder-only labeling" proven directly, not just visually.
-  await page.getByLabel("Email").focus();
+  await page.getByLabel("Your name").focus();
+  await expect(page.getByLabel("Your name")).toBeFocused();
+
+  await page.keyboard.press("Tab");
   await expect(page.getByLabel("Email")).toBeFocused();
 
   await page.keyboard.press("Tab");

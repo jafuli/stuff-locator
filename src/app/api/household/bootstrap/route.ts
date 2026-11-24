@@ -31,7 +31,7 @@ export async function POST() {
     return Response.json({ ok: false }, { status: 401 });
   }
 
-  const result = await ensureHousehold(supabase, user.id, user.email);
+  const result = await ensureHousehold(supabase, user.id);
   if (!result.ok) {
     console.error("[household-bootstrap]", result.error);
     return Response.json({ ok: false }, { status: 500 });

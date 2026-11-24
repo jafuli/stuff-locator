@@ -2,13 +2,23 @@
 export const FALLBACK_INITIALS = "H";
 
 /**
+ * The generic word in a default name ("Itamar's household"): it says
+ * nothing about whose household it is, so it never becomes an initial.
+ */
+const GENERIC_WORD = /^household$/i;
+
+/**
  * The one or two letters on the household button: the first letter of the
  * first two words of the household's name, uppercased ("Shared home" → "SH",
- * "jane" → "J"). Pure, so the edge cases (blank, punctuation, emoji-leading
- * names) are testable without rendering anything.
+ * "jane" → "J"). A default name drops its generic word, so "Itamar's
+ * household" is "I", not "IH". Pure, so the edge cases (blank, punctuation,
+ * emoji-leading names) are testable without rendering anything.
  */
 export function householdInitials(name: string | null | undefined): string {
-  const words = (name ?? "").split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word));
+  const words = (name ?? "")
+    .split(/\s+/)
+    .filter((word) => /[\p{L}\p{N}]/u.test(word))
+    .filter((word) => !GENERIC_WORD.test(word));
   const letters = words
     .slice(0, 2)
     .map((word) => Array.from(word.replace(/^[^\p{L}\p{N}]+/u, ""))[0] ?? "")

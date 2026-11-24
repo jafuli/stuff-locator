@@ -21,3 +21,9 @@ test("falls back to H for a missing or blank name", () => {
   expect(householdInitials("   ")).toBe(FALLBACK_INITIALS);
   expect(householdInitials("—")).toBe(FALLBACK_INITIALS);
 });
+
+test('a default name drops the generic word: "Itamar\'s household" is just I', () => {
+  expect(householdInitials("Itamar's household")).toBe("I");
+  expect(householdInitials("Our household")).toBe("O");
+  expect(householdInitials("Household")).toBe(FALLBACK_INITIALS);
+});

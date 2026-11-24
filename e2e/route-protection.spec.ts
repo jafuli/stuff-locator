@@ -13,6 +13,7 @@ const TEST_PASSWORD = "correct-horse-battery-1";
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-route-protection-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -162,6 +163,7 @@ test("the return-to path also survives choosing 'sign up' instead", async ({ pag
   await page.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL("/sign-up?next=%2Fbrowse");
 
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(`e2e-route-protection-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();

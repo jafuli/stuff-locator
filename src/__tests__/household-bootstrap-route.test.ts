@@ -50,7 +50,7 @@ describe("POST /api/household/bootstrap", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true, created: true });
-    expect(ensureHousehold).toHaveBeenCalledWith(expect.anything(), "u1", "jane@example.com");
+    expect(ensureHousehold).toHaveBeenCalledWith(expect.anything(), "u1");
   });
 
   test("returns 500 without leaking the raw error, but logs it", async () => {

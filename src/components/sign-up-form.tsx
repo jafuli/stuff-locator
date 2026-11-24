@@ -7,13 +7,20 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { HouseholdBootstrapNotice } from "@/components/household-bootstrap-notice";
 import { BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS, triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
-import { validateEmail, validateSignUpPassword } from "@/lib/auth-validation";
+import {
+  normalizeDisplayName,
+  validateDisplayName,
+  validateEmail,
+  validateSignUpPassword,
+} from "@/lib/auth-validation";
+import { TEXT_LIMITS } from "@/lib/limits";
 import { redeemInviteAndGetHouseholdName, type RedeemInviteResult } from "@/lib/redeem-invite-client";
 import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
 
 interface FieldErrors {
+  name?: string;
   email?: string;
   password?: string;
 }
@@ -70,6 +77,7 @@ export interface SignUpFormProps {
  */
 export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormProps) {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -99,18 +107,26 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
     event.preventDefault();
 
     const errors: FieldErrors = {
+      name: validateDisplayName(name),
       email: validateEmail(email),
       password: validateSignUpPassword(password),
     };
     setFieldErrors(errors);
-    if (errors.email || errors.password) {
+    if (errors.name || errors.email || errors.password) {
       return;
     }
 
     setSubmitError(null);
     setIsSubmitting(true);
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // The name rides along as user metadata; the auth.users trigger
+    // (handle_new_user) turns it into the profile's display name, and the
+    // household bootstrap names the new household after it.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: normalizeDisplayName(name) } },
+    });
 
     if (error) {
       setIsSubmitting(false);
@@ -180,6 +196,17 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
 
   return (
     <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
+      <FormField
+        id="sign-up-name"
+        label="Your name"
+        type="text"
+        autoComplete="name"
+        value={name}
+        onChange={setName}
+        maxLength={TEXT_LIMITS.displayName}
+        error={fieldErrors.name}
+        disabled={isSubmitting}
+      />
       <FormField
         id="sign-up-email"
         label="Email"

@@ -74,6 +74,7 @@ test("a signed-out visitor sees the sign-up form by default; a successful sign-u
 
   expect(screen.getByRole("button", { name: "Create account" })).toBeDefined();
 
+  await user.type(screen.getByLabelText("Your name"), "Noa");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));

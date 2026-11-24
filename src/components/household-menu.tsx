@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { DisplayNameEditor } from "@/components/display-name-editor";
 import { SignOutButton } from "@/components/sign-out-button";
 import { useHasSession } from "@/components/use-has-session";
 import { Dialog } from "@/components/ui/dialog";
@@ -43,7 +44,9 @@ function useHouseholdName(enabled: boolean): string | null {
 }
 
 /**
- * The household button and the sheet it opens: Invite partner and Sign out.
+ * The household button and the sheet it opens: Invite partner, your own
+ * name (editable in place, DisplayNameEditor) and Sign out. Invite partner
+ * stays first, so it is what the sheet focuses when it opens.
  * This is the primary way to reach both, so the app shell no longer carries
  * a loose Invite link and a bare Sign out button under the tabs. There is
  * deliberately no Settings row yet: the only settings page is
@@ -93,6 +96,9 @@ export function HouseholdMenu() {
             <Link href="/settings/invite" onClick={close} className={ROW_CLASSES}>
               Invite partner
             </Link>
+          </li>
+          <li>
+            <DisplayNameEditor />
           </li>
           <li>
             <SignOutButton assumeSession />

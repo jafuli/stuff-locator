@@ -52,6 +52,7 @@ test("submitting an invalid email shows an inline error and never calls signUp",
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "not-an-email");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -65,6 +66,7 @@ test("a rejected signUp surfaces Supabase's own error message verbatim", async (
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -79,6 +81,7 @@ test("a successful signUp with a returned session bootstraps a household, then r
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -97,6 +100,7 @@ test("a household-bootstrap failure shows a dismissible notice, logs it, and nev
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -120,6 +124,7 @@ test("a successful signUp with no session shows the check-your-email state inste
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -141,6 +146,7 @@ test("submit shows a real loading state while signUp is in flight", async () => 
   const user = userEvent.setup();
   render(<SignUpForm />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -164,6 +170,7 @@ test("with an invite code, a successful sign-up redeems it before bootstrapping,
   const user = userEvent.setup();
   render(<SignUpForm invite={{ code: "abc123", onRedeemed }} />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -188,6 +195,7 @@ test("with an invite code, a rejected redemption still bootstraps as a fallback 
   const user = userEvent.setup();
   render(<SignUpForm invite={{ code: "expired-code", onRedeemed }} />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-real-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -209,6 +217,7 @@ test("a return-to path carried over from /sign-in survives account creation", as
   const user = userEvent.setup();
   render(<SignUpForm next="/browse" />);
 
+  await user.type(screen.getByLabelText("Your name"), "Noa Levi");
   await user.type(screen.getByLabelText("Email"), "person@example.com");
   await user.type(screen.getByLabelText("Password"), "a-long-enough-password");
   await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -222,4 +231,39 @@ test("a return-to path carried over from /sign-in survives account creation", as
 test("the sign-in link carries the return-to path back the other way", () => {
   render(<SignUpForm next="/browse" />);
   expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/sign-in?next=%2Fbrowse");
+});
+
+test("'Your name' is required, comes first, and caps at 50 characters", async () => {
+  const user = userEvent.setup();
+  render(<SignUpForm />);
+
+  const nameField = screen.getByLabelText<HTMLInputElement>("Your name");
+  expect(screen.getAllByRole("textbox")[0]).toBe(nameField);
+  expect(nameField.autocomplete).toBe("name");
+  expect(nameField.maxLength).toBe(50);
+
+  await user.type(nameField, "   ");
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  expect(screen.getByText("Enter your name.")).toBeDefined();
+  expect(signUp).not.toHaveBeenCalled();
+});
+
+test("the name is sent as user metadata, whitespace-normalised", async () => {
+  signUp.mockResolvedValue({ data: { user: { id: "1" }, session: null }, error: null });
+  const user = userEvent.setup();
+  render(<SignUpForm />);
+
+  await user.type(screen.getByLabelText("Your name"), "  Noa   Levi ");
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+
+  expect(signUp).toHaveBeenCalledWith({
+    email: "person@example.com",
+    password: "a-real-password",
+    options: { data: { display_name: "Noa Levi" } },
+  });
 });
