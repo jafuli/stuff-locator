@@ -80,16 +80,54 @@ places than things.
 ### Capacity: estimates and measurements
 
 The estimates come from the schema (2026-11-17, at a 200-place cap). The
-measurements come from `npm run measure:db` on local Supabase; see the next
-section.
+measurements come from `npm run measure:db` (`scripts/measure-db.mts`) on
+local Supabase, 2026-11-24. Two consecutive runs agreed within about 1%.
 
-| Quantity | Estimate | Measured |
-|---|---|---|
-| Item row, typical / maxed | ~280 B / ~800 B | _pending_ |
-| Place row, typical / maxed | ~250 B / ~350 B | _pending_ |
-| Event row, typical / maxed | ~270 B / ~1.3 KB | _pending_ |
-| Typical household (30 items, 15 places, ~150 events) | ~60 KB | _pending_ |
-| Maxed-out household | ~780 KB (200 places) | _pending_ |
+"Live" is the row itself (`pg_column_size`). "On disk" is file growth
+divided by rows, so it includes the dead versions that moves and edits leave
+behind. VACUUM makes that space reusable but doesn't give it back. The
+500 MB limit counts files, so the per-household figures are on disk.
+
+| Quantity | Estimate | Measured, live | Measured, on disk |
+|---|---|---:|---:|
+| Item row, typical / maxed | ~280 B / ~800 B | 176 B / 712 B | ~1.1 KB / ~4.2 KB |
+| Place row, typical / maxed | ~250 B / ~350 B | 86 B / 141 B | ~380 B / ~390 B |
+| Event row, typical / maxed | ~270 B / ~1.3 KB | 199 B / 1.2 KB | ~310 B / ~2.0 KB |
+| Auth rows per person (users, identities, sessions, refresh tokens, audit log) | — | | ~7 KB |
+| Typical household (30 items, 15 places, 150 events; 2 people) | ~60 KB | | **~104 KB** |
+| Maxed-out household (100 items, 100 places, depth 8, 500 events) | ~780 KB (200 places) | | **~1.44 MB** |
+| Churn on a maxed household (200 moves, 10 deletes + re-stashes) | — | | +~58 KB |
+
+Where a maxed-out household's space goes: activity events about 69%
+(~990 KB), items about 29% (~416 KB), places about 3%.
+
+On disk is well above live for items, because every move and edit writes a
+new row version. `location_id` is indexed, so these aren't HOT updates.
+
+**500 households:**
+
+| Mix | Database (on disk) |
+|---|---:|
+| All typical | ~51 MB |
+| 90% typical, 10% maxed out | ~118 MB |
+| All maxed out | ~705 MB |
+
+The budget is 500 MB minus Supabase's baseline. Locally that baseline was
+~28–31 MB including dev/test leftovers, leaving ~470 MB. At most about
+**330** maxed-out households fit in it.
+
+**Verdict.** The 500-household target holds for any realistic mix: all
+typical is about a tenth of the budget, and even one household in ten maxed
+out is about a quarter. The theoretical worst case, every household at every
+cap, does not fit (~705 MB). The 300 MB upgrade trigger fires long before
+that in every case, so no limit has to move for the target as stated. If the
+all-maxed worst case must fit too, the number to move is activity
+retention, because events are most of a maxed household. That is Itamar's
+call, not taken here.
+
+Production's own baseline (`select pg_database_size(current_database())`
+right after the first `supabase db push`) is a manual step. It replaces the
+local ~28 MB above.
 
 **Upgrade triggers** (2026-11-17): database over 300 MB, or Vercel function
 invocations over 70% of quota. Then move to Supabase Pro + Vercel Pro.
