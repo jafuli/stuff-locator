@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { seedItems, seedLocationChainAllIds, seedTopLevelPlaces, signedInClient } from "./supabase-test-client";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -19,14 +19,6 @@ async function signUpFreshAccount(page: Page): Promise<string> {
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(STUFF_PATH);
   return email;
-}
-
-async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter(
-    (violation) => violation.impact === "critical" || violation.impact === "serious",
-  );
-  expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
 }
 
 test("at 100 things: the count line says so, and Stash explains instead of showing the form", async ({ page }) => {
