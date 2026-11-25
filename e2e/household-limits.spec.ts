@@ -68,9 +68,14 @@ test("at 100 places: Browse says so, '+ Add a place here' becomes a note, and th
   await expect(page.getByRole("option", { name: /New place/ })).toHaveCount(0);
   await expect(page.getByText("Limit reached: this household has 100 places. Pick an existing one.")).toBeVisible();
 
-  // Existing places stay pickable.
+  // Existing places stay pickable: listed, not disabled, and picking one
+  // really makes a chip (a disabled row would still be visible).
   await page.getByRole("combobox").fill("Place 7");
-  await expect(page.getByRole("option", { name: "Place 7, already here" })).toBeVisible();
+  const existing = page.getByRole("option", { name: "Place 7, already here" });
+  await expect(existing).toBeVisible();
+  await expect(existing).not.toHaveAttribute("aria-disabled", "true");
+  await existing.click();
+  await expect(page.getByRole("group", { name: "Location: Place 7" })).toBeVisible();
 });
 
 test("8 places deep: no '+ Add a place here' inside, no '+ New' in the picker, and Move into… greys what won't fit", async ({
