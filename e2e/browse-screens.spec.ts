@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { seedItem, seedLocationChainAllIds, signedInClient } from "./supabase-test-client";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -14,13 +14,6 @@ async function signUp(page: Page): Promise<string> {
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(STUFF_PATH);
   return email;
-}
-
-async function expectNoSeriousViolations(page: Page, colorScheme: "light" | "dark"): Promise<void> {
-  await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-  const results = await new AxeBuilder({ page }).analyze();
-  const seriousOrWorse = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-  expect(seriousOrWorse, `${colorScheme}: ${JSON.stringify(seriousOrWorse, null, 2)}`).toEqual([]);
 }
 
 test("a place page has one display heading, an Items and a Places section, and a ⋯ menu whose Delete is signal", async ({
@@ -46,24 +39,20 @@ test("a place page has one display heading, an Items and a Places section, and a
   expect(await color("Rename")).toBe(await color("Move into…"));
 });
 
-for (const colorScheme of ["light", "dark"] as const) {
-  test(`the place menu and the delete confirmation have no critical or serious axe violations (${colorScheme})`, async ({
-    page,
-  }) => {
-    const email = await signUp(page);
-    const emptyId = (await seedLocationChainAllIds(email, TEST_PASSWORD, ["Attic"]))[0];
-    await page.goto(`/browse/${emptyId}`);
-    await page.waitForLoadState("networkidle");
+test("the place menu and the delete confirmation have no critical or serious axe violations", async ({ page }) => {
+  const email = await signUp(page);
+  const emptyId = (await seedLocationChainAllIds(email, TEST_PASSWORD, ["Attic"]))[0];
+  await page.goto(`/browse/${emptyId}`);
+  await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Manage Attic" }).click();
-    await expect(page.getByRole("menu")).toBeVisible();
-    await expectNoSeriousViolations(page, colorScheme);
+  await page.getByRole("button", { name: "Manage Attic" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await expectNoSeriousAxeViolations(page, "place menu");
 
-    await page.getByRole("menuitem", { name: "Delete" }).click();
-    await expect(page.getByRole("dialog", { name: /Delete/ })).toBeVisible();
-    await expectNoSeriousViolations(page, colorScheme);
-  });
-}
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(page.getByRole("dialog", { name: /Delete/ })).toBeVisible();
+  await expectNoSeriousAxeViolations(page, "delete confirmation");
+});
 
 test("activity shows a move as two path trails, with the tape on each destination", async ({ page }) => {
   const email = await signUp(page);

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
 import {
   seedInviteForNewHousehold,
   seedItem,
@@ -8,39 +7,10 @@ import {
   seedLocationChainAllIds,
   signedInClient,
 } from "./supabase-test-client";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { MARKETING_PATH, STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
-
-const COLOR_SCHEMES = ["light", "dark"] as const;
-
-// Scans the page that is already set up, once per theme. The Label Maker
-// design system ships light and dark palettes that follow the OS, so a
-// contrast failure can live in just one of them — emulating each scheme on
-// the same page is cheaper than re-seeding the whole test twice.
-async function expectNoSeriousAxeViolations(page: Page): Promise<void> {
-  for (const colorScheme of COLOR_SCHEMES) {
-    // reducedMotion matters here: colours transition for 150ms, and axe would
-    // otherwise sample a half-way blend right after the scheme flips.
-    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-    // Two frames: lets the restyle (and the now-instant transitions) land.
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              resolve();
-            });
-          });
-        }),
-    );
-    const results = await new AxeBuilder({ page }).analyze();
-    const seriousOrWorse = results.violations.filter(
-      (violation) => violation.impact === "critical" || violation.impact === "serious",
-    );
-    expect(seriousOrWorse, `${colorScheme}: ${JSON.stringify(seriousOrWorse, null, 2)}`).toEqual([]);
-  }
-}
 
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-a11y-home-${randomUUID()}@example.com`;

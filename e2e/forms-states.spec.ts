@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { STUFF_PATH } from "@/lib/routes";
 
 const TEST_PASSWORD = "correct-horse-battery-1";
@@ -13,25 +13,6 @@ async function signUp(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(STUFF_PATH);
   await page.waitForLoadState("networkidle");
-}
-
-async function expectNoSeriousViolations(page: Page): Promise<void> {
-  for (const colorScheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              resolve();
-            });
-          });
-        }),
-    );
-    const results = await new AxeBuilder({ page }).analyze();
-    const seriousOrWorse = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-    expect(seriousOrWorse, `${colorScheme}: ${JSON.stringify(seriousOrWorse, null, 2)}`).toEqual([]);
-  }
 }
 
 test("a form's validation errors are signal-coloured text on no fill, and pass axe in both themes", async ({
@@ -55,7 +36,7 @@ test("a form's validation errors are signal-coloured text on no fill, and pass a
     const ink = await page.locator("h1").evaluate((el) => getComputedStyle(el).color);
     expect(style.color).not.toBe(ink);
   }
-  await expectNoSeriousViolations(page);
+  await expectNoSeriousAxeViolations(page);
 });
 
 test("the Stash success panel passes axe in both themes and shows the path on tape", async ({ page }) => {
@@ -74,7 +55,7 @@ test("the Stash success panel passes axe in both themes and shows the path on ta
   const tape = status.locator("span.bg-tape", { hasText: "Shed" });
   await expect(tape).toBeVisible();
   expect(await tape.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
-  await expectNoSeriousViolations(page);
+  await expectNoSeriousAxeViolations(page);
 });
 
 test("signed-out auth forms are comfortable at 320px: 16px inputs, 50px controls, no sideways scroll", async ({

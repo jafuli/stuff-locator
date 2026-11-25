@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { openHouseholdMenu, tabUntilFocused } from "./utils";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -81,14 +81,9 @@ test("the capsule floats clear of the last row and the page doesn't scroll sidew
   expect(overflow).toBe(0);
 });
 
-for (const colorScheme of ["light", "dark"] as const) {
-  test(`the open household sheet has no critical or serious axe violations (${colorScheme})`, async ({ page }) => {
-    await signUpFreshAccount(page);
-    await page.waitForLoadState("networkidle");
-    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-    await openHouseholdMenu(page);
-    const results = await new AxeBuilder({ page }).analyze();
-    const seriousOrWorse = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-    expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
-  });
-}
+test("the open household sheet has no critical or serious axe violations", async ({ page }) => {
+  await signUpFreshAccount(page);
+  await page.waitForLoadState("networkidle");
+  await openHouseholdMenu(page);
+  await expectNoSeriousAxeViolations(page);
+});
