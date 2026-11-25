@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { seedItem, seedLocationChainAllIds } from "./supabase-test-client";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -250,18 +250,13 @@ test("menu open and dialog open have no critical or serious axe violations", asy
   await page.goto(`/browse/${cabinetId}`);
   await page.waitForLoadState("networkidle");
 
-  const serious = async () => {
-    const results = await new AxeBuilder({ page }).analyze();
-    return results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-  };
-
   await page.getByRole("button", { name: "Manage Cabinet" }).click();
-  expect(await serious()).toEqual([]);
+  await expectNoSeriousAxeViolations(page, "menu open");
 
   await page.getByRole("menuitem", { name: /Move into/ }).click();
   await page.getByRole("dialog").getByRole("combobox").fill("off");
   await expect(page.getByRole("dialog").getByRole("option").first()).toBeVisible();
-  expect(await serious()).toEqual([]);
+  await expectNoSeriousAxeViolations(page, "Move into… dialog open");
 });
 
 test("/locations/new is gone", async ({ page }) => {

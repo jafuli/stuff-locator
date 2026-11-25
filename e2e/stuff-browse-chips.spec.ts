@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "./fixtures";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 import { STUFF_PATH } from "@/lib/routes";
@@ -201,9 +201,7 @@ test("Home and the top of Browse have no critical or serious axe violations with
   for (const path of [STUFF_PATH, "/browse"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
-    const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-    expect(serious, `${path}: ${JSON.stringify(serious, null, 2)}`).toEqual([]);
+    await expectNoSeriousAxeViolations(page, path);
   }
 });
 

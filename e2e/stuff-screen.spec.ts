@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "./fixtures";
-import AxeBuilder from "@axe-core/playwright";
+import { expectNoSeriousAxeViolations } from "./axe";
 import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -96,16 +96,9 @@ test("from 375px up nothing is collapsed", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Show the full path/ })).toHaveCount(0);
 });
 
-for (const colorScheme of ["light", "dark"] as const) {
-  test(`the Stuff screen while searching has no critical or serious axe violations (${colorScheme})`, async ({
-    page,
-  }) => {
-    await signUpAndSeed(page);
-    await page.getByRole("searchbox").fill("spare");
-    await expect(page.getByRole("heading", { level: 2, name: "Best matches" })).toBeVisible();
-    await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-    const results = await new AxeBuilder({ page }).analyze();
-    const seriousOrWorse = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
-    expect(seriousOrWorse, JSON.stringify(seriousOrWorse, null, 2)).toEqual([]);
-  });
-}
+test("the Stuff screen while searching has no critical or serious axe violations", async ({ page }) => {
+  await signUpAndSeed(page);
+  await page.getByRole("searchbox").fill("spare");
+  await expect(page.getByRole("heading", { level: 2, name: "Best matches" })).toBeVisible();
+  await expectNoSeriousAxeViolations(page);
+});
