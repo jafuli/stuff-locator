@@ -305,6 +305,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_invite: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          household_id: string
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_location: {
         Args: { p_name: string; p_parent_id?: string }
         Returns: {

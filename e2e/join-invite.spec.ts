@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
-import { countHouseholdsForUser, householdIdsForUser, seedInviteForNewHousehold } from "./supabase-test-client";
+import {
+  addSeededPartner,
+  countHouseholdsForUser,
+  householdIdsForUser,
+  seedInviteForNewHousehold,
+} from "./supabase-test-client";
 import { signOutViaMenu } from "./utils";
 import { STUFF_PATH } from "@/lib/routes";
 
@@ -129,4 +134,24 @@ test("toggling to sign-in and joining via an existing account also redeems corre
   await expect(status.getByText("Shared home")).toBeVisible();
   // Their empty bootstrap household is removed on join (ADR 0008).
   expect(await householdIdsForUser(email, TEST_PASSWORD)).toEqual([householdId]);
+});
+
+test("joining a household that already has two people says so, and leaves the joiner in their own household", async ({
+  page,
+}) => {
+  const { code, householdId } = await seedInviteForNewHousehold(`Full household ${randomUUID().slice(0, 8)}`);
+  await addSeededPartner(householdId);
+  const email = `e2e-join-full-${randomUUID()}@example.com`;
+
+  await page.goto(`/join/${code}`);
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  const alert = page.getByRole("alert");
+  await expect(alert.getByText("This household already has two people in it")).toBeVisible();
+  const households = await householdIdsForUser(email, TEST_PASSWORD);
+  expect(households).toHaveLength(1);
+  expect(households).not.toContain(householdId);
 });

@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { LIMIT_ERROR_CODES } from "@/lib/limits";
+
+/** What a joiner sees when the household already has its two people (SL005, ADR 0015). */
+export const HOUSEHOLD_FULL_MESSAGE =
+  "This household already has two people in it, so this invite can't add anyone else.";
 
 export type RedeemInviteResult = { ok: true; householdName: string | null } | { ok: false; error: string };
 
@@ -38,6 +43,10 @@ export async function redeemInviteAndGetHouseholdName(
       .eq("id", data.household_id)
       .maybeSingle();
     return { ok: true, householdName: household?.name ?? null };
+  }
+
+  if (error.code === LIMIT_ERROR_CODES.householdFull) {
+    return { ok: false, error: HOUSEHOLD_FULL_MESSAGE };
   }
 
   const { data: alreadyMemberInvite } = await supabase

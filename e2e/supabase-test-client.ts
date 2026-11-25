@@ -249,3 +249,34 @@ export async function householdIdsForUser(email: string, password: string): Prom
   }
   return memberships.map((row) => row.household_id);
 }
+
+/**
+ * Adds a freshly created (service-role) user to a household as its second
+ * member — households hold two people at most (ADR 0015), so this is how
+ * specs reach the "household full" states without a second browser.
+ */
+export async function addSeededPartner(householdId: string): Promise<void> {
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+
+  const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
+    email: `e2e-partner-${randomUUID()}@example.com`,
+    password: "a-long-enough-test-password-1!",
+    email_confirm: true,
+  });
+  if (userError) {
+    throw new Error(`failed to seed partner user: ${userError.message}`);
+  }
+
+  const { error: memberError } = await serviceClient
+    .from("household_members")
+    .insert({ household_id: householdId, user_id: userData.user.id, role: "member" });
+  if (memberError) {
+    throw new Error(`failed to seed partner membership: ${memberError.message}`);
+  }
+}
+
+/** addSeededPartner for the household `email` signs in to. */
+export async function addSeededPartnerFor(email: string, password: string): Promise<void> {
+  const { householdId } = await signInForHouseholdId(email, password);
+  await addSeededPartner(householdId);
+}
