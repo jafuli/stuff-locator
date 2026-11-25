@@ -9,7 +9,7 @@ import { DEFAULT_HOUSEHOLD_NAME, deriveHouseholdName, ensureHousehold } from "@/
 function fakeClient(options: {
   existing?: { household_id: string }[];
   readError?: { message: string } | null;
-  createError?: { message: string } | null;
+  createError?: { message: string; code?: string } | null;
 }): { client: SupabaseClient<Database>; rpc: ReturnType<typeof vi.fn> } {
   const limit = vi.fn().mockResolvedValue({
     data: options.existing ?? [],
@@ -30,6 +30,11 @@ describe("deriveHouseholdName", () => {
 
   test("trims whitespace around the local-part", () => {
     expect(deriveHouseholdName("  jane  @example.com")).toBe("jane");
+  });
+
+  test("clamps a long local-part to the household-name limit (50)", () => {
+    const localPart = "a".repeat(64);
+    expect(deriveHouseholdName(`${localPart}@example.com`)).toBe("a".repeat(50));
   });
 
   test.each([null, undefined, "", "   ", "@example.com"])("falls back to the default name for %j", (email) => {
@@ -71,5 +76,16 @@ describe("ensureHousehold", () => {
     const result = await ensureHousehold(client, "user-1", "jane@example.com");
 
     expect(result).toEqual({ ok: false, error: "create_household: boom" });
+  });
+
+  test("treats SL004 (already in a household — a concurrent bootstrap won) as success, not an error", async () => {
+    const { client } = fakeClient({
+      existing: [],
+      createError: { message: "create_household: the caller already belongs to a household", code: "SL004" },
+    });
+
+    const result = await ensureHousehold(client, "user-1", "jane@example.com");
+
+    expect(result).toEqual({ ok: true, created: false });
   });
 });

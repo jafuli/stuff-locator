@@ -20,8 +20,8 @@
 //     checked by row existence, not just the caught error
 //   - an unauthenticated (anon-key, no session) caller is rejected by the
 //     GRANT itself, before the function body ever runs
-//   - calling twice as the same user succeeds both times with two
-//     independent households (multi-household membership is supported)
+//   - a second call by the same user is refused (SL004): one household per
+//     user since ADR 0015
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -185,32 +185,20 @@ describe("create_household RPC", () => {
     expect(rows).toHaveLength(0);
   });
 
-  test("supports multi-household membership: calling twice as the same user succeeds both times", async () => {
+  test("refuses a caller who already belongs to a household (one household per user, ADR 0015)", async () => {
     const { data: firstData, error: firstError } = await userClient.rpc("create_household", {
       p_name: "First Household",
     });
-    expect(firstError).toBeNull();
-    const first = assertNotNull(firstData, "create_household returned no data (first call)");
-    createdHouseholdIds.push(first.id);
-
-    const { data: secondData, error: secondError } = await userClient.rpc("create_household", {
-      p_name: "Second Household",
-    });
-    expect(secondError).toBeNull();
-    const second = assertNotNull(secondData, "create_household returned no data (second call)");
-    createdHouseholdIds.push(second.id);
-
-    expect(first.id).not.toBe(second.id);
+    // The first test in this file already gave this user a household, so
+    // even this "first" call is a second one.
+    expect(firstData).toBeNull();
+    expect(firstError?.code).toBe("SL004");
 
     const { data: memberships, error: membershipsError } = await userClient
       .from("household_members")
-      .select("*")
-      .in("household_id", [first.id, second.id])
+      .select("household_id")
       .eq("user_id", userId);
     expect(membershipsError).toBeNull();
-    expect(memberships).toHaveLength(2);
-    for (const membership of memberships ?? []) {
-      expect(membership.role).toBe("owner");
-    }
+    expect(memberships).toHaveLength(1);
   });
 });
