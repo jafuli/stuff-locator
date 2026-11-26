@@ -163,3 +163,35 @@ test("long names wrap at 375px: nothing is clipped, and a path breaks after › 
     await expectNoTextOutsideViewport(page);
   }
 });
+
+test("the place picker's menu and chips wrap long names at 320px instead of clipping them", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const longPlace = "P".repeat(60);
+  const newPlace = "Q".repeat(60);
+  const email = await signUp(page, "Noa");
+  await seedLocationChain(email, TEST_PASSWORD, ["Garage", "High shelf", longPlace]);
+
+  await page.goto("/items/new");
+  await page.waitForLoadState("networkidle");
+  const location = page.getByRole("combobox", { name: "Location" });
+
+  // An existing long place, found anywhere: its full path wraps after a "›";
+  // only the over-long place breaks inside.
+  await location.fill("PPP");
+  const match = page.getByRole("option", { name: `Garage › High shelf › ${longPlace}` });
+  await expect(match).toBeVisible();
+  await expectNoTextOutsideViewport(page);
+  expect(await lineCount(page, "High shelf")).toBe(1);
+
+  // A long new place at the top level, then inside a long place.
+  await location.fill(newPlace);
+  await expect(page.getByRole("option", { name: `New place “${newPlace}”, top level` })).toBeVisible();
+  await expectNoTextOutsideViewport(page);
+
+  await location.fill("PPP");
+  await match.click();
+  await location.fill(newPlace);
+  await expect(page.getByRole("option", { name: new RegExp(`^New “${newPlace}” inside`) })).toBeVisible();
+  // The chips (one of them 60 characters) and "Goes in …" wrap too.
+  await expectNoTextOutsideViewport(page);
+});

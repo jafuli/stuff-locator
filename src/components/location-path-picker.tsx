@@ -15,7 +15,7 @@ import {
   descend,
   newChipCount,
   popChip,
-  splitMatchSegments,
+  splitMatchSteps,
   truncateTo,
   type PathChip,
   type PickerRow,
@@ -70,15 +70,38 @@ export interface LocationPathPickerProps {
 const SECTION_CLASS = "border-b border-divider last:border-b-0";
 const HEADER_CLASS = "px-4 pt-3 pb-1 text-section-label text-muted";
 
+/**
+ * A place or a full path in a menu row, with the typed text underlined. It
+ * wraps the way PathTrail does: each step (a name and the "›" after it) is
+ * one flex item, so a step that fits moves to the next line whole, and only
+ * a step wider than the row breaks inside (at a space, or anywhere for one
+ * unbroken word). Nothing is clipped by the menu's overflow-hidden.
+ */
 function MatchedPath({ path, query }: { path: string; query: string }): ReactNode {
-  return splitMatchSegments(path, query).map((segment, index) =>
-    segment.matched ? (
-      <b key={index} className="font-medium underline decoration-2 underline-offset-2">
-        {segment.text}
-      </b>
-    ) : (
-      <span key={index}>{segment.text}</span>
-    ),
+  const steps = splitMatchSteps(path, query);
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+      {steps.map((pieces, stepIndex) => (
+        <span key={stepIndex} className="inline-flex min-w-0 items-center gap-x-1.5">
+          <span className="min-w-0 wrap-anywhere">
+            {pieces.map((piece, index) =>
+              piece.matched ? (
+                <b key={index} className="font-medium underline decoration-2 underline-offset-2">
+                  {piece.text}
+                </b>
+              ) : (
+                <span key={index}>{piece.text}</span>
+              ),
+            )}
+          </span>
+          {stepIndex < steps.length - 1 ? (
+            <span aria-hidden="true" className="shrink-0 text-faint">
+              {" › "}
+            </span>
+          ) : null}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -223,7 +246,9 @@ export function LocationPathPicker({
 
   function renderOption(item: ComboItem, index: number) {
     const isHighlighted = highlightedIndex === index;
-    const base = "flex min-h-12 items-center justify-between gap-3 px-4 py-2";
+    // flex-wrap: a side note ("top level", "inside …", "already here") drops
+    // under the name when both don't fit on one line.
+    const base = "flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2";
     if (item.kind === "create") {
       const label = rows.createInside === null ? `+ New place “${item.name}”` : `+ New “${item.name}”`;
       const where = rows.createInside === null ? "top level" : `inside ${rows.createInside}`;
@@ -242,7 +267,9 @@ export function LocationPathPicker({
         >
           {/* The space keeps the two spans' words apart in the computed
               visible text; a flex container doesn't render it. */}
-          <span>{label}</span> <span className="shrink-0 text-meta font-normal text-muted">{where}</span>
+          <span className="min-w-0 wrap-anywhere">{label}</span>{" "}
+          {/* "inside ‹place›" can be long too, so it may wrap as well. */}
+          <span className="min-w-0 text-meta font-normal text-muted wrap-anywhere">{where}</span>
         </li>
       );
     }
@@ -267,9 +294,7 @@ export function LocationPathPicker({
           isHighlighted && "bg-divider",
         )}
       >
-        <span>
-          <MatchedPath path={text} query={inputValue} />
-        </span>
+        <MatchedPath path={text} query={inputValue} />
         {/* Visible reason, also inside the accessible name above; the
             option itself is aria-disabled (downshift's isItemDisabled). */}
         {row.disabled ? (
@@ -309,9 +334,9 @@ export function LocationPathPicker({
         aria-label={`Location: ${pathLabel}`}
       >
         {value.map((chip, index) => (
-          <span key={`${chip.kind}-${String(index)}-${chip.name}`} className="flex items-center gap-1.5">
+          <span key={`${chip.kind}-${String(index)}-${chip.name}`} className="flex min-w-0 items-center gap-1.5">
             {index > 0 ? (
-              <span aria-hidden="true" className="text-path text-faint">
+              <span aria-hidden="true" className="shrink-0 text-path text-faint">
                 ›
               </span>
             ) : null}
@@ -331,7 +356,7 @@ export function LocationPathPicker({
                 // location so far); a chip that doesn't exist yet is dashed
                 // and untaped until the item is saved — the tape prints in
                 // then (see StashForm's success panel).
-                "inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-tape px-2 text-path break-words",
+                "inline-flex min-h-target-min min-w-target-min items-center justify-center rounded-tape px-2 text-path wrap-anywhere",
                 "focus-ring",
                 chip.kind === "new"
                   ? "border border-dashed border-border-strong bg-transparent text-ink"
@@ -410,7 +435,7 @@ export function LocationPathPicker({
       </ul>
 
       {value.length > 0 ? (
-        <p className="mt-1 text-meta text-muted">
+        <p className="mt-1 text-meta text-muted wrap-anywhere">
           Goes in <b className="font-medium text-ink">{chipsPath(value)}</b>
           {newCount > 0 ? ` · ${String(newCount)} new place${newCount === 1 ? "" : "s"}` : ""}
         </p>
