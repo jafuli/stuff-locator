@@ -12,7 +12,7 @@
 //   - text lengths: CHECK constraints at exactly the limits (23514 one over)
 //   - an email with a 64-character local part still signs up (its seeded
 //     display name is clamped)
-//   - activity retention: a household keeps exactly its newest 500 events
+//   - activity retention: a household keeps exactly its newest 200 events
 //
 // Each limit raises its own SQLSTATE (SL001–SL003); the UI maps them to copy.
 import { randomUUID } from "node:crypto";
@@ -439,8 +439,8 @@ describe("text lengths", () => {
   });
 });
 
-describe("activity retention (newest 500 per household)", () => {
-  test("a household that writes more than 500 events keeps exactly the newest 500", async () => {
+describe("activity retention (newest 200 per household)", () => {
+  test("a household that writes more than 200 events keeps exactly the newest 200", async () => {
     const member = await newMember("retention");
     const [fromId = "", toId = ""] = await seedPlaces(member, 2);
     const { data: item, error } = await member.client.rpc("stash_item", { p_name: "Keys", p_location_id: fromId });
@@ -448,8 +448,8 @@ describe("activity retention (newest 500 per household)", () => {
       throw new Error(error.message);
     }
 
-    // 1 item_added + 510 moves = 511 events written.
-    for (let move = 0; move < 510; move += 1) {
+    // 1 item_added + 210 moves = 211 events written.
+    for (let move = 0; move < 210; move += 1) {
       const { error: moveError } = await member.client.rpc("move_item", {
         p_item_id: item.id,
         p_new_location_id: move % 2 === 0 ? toId : fromId,
@@ -459,7 +459,7 @@ describe("activity retention (newest 500 per household)", () => {
       }
     }
 
-    expect(await countRows("activity_events", member.householdId)).toBe(500);
+    expect(await countRows("activity_events", member.householdId)).toBe(200);
 
     // The oldest event (the item_added) is the one that went.
     const { data: kinds } = await serviceClient

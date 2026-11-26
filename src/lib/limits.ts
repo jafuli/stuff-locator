@@ -11,6 +11,9 @@ export const PLACE_LIMIT = 100;
 /** Places on one path, top level included: `Garage › Closet › … ` holds at most 8. */
 export const DEPTH_LIMIT = 8;
 
+/** Activity events kept per household, newest first (record_activity_event prunes the rest). */
+export const ACTIVITY_RETENTION = 200;
+
 /** Maximum lengths in characters (Postgres `char_length`, i.e. code points). */
 export const TEXT_LIMITS = {
   itemName: 80,

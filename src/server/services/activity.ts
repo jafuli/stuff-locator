@@ -1,20 +1,17 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toActivityEntry, type ActivityEntry } from "@/lib/activity";
+import { fetchActivityPage, type ActivityPage } from "@/lib/activity-page";
 import type { Database } from "@/lib/database.types";
-import { displayNameFor } from "@/lib/display-name";
-import { fetchDisplayNames } from "./profiles";
 
-/** How many of the most recent events the feed shows. */
-export const ACTIVITY_FEED_LIMIT = 100;
+/** The household the feed is for, and its first page. */
+export interface FirstActivityPage extends ActivityPage {
+  householdId: string;
+}
 
 /**
- * Builds the /activity feed for the household the caller belongs to.
- *
- * Reads ONLY `activity_events` (ADR 0011): every change to an item or place
- * is recorded there by the function that made it, in the same transaction,
- * so there is nothing to derive or merge. Newest first, capped at
- * ACTIVITY_FEED_LIMIT.
+ * The first page of the /activity feed for the household the caller belongs
+ * to (ADR 0011: activity_events only). Older pages are fetched from the
+ * browser with the same fetchActivityPage, starting from `next`.
  *
  * Takes its client as a parameter (like ensureHousehold) so it is testable
  * with a hand-built fake. Everything is RLS-scoped through the caller's JWT.
@@ -25,7 +22,7 @@ export const ACTIVITY_FEED_LIMIT = 100;
 export async function fetchActivityEntries(
   supabase: SupabaseClient<Database>,
   userId: string,
-): Promise<ActivityEntry[]> {
+): Promise<FirstActivityPage> {
   const { data: membership, error: membershipError } = await supabase
     .from("household_members")
     .select("household_id")
@@ -41,24 +38,6 @@ export async function fetchActivityEntries(
     throw new Error("activity: signed-in user has no household");
   }
 
-  const { data: rows, error } = await supabase
-    .from("activity_events")
-    .select("id, household_id, actor_id, kind, subject_id, subject_name, from_text, to_text, detail_text, created_at")
-    .eq("household_id", membership.household_id)
-    .order("created_at", { ascending: false })
-    .limit(ACTIVITY_FEED_LIMIT);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const displayNames = await fetchDisplayNames(
-    supabase,
-    rows.map((row) => row.actor_id),
-  );
-
-  return rows.flatMap((row) => {
-    const entry = toActivityEntry(row, displayNameFor(row.actor_id, displayNames));
-    return entry ? [entry] : [];
-  });
+  const page = await fetchActivityPage(supabase, membership.household_id, null);
+  return { householdId: membership.household_id, ...page };
 }

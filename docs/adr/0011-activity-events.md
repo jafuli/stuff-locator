@@ -151,12 +151,19 @@ wrong. A move without a `from_text` renders as "to *path*".
   `EXECUTE` is checked against the calling role, so the helper would have to
   be granted to `authenticated`, which is a direct write path again.
 
-## Amendment, 2026-11-24: the newest 500 events per household are kept
+## Amendment, 2026-11-24: the newest 200 events per household are kept
 
-"Every move is kept" above now holds only within a household's newest 500
-events (ADR 0015). `record_activity_event`, which every writer already calls,
-deletes anything older in the same transaction, so no writer can skip it;
-the migration pruned existing households once. The feed shows the newest
-100 (`ACTIVITY_FEED_LIMIT`), so nothing a person can see is lost. Without a
-bound the log was the one table that grew forever: about 80% of a maxed-out
-household's estimated size.
+"Every move is kept" above now holds only within a household's newest 200
+events (ADR 0015). It was first set at 500, then lowered the same day, once
+the feed could page back through everything kept. `record_activity_event`,
+which every writer already calls, deletes anything older in the same
+transaction, so no writer can skip it; the migrations pruned existing
+households once. Without a bound the log was the one table that grew
+forever: about 69% of a maxed-out household on disk at 500.
+
+The feed shows all of what is kept: the newest 50, then "Show earlier
+activity" for 50 more, read from the browser by keyset (`created_at`, `id`)
+through RLS. It is paged, not virtualized: a few hundred rows is no load for
+the DOM, and a real list keeps find-in-page, list navigation and the
+This week / Earlier headings. At the end it says so: "That's everything:
+the newest 200 changes are kept."
