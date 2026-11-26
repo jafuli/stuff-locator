@@ -107,3 +107,13 @@ enforced wherever depth can grow: `ensure_location_path` (Stash, item edit,
 move with a new path), `create_location` ("+ Add a place here") and
 `move_container`, which refuses a move that would push any place inside the
 moved one past 8. Capture still never *requires* more than one level.
+
+## Amendment, 2026-11-24: "›" is not allowed in a place name
+
+"›" separates the places in a path: paths are shown and stored as names
+joined with " › " (`location_path_text`, the `activity_events` snapshots),
+and the Activity feed splits them back on it. A place named "A › B" would
+come back as two places. A CHECK (`locations_name_no_path_separator`) now
+refuses it in every writer. The forms validate it first, and the picker
+never offers "+ New" for text containing "›", because typing it means typing
+a path, which "Matches anywhere" already finds.
