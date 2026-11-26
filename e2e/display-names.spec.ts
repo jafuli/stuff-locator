@@ -85,35 +85,81 @@ test("Escape cancels an edit without closing the sheet; a blank name is refused"
   await expect(sheet.getByRole("alert")).toHaveText("Enter your name.");
 });
 
-test("a 50-character one-word name keeps its whole suffix and never scrolls a 375px screen sideways", async ({
+/**
+ * Fails if any visible text sticks out of the viewport, measured on the
+ * text itself. Checking page scroll isn't enough: rows sit in
+ * overflow-hidden panels, so a long word there is clipped, not scrolled.
+ */
+async function expectNoTextOutsideViewport(page: Page) {
+  const outside = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const found: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? "";
+      if (text === "" || node.parentElement?.closest(".sr-only") !== null) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of Array.from(range.getClientRects())) {
+        if (rect.width > 0 && (rect.left < -0.5 || rect.right > width + 0.5)) {
+          found.push(text.slice(0, 40));
+        }
+      }
+    }
+    return found;
+  });
+  expect(outside).toEqual([]);
+}
+
+/** How many lines `text`'s element wraps onto. */
+async function lineCount(page: Page, text: string): Promise<number> {
+  return page
+    .getByText(text, { exact: true })
+    .first()
+    .evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+    });
+}
+
+test("long names wrap at 375px: nothing is clipped, and a path breaks after › before it breaks inside a place", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   const longName = "W".repeat(50);
+  const longPlace = "P".repeat(60);
   const email = await signUp(page, longName);
-  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage", "High shelf", "Top drawer", longPlace]);
   const client = await signedInClient(email, TEST_PASSWORD);
-  const { data: item, error } = await client.rpc("stash_item", { p_name: "Bike pump", p_location_id: locationId });
+  const { data: item, error } = await client.rpc("stash_item", {
+    p_name: "I".repeat(80),
+    p_detail: "D".repeat(80),
+    p_location_id: locationId,
+  });
   expect(error).toBeNull();
-
-  async function expectNoSidewaysScroll() {
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(
-      0,
-    );
-  }
 
   const sheet = await openSheet(page);
   // Nothing is stored or clamped: the title is composed when shown.
   await expect(sheet.getByRole("heading", { name: `${longName}'s household` })).toBeVisible();
-  const sheetBox = await sheet.boundingBox();
-  expect((sheetBox?.x ?? 0) + (sheetBox?.width ?? 0)).toBeLessThanOrEqual(375);
-  await expectNoSidewaysScroll();
+  await expectNoTextOutsideViewport(page);
   await page.keyboard.press("Escape");
 
-  for (const path of [STUFF_PATH, "/activity", `/items/${item?.id ?? ""}`]) {
+  await page.goto(STUFF_PATH);
+  await page.waitForLoadState("networkidle");
+  // Short steps move to the next line whole; only the over-long one wraps inside.
+  expect(await lineCount(page, "High shelf")).toBe(1);
+  expect(await lineCount(page, "Top drawer")).toBe(1);
+  expect(await lineCount(page, longPlace)).toBeGreaterThan(1);
+  // No "who, when" line under the row.
+  await expect(page.locator("main").getByText(/ ago$/)).toHaveCount(0);
+  await expectNoTextOutsideViewport(page);
+
+  for (const path of ["/browse", "/activity", `/items/${item?.id ?? ""}`]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
-    await expect(page.getByText("Bike pump").first()).toBeVisible();
-    await expectNoSidewaysScroll();
+    await expectNoTextOutsideViewport(page);
   }
 });

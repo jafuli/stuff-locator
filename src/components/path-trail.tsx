@@ -54,16 +54,24 @@ function isNarrowOnServer(): boolean {
   return false;
 }
 
-const SEGMENT_CLASSES = "inline-flex min-h-6 items-center whitespace-nowrap";
+// No nowrap: a step that fits on a line moves to the next line whole (see
+// the doc comment); only a step wider than the line wraps inside, at its
+// spaces first and mid-word only for one unbroken word.
+const SEGMENT_CLASSES = "inline-flex min-h-6 min-w-0 items-center wrap-anywhere";
 const LINK_CLASSES = "rounded-tape hover:underline focus-ring";
 // Only the last segment is ever on tape — the location is the hero.
-const TAPE_CLASSES = "h-tape-height rounded-tape bg-tape px-2 text-on-tape shadow-tape";
+// A minimum height, so a name too long for one line grows the tape downwards.
+const TAPE_CLASSES = "min-h-tape-height rounded-tape bg-tape px-2 text-on-tape shadow-tape";
 
 /**
  * The design system's PathTrail: a location path in uppercase mono, with
  * `›` separators in `faint` and ONLY the last segment on label tape —
- * `BEDROOM › DESK › [TOP DRAWER]`. It stays on one line and wraps between
- * segments only when it has to (a segment never breaks mid-name).
+ * `BEDROOM › DESK › [TOP DRAWER]`. It stays on one line and, when it has
+ * to, wraps after a `›`: each step (a name and the `›` after it) is one
+ * flex item, and flex wrapping moves a step that fits on the next line
+ * there whole. Only a step wider than a whole line breaks inside its name:
+ * at a space if it has one, anywhere if it is one unbroken word. It never
+ * spills out of its row.
  *
  * Under 360px a path with middle segments collapses them to a "…" button
  * that expands them; the button's label names the whole path, so assistive
@@ -97,7 +105,7 @@ export function PathTrail({ segments, linked = false, printIn = false, collapseF
         const isLast = index === lastIndex;
         const segmentClasses = cn(SEGMENT_CLASSES, isLast && cn(TAPE_CLASSES, printIn && "animate-tape-print"));
         return (
-          <span key={segment.id} className="inline-flex items-center gap-x-1.5">
+          <span key={segment.id} className="inline-flex min-w-0 items-center gap-x-1.5">
             {linked ? (
               <Link href={`/browse/${segment.id}`} className={cn(segmentClasses, LINK_CLASSES)}>
                 {segment.name}
@@ -131,7 +139,7 @@ export function PathTrail({ segments, linked = false, printIn = false, collapseF
 
 function Separator() {
   return (
-    <span aria-hidden="true" className="text-faint">
+    <span aria-hidden="true" className="shrink-0 text-faint">
       {" › "}
     </span>
   );

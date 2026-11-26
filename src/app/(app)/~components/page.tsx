@@ -329,10 +329,9 @@ export default function ComponentsDemoPage() {
       <Section id="result-list-heading" title="Result list">
         <ThemePair>
           <StuffList
-            entries={ITEMS.slice(0, 3).map((item, index) => ({
+            entries={ITEMS.slice(0, 3).map((item) => ({
               item,
               segments: segmentsFor(item.locationId),
-              byName: index === 0 ? "Noa" : undefined,
             }))}
             linkLocationSegments
             closestId={ITEMS[0]?.id}

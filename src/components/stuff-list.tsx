@@ -16,8 +16,6 @@ export interface StuffListEntry {
   item: Item;
   /** Root→leaf path segments for item.locationId — already resolved by the caller. */
   segments: LocationBreadcrumbSegment[];
-  /** First name of whoever last touched the item, when the caller could resolve it. */
-  byName?: string;
 }
 
 export interface StuffListProps {
@@ -70,12 +68,11 @@ export function StuffList({
 
   return (
     <div className={RESULT_LIST_PANEL_CLASSES}>
-      {entries.map(({ item, segments, byName }) => (
+      {entries.map(({ item, segments }) => (
         <ItemCard
           key={item.id}
           item={item}
           segments={segments}
-          byName={byName}
           href={`/items/${item.id}`}
           linkLocationSegments={linkLocationSegments}
           closest={closestId !== undefined && item.id === closestId}
