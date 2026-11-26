@@ -10,7 +10,7 @@ vi.mock("@/server/db/client", () => ({
   createClient: () => ({
     auth: { signUp },
     rpc,
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle, limit: () => ({ maybeSingle }) }) }) }),
   }),
 }));
 
@@ -164,7 +164,7 @@ test("submit shows a real loading state while signUp is in flight", async () => 
 test("with an invite code, a successful sign-up redeems it before bootstrapping, and never navigates itself", async () => {
   signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
   rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
-  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home", household_members: [] } });
   const onRedeemed = vi.fn();
 
   const user = userEvent.setup();
@@ -266,4 +266,39 @@ test("the name is sent as user metadata, whitespace-normalised", async () => {
     password: "a-real-password",
     options: { data: { display_name: "Noa Levi" } },
   });
+});
+
+test("a failed submit focuses the first invalid field; typing in a field clears only that field's error", async () => {
+  const user = userEvent.setup();
+  render(<SignUpForm />);
+
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Your name"));
+  expect(screen.getByText("Enter your name.")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Your name"), "N");
+  expect(screen.queryByText("Enter your name.")).toBeNull();
+  expect(screen.getByText("Enter your email address.")).toBeDefined();
+  expect(screen.getByText("Enter a password.")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Email"), "n");
+  expect(screen.queryByText("Enter your email address.")).toBeNull();
+  expect(screen.getByText("Enter a password.")).toBeDefined();
+  expect(screen.getByLabelText("Password").getAttribute("aria-invalid")).toBe("true");
+  expect(screen.getByLabelText("Email").getAttribute("aria-invalid")).toBeNull();
+});
+
+test("Supabase's own error stays until the next submit: it belongs to the form, not a field", async () => {
+  signUp.mockResolvedValue({ data: { user: null, session: null }, error: { message: "User already registered" } });
+  const user = userEvent.setup();
+  render(<SignUpForm />);
+
+  await user.type(screen.getByLabelText("Your name"), "Noa");
+  await user.type(screen.getByLabelText("Email"), "person@example.com");
+  await user.type(screen.getByLabelText("Password"), "a-real-password");
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+  expect(await screen.findByText("User already registered")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Email"), "x");
+  expect(screen.getByText("User already registered")).toBeDefined();
 });

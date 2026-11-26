@@ -107,6 +107,16 @@ describe("ensureHousehold", () => {
     expect(memberships?.[0]?.role).toBe("owner");
     const membership = assertNotNull(memberships?.[0] ?? null, "expected exactly one membership row");
     createdHouseholdIds.push(membership.household_id);
+
+    // Unnamed: the app titles it after its owner when it is shown, so
+    // nothing derived from anyone's name is stored.
+    const { data: household, error: householdError } = await userClient
+      .from("households")
+      .select("name")
+      .eq("id", membership.household_id)
+      .single();
+    expect(householdError).toBeNull();
+    expect(household?.name).toBeNull();
   });
 
   test("running it again for the same user does not create a second household", async () => {

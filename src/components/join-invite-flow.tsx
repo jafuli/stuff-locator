@@ -84,7 +84,7 @@ export function JoinInviteFlow({ code, initiallySignedIn }: JoinInviteFlowProps)
     return (
       <div role="status" className="flex flex-col gap-3 rounded-panel border border-hairline bg-surface p-4">
         <p className="text-body text-ink">
-          You&apos;ve joined <span className="font-medium">{stage.householdName ?? "the household"}</span>&apos;s home
+          You&apos;ve joined <span className="font-medium wrap-anywhere">{stage.householdName ?? "the household"}</span>
         </p>
         <Link href={STUFF_PATH} className={LINK_CLASSES}>
           Go to Stuff Locator

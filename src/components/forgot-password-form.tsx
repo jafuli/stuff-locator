@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { useFieldErrors } from "@/components/use-field-errors";
 import { validateEmail } from "@/lib/auth-validation";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
 
-interface FieldErrors {
-  email?: string;
-}
+const FIELDS = ["email"] as const;
 
 /**
  * Standalone forgot-password form — calls the browser Supabase client
@@ -27,16 +26,19 @@ interface FieldErrors {
  */
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const {
+    fieldErrors,
+    report,
+    clear,
+    inputs: { email: emailInputRef },
+  } = useFieldErrors(FIELDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors: FieldErrors = { email: validateEmail(email) };
-    setFieldErrors(errors);
-    if (errors.email) {
+    if (report({ email: validateEmail(email) })) {
       return;
     }
 
@@ -83,7 +85,11 @@ export function ForgotPasswordForm() {
         type="email"
         autoComplete="email"
         value={email}
-        onChange={setEmail}
+        onChange={(value) => {
+          setEmail(value);
+          clear("email");
+        }}
+        ref={emailInputRef}
         error={fieldErrors.email}
         disabled={isSubmitting}
       />

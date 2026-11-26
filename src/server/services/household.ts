@@ -1,29 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { firstNameOf } from "@/lib/display-name";
-import { clampToLength, LIMIT_ERROR_CODES, TEXT_LIMITS } from "@/lib/limits";
-
-// Used when there is no usable name to derive one from (shouldn't happen in
-// practice — every profile has a non-empty display name — but
-// create_household rejects null/empty/whitespace-only names, so this is
-// the guaranteed-non-empty fallback).
-export const DEFAULT_HOUSEHOLD_NAME = "Our household";
-
-/**
- * A new household's name, from the founder's display name: "Itamar's
- * household" (first name only, the brand voice). The display name is what
- * they typed at sign-up, or their email handle if they predate that field
- * (handle_new_user). Falls back to DEFAULT_HOUSEHOLD_NAME for a blank name.
- *
- * Clamped to the household-name limit (ADR 0015), so a 50-character first
- * name can't fail households' length CHECK and with it the whole bootstrap.
- */
-export function deriveHouseholdName(displayName: string | null | undefined): string {
-  const firstName = firstNameOf(displayName);
-  return firstName === undefined
-    ? DEFAULT_HOUSEHOLD_NAME
-    : clampToLength(`${firstName}'s household`, TEXT_LIMITS.householdName);
-}
+import { LIMIT_ERROR_CODES } from "@/lib/limits";
 
 export type EnsureHouseholdResult =
   { readonly ok: true; readonly created: boolean } | { readonly ok: false; readonly error: string };
@@ -70,14 +47,9 @@ export async function ensureHousehold(
     return { ok: true, created: false };
   }
 
-  // The auth.users trigger has already seeded this (from the sign-up name,
-  // or the email handle). An unreadable profile still gets a household,
-  // under the default name.
-  const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", userId).maybeSingle();
-
-  const { error: createError } = await supabase.rpc("create_household", {
-    p_name: deriveHouseholdName(profile?.display_name),
-  });
+  // No name: a household is unnamed until someone chooses one, and the app
+  // titles it after its owner when it is shown (src/lib/household-title.ts).
+  const { error: createError } = await supabase.rpc("create_household");
   if (createError?.code === LIMIT_ERROR_CODES.alreadyInHousehold) {
     return { ok: true, created: false };
   }

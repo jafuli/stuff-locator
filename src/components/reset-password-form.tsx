@@ -5,14 +5,13 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
+import { useFieldErrors } from "@/components/use-field-errors";
 import { validatePasswordConfirmation, validateSignUpPassword } from "@/lib/auth-validation";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
 
-interface FieldErrors {
-  password?: string;
-  confirmation?: string;
-}
+/** On-screen order, for where focus goes after a failed submit. */
+const FIELDS = ["password", "confirmation"] as const;
 
 type Status = "checking" | "invalid" | "ready" | "updated";
 
@@ -40,7 +39,12 @@ export function ResetPasswordForm() {
   const [status, setStatus] = useState<Status>("checking");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const {
+    fieldErrors,
+    report,
+    clear,
+    inputs: { password: passwordInputRef, confirmation: confirmationInputRef },
+  } = useFieldErrors(FIELDS);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,12 +71,12 @@ export function ResetPasswordForm() {
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors: FieldErrors = {
+    // On a failure, focus moves to the first invalid field.
+    const hasErrors = report({
       password: validateSignUpPassword(password),
       confirmation: validatePasswordConfirmation(password, confirmation),
-    };
-    setFieldErrors(errors);
-    if (errors.password || errors.confirmation) {
+    });
+    if (hasErrors) {
       return;
     }
 
@@ -151,7 +155,11 @@ export function ResetPasswordForm() {
         type="password"
         autoComplete="new-password"
         value={password}
-        onChange={setPassword}
+        onChange={(value) => {
+          setPassword(value);
+          clear("password");
+        }}
+        ref={passwordInputRef}
         error={fieldErrors.password}
         disabled={isSubmitting}
       />
@@ -161,7 +169,11 @@ export function ResetPasswordForm() {
         type="password"
         autoComplete="new-password"
         value={confirmation}
-        onChange={setConfirmation}
+        onChange={(value) => {
+          setConfirmation(value);
+          clear("confirmation");
+        }}
+        ref={confirmationInputRef}
         error={fieldErrors.confirmation}
         disabled={isSubmitting}
       />

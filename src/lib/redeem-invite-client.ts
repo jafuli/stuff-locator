@@ -1,14 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { householdTitle, readHouseholdIdentity } from "@/lib/household-title";
 import { HOUSEHOLD_FULL_MESSAGE } from "@/lib/limit-errors";
 import { LIMIT_ERROR_CODES } from "@/lib/limits";
 
 export { HOUSEHOLD_FULL_MESSAGE };
 
+/** `householdName` is the household's title (householdTitle), null if it can't be read. */
 export type RedeemInviteResult = { ok: true; householdName: string | null } | { ok: false; error: string };
 
+async function titleOf(supabase: SupabaseClient<Database>, householdId: string): Promise<string | null> {
+  const identity = await readHouseholdIdentity(supabase, householdId);
+  return identity === null ? null : householdTitle(identity);
+}
+
 /**
- * Redeems an invite code and resolves the joined household's display name —
+ * Redeems an invite code and resolves the joined household's title —
  * shared by JoinInviteFlow (the already-signed-in case) and
  * SignUpForm/SignInForm (the sign-up/sign-in-through-an-invite case), so
  * there's exactly one place that knows how to turn a code into "you're in,
@@ -36,12 +43,7 @@ export async function redeemInviteAndGetHouseholdName(
   const { data, error } = await supabase.rpc("redeem_invite", { p_code: code });
 
   if (!error) {
-    const { data: household } = await supabase
-      .from("households")
-      .select("name")
-      .eq("id", data.household_id)
-      .maybeSingle();
-    return { ok: true, householdName: household?.name ?? null };
+    return { ok: true, householdName: await titleOf(supabase, data.household_id) };
   }
 
   if (error.code === LIMIT_ERROR_CODES.householdFull) {
@@ -55,12 +57,7 @@ export async function redeemInviteAndGetHouseholdName(
     .maybeSingle();
 
   if (alreadyMemberInvite) {
-    const { data: household } = await supabase
-      .from("households")
-      .select("name")
-      .eq("id", alreadyMemberInvite.household_id)
-      .maybeSingle();
-    return { ok: true, householdName: household?.name ?? null };
+    return { ok: true, householdName: await titleOf(supabase, alreadyMemberInvite.household_id) };
   }
 
   return { ok: false, error: error.message };

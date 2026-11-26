@@ -14,7 +14,7 @@ vi.mock("@/server/db/client", () => ({
   createClient: () => ({
     auth: { signInWithPassword },
     rpc,
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle, limit: () => ({ maybeSingle }) }) }) }),
   }),
 }));
 
@@ -164,7 +164,7 @@ test("with an invite code, a successful sign-in redeems it before bootstrapping,
     error: null,
   });
   rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
-  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home", household_members: [] } });
   const onRedeemed = vi.fn();
 
   const user = userEvent.setup();
@@ -235,4 +235,19 @@ test("the sign-up link carries the return-to path along, so switching forms does
 test("with no return-to path, the sign-up link stays clean", () => {
   render(<SignInForm />);
   expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/sign-up");
+});
+
+test("a failed submit focuses the first invalid field; typing in a field clears only that field's error", async () => {
+  const user = userEvent.setup();
+  render(<SignInForm />);
+
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Email"));
+
+  await user.type(screen.getByLabelText("Email"), "a");
+  expect(screen.queryByText("Enter your email address.")).toBeNull();
+  expect(screen.getByText("Enter your password.")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Password"), "a");
+  expect(screen.queryByText("Enter your password.")).toBeNull();
 });

@@ -84,3 +84,14 @@ test("resetPasswordForEmail throwing (not resolving to { error }) still reaches 
 
   consoleError.mockRestore();
 });
+
+test("the email error clears as soon as the email changes, and a failed submit focuses the field", async () => {
+  const user = userEvent.setup();
+  render(<ForgotPasswordForm />);
+
+  await user.click(screen.getByRole("button", { name: "Send reset link" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Email"));
+
+  await user.type(screen.getByLabelText("Email"), "a");
+  expect(screen.queryByText("Enter your email address.")).toBeNull();
+});

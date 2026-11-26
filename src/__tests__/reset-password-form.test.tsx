@@ -122,3 +122,20 @@ test("updateUser throwing (not resolving to { error }) surfaces an error too, no
   expect(screen.queryByRole("button", { name: "Updating…" })).toBeNull();
   expect(screen.queryByRole("status")).toBeNull();
 });
+
+test("each field clears only its own error: editing the password leaves the mismatch under Confirm", async () => {
+  mockRecoverySession();
+  const user = userEvent.setup();
+  render(<ResetPasswordForm />);
+
+  await user.type(screen.getByLabelText("New password"), "longenough1");
+  await user.type(screen.getByLabelText("Confirm new password"), "different1");
+  await user.click(screen.getByRole("button", { name: "Update password" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Confirm new password"));
+
+  await user.type(screen.getByLabelText("New password"), "2");
+  expect(screen.getByText("Passwords don't match.")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Confirm new password"), "2");
+  expect(screen.queryByText("Passwords don't match.")).toBeNull();
+});

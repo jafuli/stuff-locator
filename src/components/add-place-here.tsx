@@ -137,7 +137,11 @@ export function AddPlaceHere({ parentId, blocked = null }: AddPlaceHereProps) {
         label="Place name"
         type="text"
         value={name}
-        onChange={setName}
+        onChange={(value) => {
+          setName(value);
+          // An error under the field goes as soon as the field changes.
+          setError(undefined);
+        }}
         maxLength={TEXT_LIMITS.placeName}
         error={error}
         disabled={isSaving}

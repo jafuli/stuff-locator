@@ -15,7 +15,7 @@ vi.mock("@/server/db/client", () => ({
   createClient: () => ({
     auth: { signUp, signInWithPassword },
     rpc,
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle, limit: () => ({ maybeSingle }) }) }) }),
   }),
 }));
 
@@ -43,12 +43,16 @@ afterEach(() => {
 
 test("an already-signed-in visitor redeems automatically and shows the real success state", async () => {
   rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
-  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  // An unnamed household, then its owner's profile: the title is composed.
+  maybeSingle
+    .mockResolvedValueOnce({ data: { name: null, household_members: [{ user_id: "owner-1", role: "owner" }] } })
+    .mockResolvedValueOnce({ data: { display_name: "Maayan Cohen" } });
 
   render(<JoinInviteFlow code="abc123" initiallySignedIn />);
 
   const status = await screen.findByRole("status");
-  expect(status.textContent).toContain("Maayan's home");
+  expect(status.textContent).toContain("You've joined Maayan's household");
+  expect(status.textContent).not.toContain("'s home");
   expect(screen.getByRole("link", { name: "Go to Stuff Locator" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(rpc).toHaveBeenCalledWith("redeem_invite", { p_code: "abc123" });
 });
@@ -67,7 +71,7 @@ test("an already-signed-in visitor with an invalid code sees a specific error st
 test("a signed-out visitor sees the sign-up form by default; a successful sign-up redeems and shows success", async () => {
   signUp.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
   rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
-  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home", household_members: [] } });
 
   const user = userEvent.setup();
   render(<JoinInviteFlow code="abc123" initiallySignedIn={false} />);
@@ -99,7 +103,7 @@ test("toggling to sign-in switches forms locally, without navigating", async () 
 test("a signed-out sign-in path also redeems the invite and shows success", async () => {
   signInWithPassword.mockResolvedValue({ data: { user: { id: "1" }, session: { access_token: "t" } }, error: null });
   rpc.mockResolvedValue({ data: { household_id: "household-1" }, error: null });
-  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home" } });
+  maybeSingle.mockResolvedValue({ data: { name: "Maayan's home", household_members: [] } });
 
   const user = userEvent.setup();
   render(<JoinInviteFlow code="abc123" initiallySignedIn={false} />);

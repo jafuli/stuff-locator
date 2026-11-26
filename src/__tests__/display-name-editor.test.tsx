@@ -124,3 +124,16 @@ test("while saving, the buttons and field are disabled; a failure shows inline a
   expect(field.value).toBe("Noa");
   expect(refresh).not.toHaveBeenCalled();
 });
+
+test("the error clears as soon as the name changes", async () => {
+  const user = userEvent.setup();
+  await user.click(await renderLoaded());
+
+  await user.clear(screen.getByLabelText("Your name"));
+  await user.click(screen.getByRole("button", { name: "Save name" }));
+  expect(screen.getByRole("alert").textContent).toBe("Enter your name.");
+
+  await user.type(screen.getByLabelText("Your name"), "M");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByLabelText("Your name").getAttribute("aria-invalid")).toBeNull();
+});

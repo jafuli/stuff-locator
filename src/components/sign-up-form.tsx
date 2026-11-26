@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { useFieldErrors } from "@/components/use-field-errors";
 import { HouseholdBootstrapNotice } from "@/components/household-bootstrap-notice";
 import { BOOTSTRAP_NOTICE_AUTO_CONTINUE_MS, triggerHouseholdBootstrap } from "@/lib/household-bootstrap-client";
 import {
@@ -19,11 +20,8 @@ import { DEFAULT_REDIRECT_PATH, withNextParam } from "@/lib/safe-redirect-path";
 import { createClient } from "@/server/db/client";
 import { textLinkClassName } from "@/components/ui/text-link";
 
-interface FieldErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-}
+/** On-screen order, for where focus goes after a failed submit. */
+const FIELDS = ["name", "email", "password"] as const;
 
 export interface SignUpFormProps {
   /**
@@ -80,7 +78,12 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const {
+    fieldErrors,
+    report,
+    clear,
+    inputs: { name: nameInputRef, email: emailInputRef, password: passwordInputRef },
+  } = useFieldErrors(FIELDS);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
@@ -106,13 +109,13 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const errors: FieldErrors = {
+    // On a failure, focus moves to the first invalid field.
+    const hasErrors = report({
       name: validateDisplayName(name),
       email: validateEmail(email),
       password: validateSignUpPassword(password),
-    };
-    setFieldErrors(errors);
-    if (errors.name || errors.email || errors.password) {
+    });
+    if (hasErrors) {
       return;
     }
 
@@ -202,7 +205,11 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
         type="text"
         autoComplete="name"
         value={name}
-        onChange={setName}
+        onChange={(value) => {
+          setName(value);
+          clear("name");
+        }}
+        ref={nameInputRef}
         maxLength={TEXT_LIMITS.displayName}
         error={fieldErrors.name}
         disabled={isSubmitting}
@@ -213,7 +220,11 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
         type="email"
         autoComplete="email"
         value={email}
-        onChange={setEmail}
+        onChange={(value) => {
+          setEmail(value);
+          clear("email");
+        }}
+        ref={emailInputRef}
         error={fieldErrors.email}
         disabled={isSubmitting}
       />
@@ -223,7 +234,11 @@ export function SignUpForm({ invite, next = DEFAULT_REDIRECT_PATH }: SignUpFormP
         type="password"
         autoComplete="new-password"
         value={password}
-        onChange={setPassword}
+        onChange={(value) => {
+          setPassword(value);
+          clear("password");
+        }}
+        ref={passwordInputRef}
         error={fieldErrors.password}
         disabled={isSubmitting}
       />

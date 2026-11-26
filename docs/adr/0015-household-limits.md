@@ -65,8 +65,8 @@ places than things.
   count cap is only reported (`RAISE NOTICE`): caps apply to new writes.
 - **Names derived from an email are clamped to 50.** The `auth.users`
   trigger seeds a display name from the email's local part, which can be 64
-  characters. Unclamped, the new CHECK would fail the whole sign-up. The
-  same applies to the household name the bootstrap derives.
+  characters. Unclamped, the new CHECK would fail the whole sign-up. (The
+  bootstrap no longer derives a household name at all; see ADR 0016.)
 - **Retention prunes inside `record_activity_event`**, the one function every
   writer already calls, in the same transaction. It takes no household lock,
   because that would deadlock against `rename_location`. So two writes

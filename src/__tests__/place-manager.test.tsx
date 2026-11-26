@@ -154,6 +154,19 @@ describe("Rename", () => {
     expect(screen.getByText("Enter a name for this place.")).toBeDefined();
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  test("the error clears as soon as the name changes", async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    const input = await startRename(user);
+    await user.clear(input);
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Enter a name for this place.")).toBeDefined();
+
+    await user.type(input, "D");
+    expect(screen.queryByText("Enter a name for this place.")).toBeNull();
+  });
 });
 
 describe("Move into…", () => {

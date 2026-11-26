@@ -47,7 +47,8 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
     consoleErrors.push(err.message);
   });
 
-  const { code } = await seedInviteForNewHousehold("Maayan's home");
+  // Unnamed, as every real household starts: titled after its owner.
+  const { code } = await seedInviteForNewHousehold(null, "Maayan Cohen");
   const email = `e2e-join-${randomUUID()}@example.com`;
 
   await page.goto(`/join/${code}`);
@@ -62,7 +63,8 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
 
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
-  await expect(status.getByText("Maayan's home")).toBeVisible();
+  await expect(status).toContainText("You've joined Maayan's household");
+  await expect(status).not.toContainText("'s home");
   await expect(status.getByRole("link", { name: "Go to Stuff Locator" })).toHaveAttribute("href", STUFF_PATH);
 
   // The critical assertion (AC #2): exactly one household, the inviter's —

@@ -224,6 +224,8 @@ export function PlaceManager({
                 value={draft}
                 onChange={(event) => {
                   setDraft(event.target.value);
+                  // An error under the field goes as soon as the field changes.
+                  setRenameError(undefined);
                 }}
                 disabled={isRenaming}
                 maxLength={TEXT_LIMITS.placeName}

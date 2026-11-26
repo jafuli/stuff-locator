@@ -32,6 +32,7 @@ async function openSheet(page: Page) {
 test("the sign-up name becomes your display name and names the new household", async ({ page }) => {
   await signUp(page, "Noa Levi");
 
+  await expect(page.getByRole("button", { name: "Household menu" })).toHaveText("N");
   const sheet = await openSheet(page);
   await expect(sheet.getByRole("heading", { name: "Noa's household" })).toBeVisible();
   await expect(sheet.getByText("Noa Levi", { exact: true })).toBeVisible();
@@ -55,7 +56,10 @@ test("renaming yourself in the household sheet shows on Stuff and on past Activi
 
   await expect(sheet.getByText("Maya", { exact: true })).toBeVisible();
   await expect(edit).toBeFocused();
+  // The household is titled after its owner when shown, so it follows too.
+  await expect(sheet.getByRole("heading", { name: "Maya's household" })).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Household menu" })).toHaveText("M");
 
   await page.goto("/activity");
   await page.waitForLoadState("networkidle");
@@ -79,4 +83,37 @@ test("Escape cancels an edit without closing the sheet; a blank name is refused"
   await sheet.getByLabel("Your name").fill("   ");
   await sheet.getByRole("button", { name: "Save name" }).click();
   await expect(sheet.getByRole("alert")).toHaveText("Enter your name.");
+});
+
+test("a 50-character one-word name keeps its whole suffix and never scrolls a 375px screen sideways", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const longName = "W".repeat(50);
+  const email = await signUp(page, longName);
+  const locationId = await seedLocationChain(email, TEST_PASSWORD, ["Garage"]);
+  const client = await signedInClient(email, TEST_PASSWORD);
+  const { data: item, error } = await client.rpc("stash_item", { p_name: "Bike pump", p_location_id: locationId });
+  expect(error).toBeNull();
+
+  async function expectNoSidewaysScroll() {
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(
+      0,
+    );
+  }
+
+  const sheet = await openSheet(page);
+  // Nothing is stored or clamped: the title is composed when shown.
+  await expect(sheet.getByRole("heading", { name: `${longName}'s household` })).toBeVisible();
+  const sheetBox = await sheet.boundingBox();
+  expect((sheetBox?.x ?? 0) + (sheetBox?.width ?? 0)).toBeLessThanOrEqual(375);
+  await expectNoSidewaysScroll();
+  await page.keyboard.press("Escape");
+
+  for (const path of [STUFF_PATH, "/activity", `/items/${item?.id ?? ""}`]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText("Bike pump").first()).toBeVisible();
+    await expectNoSidewaysScroll();
+  }
 });

@@ -17,6 +17,11 @@ const ICON_BUTTON =
 const SAVE_FAILED = "Your name couldn't be saved. Check your connection and try again.";
 const CHECK_VIOLATION = "23514";
 
+export interface DisplayNameEditorProps {
+  /** Fires after a rename lands, for anything on screen that shows the name outside the router's refresh. */
+  onSaved?: () => void;
+}
+
 type Loaded = { status: "loading" } | { status: "failed" } | { status: "ready"; userId: string; name: string };
 
 /**
@@ -32,7 +37,7 @@ type Loaded = { status: "loading" } | { status: "failed" } | { status: "ready"; 
  * time, so a router.refresh() is enough for Stuff, item detail and Activity
  * — past events included — to show the new name.
  */
-export function DisplayNameEditor() {
+export function DisplayNameEditor({ onSaved }: DisplayNameEditorProps = {}) {
   const router = useRouter();
   const inputId = useId();
   const labelId = useId();
@@ -136,6 +141,7 @@ export function DisplayNameEditor() {
     }
     setLoaded({ status: "ready", userId, name: data.display_name });
     stopEditing();
+    onSaved?.();
     router.refresh();
   }
 
@@ -194,6 +200,8 @@ export function DisplayNameEditor() {
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);
+            // An error under the field goes as soon as the field changes.
+            setError(undefined);
           }}
           onKeyDown={handleKeyDown}
           maxLength={TEXT_LIMITS.displayName}
