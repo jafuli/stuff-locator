@@ -97,6 +97,7 @@ npm run dev
 | `npm run test:e2e` | Playwright end-to-end suite (builds, boots the app, drives it). Needs a real backend — run `npm run supabase:start` first — and the same `.env.rls.local` values, auto-loaded the same way |
 | `npm run supabase:start` / `:stop` | Local Supabase stack (Postgres + Auth + PostgREST) |
 | `npm run db:types` | Regenerate `src/lib/database.types.ts` from the local schema |
+| `npm run measure:db` | Capacity measurement (ADR 0015): seeds typical and maxed-out households into the **local** stack through the real write functions, prints table/index/TOAST sizes per row and per household, then deletes what it made. Needs `supabase start`, Docker and `.env.rls.local`; never touches production |
 
 ## Layout
 

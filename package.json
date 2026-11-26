@@ -24,7 +24,8 @@
     "test:e2e": "node --env-file-if-exists=.env.rls.local node_modules/.bin/playwright test",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "measure:db": "node --env-file-if-exists=.env.rls.local scripts/measure-db.mts"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",
