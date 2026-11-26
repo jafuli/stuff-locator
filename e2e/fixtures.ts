@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { test as base, expect, type BrowserContext } from "@playwright/test";
+import { test as base, expect, type BrowserContext, type Request } from "@playwright/test";
 import { isHuggingFaceRequest } from "../src/lib/search/model-hosts";
 
 // Find downloads a ~23 MB embedding model from Hugging Face, the only
@@ -82,6 +82,24 @@ interface StoredResponse {
   headers: Record<string, string>;
 }
 
+/**
+ * A cached response, re-addressed to the page asking for it. Hugging Face
+ * answers some requests with `access-control-allow-origin: <the request's
+ * origin>` rather than `*`, so a reply recorded from http://localhost:3000
+ * would be refused by CORS on any other origin (another port, or
+ * 127.0.0.1): the model would never load and Find would quietly fall back
+ * to lexical. Echoing the current origin keeps the cache origin-independent,
+ * as the real host is.
+ */
+function forThisOrigin(headers: Record<string, string>, request: Request): Record<string, string> {
+  const name = "access-control-allow-origin";
+  const requestHeaders = request.headers();
+  if (!(name in headers) || headers[name] === "*" || !("origin" in requestHeaders)) {
+    return headers;
+  }
+  return { ...headers, [name]: requestHeaders.origin };
+}
+
 async function installModelRoutes(context: BrowserContext, mode: ModelNetwork): Promise<ModelRoutes> {
   const urls: string[] = [];
   let upstreamFailed = false;
@@ -103,7 +121,7 @@ async function installModelRoutes(context: BrowserContext, mode: ModelNetwork): 
       try {
         const [meta, body] = await Promise.all([readFile(metaPath, "utf8"), readFile(bodyPath)]);
         const stored = JSON.parse(meta) as StoredResponse;
-        await route.fulfill({ status: stored.status, headers: stored.headers, body });
+        await route.fulfill({ status: stored.status, headers: forThisOrigin(stored.headers, request), body });
         return;
       } catch {
         // Not cached yet: fall through to the real host.
