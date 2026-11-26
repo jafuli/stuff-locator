@@ -1,27 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { clampToLength, LIMIT_ERROR_CODES, TEXT_LIMITS } from "@/lib/limits";
-
-// Used when a user's email has no usable local-part to derive a name from
-// (shouldn't happen in practice — Supabase Auth requires an email — but
-// create_household rejects null/empty/whitespace-only names, so this is
-// the guaranteed-non-empty fallback).
-export const DEFAULT_HOUSEHOLD_NAME = "Our household";
-
-/**
- * A deterministic, non-empty default household name derived from the
- * user's email local-part (the bit before "@"), e.g. "jane@example.com" ->
- * "jane". Falls back to DEFAULT_HOUSEHOLD_NAME if the local-part is empty
- * or whitespace-only once trimmed.
- *
- * Clamped to the household-name limit (ADR 0015): an email's local part may
- * be 64 characters, and an unclamped one would fail households' length CHECK
- * and with it the whole bootstrap.
- */
-export function deriveHouseholdName(email: string | null | undefined): string {
-  const localPart = clampToLength(email?.split("@")[0]?.trim() ?? "", TEXT_LIMITS.householdName);
-  return localPart.length > 0 ? localPart : DEFAULT_HOUSEHOLD_NAME;
-}
+import { LIMIT_ERROR_CODES } from "@/lib/limits";
 
 export type EnsureHouseholdResult =
   { readonly ok: true; readonly created: boolean } | { readonly ok: false; readonly error: string };
@@ -54,7 +33,6 @@ export type EnsureHouseholdResult =
 export async function ensureHousehold(
   supabase: SupabaseClient<Database>,
   userId: string,
-  email: string | null | undefined,
 ): Promise<EnsureHouseholdResult> {
   const { data: existing, error: readError } = await supabase
     .from("household_members")
@@ -69,9 +47,9 @@ export async function ensureHousehold(
     return { ok: true, created: false };
   }
 
-  const { error: createError } = await supabase.rpc("create_household", {
-    p_name: deriveHouseholdName(email),
-  });
+  // No name: a household is unnamed until someone chooses one, and the app
+  // titles it after its owner when it is shown (src/lib/household-title.ts).
+  const { error: createError } = await supabase.rpc("create_household");
   if (createError?.code === LIMIT_ERROR_CODES.alreadyInHousehold) {
     return { ok: true, created: false };
   }

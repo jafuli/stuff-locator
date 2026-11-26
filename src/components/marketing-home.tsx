@@ -5,8 +5,6 @@ import { RESULT_LIST_PANEL_CLASSES, type StuffListEntry } from "@/components/stu
 import { buttonClassName } from "@/components/ui/button";
 import { textLinkClassName } from "@/components/ui/text-link";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 const HOW_IT_WORKS = [
   {
     title: "Stash it",
@@ -22,15 +20,8 @@ const HOW_IT_WORKS = [
   },
 ] as const;
 
-/**
- * The "For example" rows. Hard-coded on purpose: no Supabase call, no
- * session. The dates are offsets from `now` rather than fixed days, so the
- * meta line keeps reading "3 days ago" instead of slowly going stale. 125
- * days rather than 120 so "4 months ago" (30-day months in
- * formatRelativeLong) doesn't sit on a boundary.
- */
-export function demoEntries(now: Date): StuffListEntry[] {
-  const daysAgo = (days: number) => new Date(now.getTime() - days * DAY_MS);
+/** The "For example" rows. Hard-coded on purpose: no Supabase call, no session. */
+export function demoEntries(): StuffListEntry[] {
   return [
     {
       item: {
@@ -38,39 +29,30 @@ export function demoEntries(now: Date): StuffListEntry[] {
         locationId: "demo-top-drawer",
         name: "Passports (both)",
         detail: "In the blue folder",
-        lastMovedAt: daysAgo(3),
       },
       segments: [
         { id: "demo-bedroom", name: "Bedroom" },
         { id: "demo-desk", name: "Desk" },
         { id: "demo-top-drawer", name: "Top drawer" },
       ],
-      byName: "Noa",
     },
     {
-      item: { id: "demo-car-key", locationId: "demo-small-tin", name: "Spare car key", lastMovedAt: daysAgo(14) },
+      item: { id: "demo-car-key", locationId: "demo-small-tin", name: "Spare car key" },
       segments: [
         { id: "demo-hallway", name: "Hallway" },
         { id: "demo-shoe-cabinet", name: "Shoe cabinet" },
         { id: "demo-small-tin", name: "Small tin" },
       ],
-      byName: "Dan",
     },
     {
-      item: { id: "demo-stove", locationId: "demo-red-box", name: "Camping stove", lastMovedAt: daysAgo(125) },
+      item: { id: "demo-stove", locationId: "demo-red-box", name: "Camping stove" },
       segments: [
         { id: "demo-garage", name: "Garage" },
         { id: "demo-closet", name: "Closet" },
         { id: "demo-red-box", name: "Red box" },
       ],
-      byName: "Noa",
     },
   ];
-}
-
-export interface MarketingHomeProps {
-  /** The moment the sample rows' "3 days ago" is measured from. Defaults to the render time. */
-  now?: Date;
 }
 
 /**
@@ -82,7 +64,7 @@ export interface MarketingHomeProps {
  * one display question, the pitch, Sign up, "How it works", and three
  * sample result rows — and it ends there, no repeated call to action.
  */
-export function MarketingHome({ now = new Date() }: MarketingHomeProps) {
+export function MarketingHome() {
   return (
     <>
       <SiteHeader
@@ -127,8 +109,8 @@ export function MarketingHome({ now = new Date() }: MarketingHomeProps) {
               sibling position (see StuffList). No href: these rows illustrate,
               they don't open anything. */}
           <div className={RESULT_LIST_PANEL_CLASSES}>
-            {demoEntries(now).map(({ item, segments, byName }) => (
-              <ItemCard key={item.id} item={item} segments={segments} byName={byName} />
+            {demoEntries().map(({ item, segments }) => (
+              <ItemCard key={item.id} item={item} segments={segments} />
             ))}
           </div>
         </section>

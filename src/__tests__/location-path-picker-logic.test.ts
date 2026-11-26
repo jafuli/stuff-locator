@@ -10,6 +10,7 @@ import {
   normalizePlaceName,
   popChip,
   resolvePath,
+  splitMatchSteps,
   truncateTo,
   type PathChip,
 } from "@/lib/location-path-picker";
@@ -207,5 +208,47 @@ describe("resolvePath — the arguments for stash_item / update_item", () => {
     expect(lastExistingId(chips)).toBe("office");
     expect(newChipCount(chips)).toBe(1);
     expect(lastExistingId([{ kind: "new", name: "Shelf" }])).toBeNull();
+  });
+});
+
+describe("splitMatchSteps", () => {
+  test("cuts a path into its places, dropping the separators", () => {
+    expect(splitMatchSteps("Garage › Top drawer", "")).toEqual([
+      [{ text: "Garage", matched: false }],
+      [{ text: "Top drawer", matched: false }],
+    ]);
+  });
+
+  test("keeps the highlight inside the place it falls in", () => {
+    expect(splitMatchSteps("Garage › Red box", "red")).toEqual([
+      [{ text: "Garage", matched: false }],
+      [
+        { text: "Red", matched: true },
+        { text: " box", matched: false },
+      ],
+    ]);
+  });
+
+  test("a match across a › is highlighted on both sides of it", () => {
+    expect(splitMatchSteps("Garage › Closet", "age › clo")).toEqual([
+      [
+        { text: "Gar", matched: false },
+        { text: "age", matched: true },
+      ],
+      [
+        { text: "Clo", matched: true },
+        { text: "set", matched: false },
+      ],
+    ]);
+  });
+
+  test("a single place is one step", () => {
+    expect(splitMatchSteps("Top drawer", "draw")).toEqual([
+      [
+        { text: "Top ", matched: false },
+        { text: "draw", matched: true },
+        { text: "er", matched: false },
+      ],
+    ]);
   });
 });

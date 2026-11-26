@@ -114,19 +114,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          name: string
+          name: string | null
           onboarding_completed_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          name: string
+          name?: string | null
           onboarding_completed_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
-          name?: string
+          name?: string | null
           onboarding_completed_at?: string | null
         }
         Relationships: []
@@ -291,11 +291,11 @@ export type Database = {
       }
       assert_place_depth: { Args: { p_depth: number }; Returns: undefined }
       create_household: {
-        Args: { p_name: string }
+        Args: { p_name?: string }
         Returns: {
           created_at: string
           id: string
-          name: string
+          name: string | null
           onboarding_completed_at: string | null
         }
         SetofOptions: {

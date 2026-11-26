@@ -1,49 +1,54 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { DisplayNameEditor } from "@/components/display-name-editor";
 import { SignOutButton } from "@/components/sign-out-button";
 import { useHasSession } from "@/components/use-has-session";
 import { Dialog } from "@/components/ui/dialog";
-import { FALLBACK_INITIALS, householdInitials } from "@/lib/household-initials";
+import { householdInitials } from "@/lib/household-initials";
+import { householdTitle, readHouseholdIdentity, type HouseholdIdentity } from "@/lib/household-title";
 import { createClient } from "@/server/db/client";
 
 const ROW_CLASSES = "flex min-h-14 items-center px-5 text-body text-ink focus-ring-inset";
 
 /**
- * The household's name, read through the caller's own RLS-scoped session
- * (the same select the join flow uses) — null while loading or if it can't
- * be read, in which case the button just shows the fallback initial.
+ * The household's chosen name and its owner's display name, read through
+ * the caller's own RLS-scoped session — null while loading or if they can't
+ * be read, in which case the button shows the fallback initial and the
+ * sheet says "Your household". `reload` re-reads them, for after the owner
+ * renames themselves.
  */
-function useHouseholdName(enabled: boolean): string | null {
-  const [name, setName] = useState<string | null>(null);
+function useHouseholdIdentity(enabled: boolean): { identity: HouseholdIdentity | null; reload: () => void } {
+  const [identity, setIdentity] = useState<HouseholdIdentity | null>(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (!enabled) {
       return;
     }
     let isMounted = true;
-    void createClient()
-      .from("household_members")
-      .select("households(name)")
-      .order("joined_at", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (isMounted) {
-          setName(data?.households.name ?? null);
-        }
-      });
+    void readHouseholdIdentity(createClient()).then((next) => {
+      if (isMounted) {
+        setIdentity(next);
+      }
+    });
     return () => {
       isMounted = false;
     };
-  }, [enabled]);
+  }, [enabled, version]);
 
-  return enabled ? name : null;
+  const reload = useCallback(() => {
+    setVersion((previous) => previous + 1);
+  }, []);
+
+  return { identity: enabled ? identity : null, reload };
 }
 
 /**
- * The household button and the sheet it opens: Invite partner and Sign out.
+ * The household button and the sheet it opens: Invite partner, your own
+ * name (editable in place, DisplayNameEditor) and Sign out. Invite partner
+ * stays first, so it is what the sheet focuses when it opens.
  * This is the primary way to reach both, so the app shell no longer carries
  * a loose Invite link and a bare Sign out button under the tabs. There is
  * deliberately no Settings row yet: the only settings page is
@@ -56,7 +61,7 @@ function useHouseholdName(enabled: boolean): string | null {
  */
 export function HouseholdMenu() {
   const hasSession = useHasSession();
-  const householdName = useHouseholdName(hasSession);
+  const { identity, reload } = useHouseholdIdentity(hasSession);
   const [open, setOpen] = useState(false);
   // Dialog hands focus back to whatever had it on open; the ref is here so
   // closing via a link click (which navigates) still ends on the button.
@@ -70,7 +75,9 @@ export function HouseholdMenu() {
     setOpen(false);
   }
 
-  const initials = householdName === null ? FALLBACK_INITIALS : householdInitials(householdName);
+  // The initial is always the owner's, never from a chosen household name.
+  const initials = householdInitials(identity?.ownerDisplayName);
+  const title = (identity === null ? null : householdTitle(identity)) ?? "Your household";
 
   return (
     <>
@@ -87,12 +94,15 @@ export function HouseholdMenu() {
       >
         {initials}
       </button>
-      <Dialog variant="sheet" open={open} onClose={close} title={householdName ?? "Your household"}>
+      <Dialog variant="sheet" open={open} onClose={close} title={title}>
         <ul className="flex flex-col divide-y divide-divider border-t border-divider">
           <li>
             <Link href="/settings/invite" onClick={close} className={ROW_CLASSES}>
               Invite partner
             </Link>
+          </li>
+          <li>
+            <DisplayNameEditor onSaved={reload} />
           </li>
           <li>
             <SignOutButton assumeSession />

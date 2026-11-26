@@ -316,3 +316,25 @@ export function splitMatchSegments(text: string, query: string): { text: string;
   }
   return segments;
 }
+
+/**
+ * splitMatchSegments for a full " › "-joined path, cut into its steps (one
+ * list of segments per place, separators dropped), so a path can wrap after
+ * a "›" rather than inside a place name. The highlight is still the first
+ * match in the whole path: a match that runs across a "›" is highlighted
+ * on both sides of it.
+ */
+export function splitMatchSteps(path: string, query: string): { text: string; matched: boolean }[][] {
+  const steps: { text: string; matched: boolean }[][] = [[]];
+  for (const segment of splitMatchSegments(path, query)) {
+    segment.text.split(" › ").forEach((part, index) => {
+      if (index > 0) {
+        steps.push([]);
+      }
+      if (part !== "") {
+        steps[steps.length - 1]?.push({ text: part, matched: segment.matched });
+      }
+    });
+  }
+  return steps;
+}

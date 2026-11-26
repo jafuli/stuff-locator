@@ -23,7 +23,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { deriveHouseholdName, ensureHousehold } from "@/server/services/household";
+import { ensureHousehold } from "@/server/services/household";
 
 // Duplicated from create-household-rpc.test.ts / rls-household-isolation.test.ts
 // rather than extracted — see those files' own comments on why, with only
@@ -95,7 +95,7 @@ describe("ensureHousehold", () => {
   });
 
   test("a fresh user with no household ends up with exactly one", async () => {
-    const result = await ensureHousehold(userClient, userId, email);
+    const result = await ensureHousehold(userClient, userId);
     expect(result).toEqual({ ok: true, created: true });
 
     const { data: memberships, error } = await userClient
@@ -107,10 +107,20 @@ describe("ensureHousehold", () => {
     expect(memberships?.[0]?.role).toBe("owner");
     const membership = assertNotNull(memberships?.[0] ?? null, "expected exactly one membership row");
     createdHouseholdIds.push(membership.household_id);
+
+    // Unnamed: the app titles it after its owner when it is shown, so
+    // nothing derived from anyone's name is stored.
+    const { data: household, error: householdError } = await userClient
+      .from("households")
+      .select("name")
+      .eq("id", membership.household_id)
+      .single();
+    expect(householdError).toBeNull();
+    expect(household?.name).toBeNull();
   });
 
   test("running it again for the same user does not create a second household", async () => {
-    const result = await ensureHousehold(userClient, userId, email);
+    const result = await ensureHousehold(userClient, userId);
     expect(result).toEqual({ ok: true, created: false });
 
     const { data: memberships, error } = await userClient
@@ -123,19 +133,14 @@ describe("ensureHousehold", () => {
 
   test("an unauthenticated call is rejected and creates nothing", async () => {
     const anonClient = createClient<Database>(SUPABASE_URL, ANON_KEY);
-    const anonEmail = `anon-household-bootstrap-${randomUUID()}@example.com`;
 
-    const result = await ensureHousehold(anonClient, randomUUID(), anonEmail);
-    expect(result.ok).toBe(false);
+    const result = await ensureHousehold(anonClient, randomUUID());
 
-    // The derived household name (anon-household-bootstrap-<uuid> local
-    // part) is unique per run — confirming no row with that name exists
-    // proves the RPC never ran, not just that ensureHousehold reported
-    // failure.
-    const derivedName = deriveHouseholdName(anonEmail);
-    const { data: rows, error } = await serviceClient.from("households").select("id").eq("name", derivedName);
-    expect(error).toBeNull();
-    expect(rows).toHaveLength(0);
+    // The anon role has no grant on create_household at all, so Postgres
+    // refuses the call (42501) before the function body runs: nothing can
+    // have been created. (A household-count check would race the other
+    // test files, which run in parallel.)
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/permission denied/i) as unknown });
   });
 
   test("two concurrent runs for a brand-new user end in exactly one household", async () => {
@@ -152,8 +157,8 @@ describe("ensureHousehold", () => {
 
     try {
       const results = await Promise.all([
-        ensureHousehold(raceClient, raceUser.user.id, raceEmail),
-        ensureHousehold(raceClient, raceUser.user.id, raceEmail),
+        ensureHousehold(raceClient, raceUser.user.id),
+        ensureHousehold(raceClient, raceUser.user.id),
       ]);
       expect(results.every((result) => result.ok)).toBe(true);
 

@@ -16,6 +16,9 @@ async function signUpFreshAccount(page: Page): Promise<{ email: string; displayN
   const displayName = `e2e-activity-${randomUUID()}`;
   const email = `${displayName}@example.com`;
   await page.goto("/sign-up");
+  // One word (and under 50 characters), so the feed's first-name display
+  // shows all of it.
+  await page.getByLabel("Your name").fill(displayName);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();

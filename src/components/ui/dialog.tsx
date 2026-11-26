@@ -125,7 +125,9 @@ export function Dialog({ open, onClose, title, children, dismissOnBackdrop = tru
             : "max-w-sm gap-3 rounded-panel p-5",
         )}
       >
-        <h2 id={titleId} className={cn("text-title text-ink", isSheet && "px-5 pb-3")}>
+        {/* Titles carry user text ("<50-character name>'s household"): break
+            anywhere rather than scroll the page sideways. */}
+        <h2 id={titleId} className={cn("text-title text-ink wrap-anywhere", isSheet && "px-5 pb-3")}>
           {title}
         </h2>
         {children}

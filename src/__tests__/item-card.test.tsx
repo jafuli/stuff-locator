@@ -68,23 +68,10 @@ test("with linkLocationSegments, the item link and each breadcrumb segment are s
   });
 });
 
-test("the meta line reads 'First name, how long ago'", () => {
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-  render(
-    <ItemCard
-      item={{ ...baseItem, lastMovedAt: threeDaysAgo }}
-      segments={segments}
-      href="/items/spare-house-keys"
-      byName="Noa"
-    />,
-  );
-  expect(screen.getByText("Noa, 3 days ago")).toBeDefined();
-});
-
-test("without a known name the meta line is just the time, never a placeholder", () => {
+test("no meta line: who touched it and when is Activity's job, not the list's", () => {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   render(<ItemCard item={{ ...baseItem, lastMovedAt: threeDaysAgo }} segments={segments} href="/items/x" />);
-  expect(screen.getByText("3 days ago")).toBeDefined();
+  expect(document.body.textContent).not.toMatch(/ago|yesterday|today/i);
 });
 
 test("only the closest row carries the CLOSEST marker, and no score is ever shown", () => {
@@ -107,11 +94,10 @@ test("a row found by meaning alone says so in words, with the ≈ hidden from as
 });
 
 test("without an href, renders the same row as a non-interactive div", () => {
-  render(<ItemCard item={baseItem} segments={segments} byName="Noa" />);
+  render(<ItemCard item={baseItem} segments={segments} />);
   expect(screen.queryByRole("link")).toBeNull();
   expect(screen.getByText("Spare house keys")).toBeDefined();
   expect(document.body.textContent).toContain("Garage › Closet › Toolbox › Red box");
-  expect(document.body.textContent).toContain("Noa,");
 });
 
 test("without an href, linkLocationSegments is ignored rather than linking the path", () => {

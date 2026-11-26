@@ -2,13 +2,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { StuffListEntry } from "@/components/stuff-list";
 import type { Database } from "@/lib/database.types";
-import { firstNameOf } from "@/lib/display-name";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
-import { fetchDisplayNames } from "@/server/services/profiles";
 
 export interface StuffEntries {
-  /** Every item, newest first, with its full breadcrumb and who touched it last. */
+  /** Every item, newest first, with its full breadcrumb. */
   entries: StuffListEntry[];
   /** Every place in the household. */
   locations: Location[];
@@ -55,23 +53,10 @@ export async function loadStuffEntries(supabase: SupabaseClient<Database>, house
     lastMovedAt: row.last_moved_at ? new Date(row.last_moved_at) : undefined,
   }));
 
-  // First names for the "Noa, 3 days ago" meta line, via the same profiles
-  // service the item page and Activity use. An id RLS hides is simply absent,
-  // and that row just shows the time.
-  const displayNames = await fetchDisplayNames(
-    supabase,
-    items.map((item) => item.lastMovedBy ?? item.addedBy),
-  );
-
-  const entries: StuffListEntry[] = items.map((item) => {
-    const toucherId = item.lastMovedBy ?? item.addedBy;
-    const fullName = toucherId ? displayNames.get(toucherId) : undefined;
-    return {
-      item,
-      segments: getBreadcrumbSegments(item.locationId, locations),
-      byName: firstNameOf(fullName),
-    };
-  });
+  const entries: StuffListEntry[] = items.map((item) => ({
+    item,
+    segments: getBreadcrumbSegments(item.locationId, locations),
+  }));
 
   return { entries, locations };
 }

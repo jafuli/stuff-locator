@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { formatRelativeLong } from "@/lib/format-relative-time";
 import type { Item } from "@/lib/fixtures/types";
 import { PathTrail, type LocationBreadcrumbSegment } from "@/components/path-trail";
 
@@ -24,8 +23,6 @@ export interface ItemCardProps {
    * keeps the single-anchor row.
    */
   linkLocationSegments?: boolean;
-  /** First name of whoever last touched the item, for the meta line ("Noa, 3 days ago"). Omitted when unknown. */
-  byName?: string;
   /** Marks this row as the top search result with the CLOSEST marker. Never a score. */
   closest?: boolean;
   /**
@@ -44,8 +41,11 @@ const ROW_CLASSES = "flex min-h-14 flex-col gap-1 border-b border-divider px-4 p
 const LINK_CLASSES = "focus-ring-inset";
 
 /**
- * A single ResultList row: title, optional detail, the full path (last
- * segment on tape) and a meta line — "Noa, 3 days ago". At least 56px tall.
+ * A single ResultList row: title, optional detail and the full path (last
+ * segment on tape). At least 56px tall. Who touched it last, and when, is
+ * Activity's job and the item page's, not the list's: the list is for
+ * finding. Long text wraps (anywhere, for one unbroken word) rather than
+ * being clipped by the panel's overflow-hidden.
  * No similarity score, ever. The only search furniture is the CLOSEST marker
  * (top row, when it has earned it) and the "matched on meaning" label on rows
  * found by meaning alone.
@@ -55,22 +55,16 @@ export function ItemCard({
   segments,
   href,
   linkLocationSegments = false,
-  byName,
   closest = false,
   matchedOnMeaning = false,
 }: ItemCardProps) {
-  const lastTouched = item.lastMovedAt ?? item.addedAt;
-  const meta = lastTouched
-    ? [byName, formatRelativeLong(lastTouched)].filter((part): part is string => Boolean(part)).join(", ")
-    : null;
-
   const titleAndDetail = (
     <>
       <span className="flex items-baseline justify-between gap-3">
-        <span className="text-title text-ink">{item.name}</span>
+        <span className="min-w-0 text-title text-ink wrap-anywhere">{item.name}</span>
         {closest ? <span className="shrink-0 text-marker text-signal">Closest</span> : null}
       </span>
-      {item.detail ? <span className="block text-meta text-muted">{item.detail}</span> : null}
+      {item.detail ? <span className="block text-meta text-muted wrap-anywhere">{item.detail}</span> : null}
       {/* Text only: tape is for location segments and signal is CLOSEST's.
           The ≈ is decoration; the words carry the meaning. */}
       {matchedOnMeaning ? (
@@ -80,14 +74,11 @@ export function ItemCard({
       ) : null}
     </>
   );
-  const metaLine = meta ? <p className="text-meta text-muted">{meta}</p> : null;
-
   if (href === undefined) {
     return (
       <div className={ROW_CLASSES}>
         {titleAndDetail}
         <PathTrail segments={segments} />
-        {metaLine}
       </div>
     );
   }
@@ -97,7 +88,6 @@ export function ItemCard({
       <Link href={href} className={cn(ROW_CLASSES, LINK_CLASSES)}>
         {titleAndDetail}
         <PathTrail segments={segments} />
-        {metaLine}
       </Link>
     );
   }
@@ -108,7 +98,6 @@ export function ItemCard({
         {titleAndDetail}
       </Link>
       <PathTrail segments={segments} linked />
-      {metaLine}
     </div>
   );
 }

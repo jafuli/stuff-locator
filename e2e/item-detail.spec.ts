@@ -14,6 +14,7 @@ const TEST_PASSWORD = "correct-horse-battery-1";
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-item-detail-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -103,6 +104,7 @@ test("item detail names the person who added the item, never their raw user id",
   const email = `${localPart}@example.com`;
 
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -115,8 +117,9 @@ test("item detail names the person who added the item, never their raw user id",
   await page.goto(`/items/${itemId}`);
   await expect(page.getByRole("heading", { level: 1, name: itemName })).toBeVisible();
 
-  // The profiles trigger seeds display_name from the email's local-part.
-  await expect(page.getByText("Added by").locator("xpath=following-sibling::*[1]")).toHaveText(localPart);
+  // The profiles trigger seeds display_name from the "Your name" given at
+  // sign-up (20261124124100_display_name_from_signup.sql).
+  await expect(page.getByText("Added by").locator("xpath=following-sibling::*[1]")).toHaveText("E2E Tester");
 
   // The actual regression guard: no user id anywhere in the rendered
   // page. The item's own id is in the URL, deliberately, but must not

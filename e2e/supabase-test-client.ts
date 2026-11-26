@@ -166,18 +166,25 @@ export async function findItemByName(name: string): Promise<{ id: string; househ
 /**
  * Seeds a brand-new household (with a real owner user, not the test's own
  * caller) plus one unredeemed invite for it, via the service-role client.
+ * `householdName` null seeds an unnamed household, titled after
+ * `ownerName` when shown.
  * Returns the invite's real code and the household's id — used by
  * join-invite.spec.ts, which needs a real, redeemable invite to land on
  * without also driving the full Invite-partner UI (already covered
  * end-to-end by invite-partner.spec.ts) just to get one.
  */
-export async function seedInviteForNewHousehold(householdName: string): Promise<{ code: string; householdId: string }> {
+export async function seedInviteForNewHousehold(
+  householdName: string | null,
+  ownerName?: string,
+): Promise<{ code: string; householdId: string }> {
   const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
   const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
     email: `e2e-join-inviter-${randomUUID()}@example.com`,
     password: "a-long-enough-test-password-1!",
     email_confirm: true,
+    // handle_new_user turns this into the owner's display name.
+    ...(ownerName === undefined ? {} : { user_metadata: { display_name: ownerName } }),
   });
   if (userError) {
     throw new Error(`failed to seed inviter user: ${userError.message}`);
@@ -189,7 +196,7 @@ export async function seedInviteForNewHousehold(householdName: string): Promise<
     .select()
     .single();
   if (householdError) {
-    throw new Error(`failed to seed household "${householdName}": ${householdError.message}`);
+    throw new Error(`failed to seed household "${String(householdName)}": ${householdError.message}`);
   }
 
   const { error: memberError } = await serviceClient

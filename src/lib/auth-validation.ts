@@ -64,3 +64,17 @@ export function validatePasswordConfirmation(password: string, confirmation: str
   }
   return undefined;
 }
+
+/**
+ * Sign-up's "Your name" and the household sheet's rename: required, and
+ * whitespace-only counts as empty. The length is held by the input's
+ * maxLength (TEXT_LIMITS.displayName) and the profiles CHECK, not here.
+ */
+export function validateDisplayName(name: string): string | undefined {
+  return normalizeDisplayName(name) === "" ? "Enter your name." : undefined;
+}
+
+/** Trims and collapses whitespace, the same way handle_new_user does. */
+export function normalizeDisplayName(name: string): string {
+  return name.replace(/\s+/g, " ").trim();
+}

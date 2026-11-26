@@ -26,6 +26,7 @@ const TEST_PASSWORD = "correct-horse-battery-1";
 async function signUpFreshAccount(page: Page): Promise<string> {
   const email = `e2e-join-${randomUUID()}@example.com`;
   await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -46,7 +47,8 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
     consoleErrors.push(err.message);
   });
 
-  const { code } = await seedInviteForNewHousehold("Maayan's home");
+  // Unnamed, as every real household starts: titled after its owner.
+  const { code } = await seedInviteForNewHousehold(null, "Maayan Cohen");
   const email = `e2e-join-${randomUUID()}@example.com`;
 
   await page.goto(`/join/${code}`);
@@ -54,13 +56,15 @@ test("signed-out arrival: sign up through the invite link, auto-redeem, and end 
   await expect(page.getByRole("heading", { level: 1, name: "Join a household" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
 
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
 
   const status = page.getByRole("status");
   await expect(status).toBeVisible();
-  await expect(status.getByText("Maayan's home")).toBeVisible();
+  await expect(status).toContainText("You've joined Maayan's household");
+  await expect(status).not.toContainText("'s home");
   await expect(status.getByRole("link", { name: "Go to Stuff Locator" })).toHaveAttribute("href", STUFF_PATH);
 
   // The critical assertion (AC #2): exactly one household, the inviter's —
@@ -99,6 +103,7 @@ test("an invalid code shows a clear, specific error state, with no partial house
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
 
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
@@ -145,6 +150,7 @@ test("joining a household that already has two people says so, and leaves the jo
 
   await page.goto(`/join/${code}`);
   await page.waitForLoadState("networkidle");
+  await page.getByLabel("Your name").fill("E2E Tester");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();

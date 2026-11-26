@@ -127,3 +127,15 @@ test("a place-cap refusal from the database (a partner took the last slot) shows
 
   expect(screen.getByRole("alert").textContent).toMatch(/^Limit reached: this household has 100 places\./);
 });
+
+test("the error clears as soon as the name changes", async () => {
+  const user = userEvent.setup();
+  render(<AddPlaceHere parentId={null} />);
+
+  await openField(user);
+  await user.click(screen.getByRole("button", { name: "Add" }));
+  expect(screen.getByText("Enter a name for this place.")).toBeDefined();
+
+  await user.type(screen.getByLabelText("Place name"), "G");
+  expect(screen.queryByText("Enter a name for this place.")).toBeNull();
+});
