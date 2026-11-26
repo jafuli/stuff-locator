@@ -3,14 +3,16 @@ import { redirect } from "next/navigation";
 import { GuidedOnboarding } from "@/components/guided-onboarding";
 import { HouseholdSetupRetry } from "@/components/household-setup-retry";
 import { StuffSearchResults } from "@/components/stuff-search-results";
+import { CountLine } from "@/components/count-line";
 import { RegisterStuffView } from "@/components/stuff-views-shell";
 import { buttonClassName } from "@/components/ui/button";
+import { ITEM_LIMIT, THINGS } from "@/lib/limits";
 import { createClient } from "@/server/db/server";
 import { loadStuffEntries } from "@/server/services/stuff-entries";
 
 // Wireframe screen 02, "Home — everything (default)": the full item list,
 // each row showing its full location path. The heading, search field, Stash
-// and the "All (n)" / "By place" chips above it belong to the layout both
+// and the "All" / "By place" chips above it belong to the layout both
 // views share (StuffViewsShell, see ../layout.tsx), so they stay on screen
 // when you switch to Browse. loading.tsx covers this page's reads.
 //
@@ -57,7 +59,7 @@ export default async function Page() {
   if (!membership) {
     return (
       <>
-        <RegisterStuffView total={0} mode="setup" />
+        <RegisterStuffView mode="setup" />
         <HouseholdSetupRetry />
       </>
     );
@@ -86,27 +88,30 @@ export default async function Page() {
 
   return (
     <>
-      <RegisterStuffView total={entries.length} mode={showOnboarding ? "onboarding" : "list"} />
+      <RegisterStuffView mode={showOnboarding ? "onboarding" : "list"} />
       {showOnboarding ? (
         <GuidedOnboarding householdId={membership.household_id} locations={locations} />
       ) : (
-        /*
-          StuffSearchResults ranks `entries` against the header's query,
-          client-side: substring matches while the embedding model loads (or
-          if it never does), a by-meaning ranking once it is ready
-          (src/lib/search/). Entries themselves are resolved server-side
-          here. emptyStateAction only ever shows for the true "this
-          household has zero items" case (StuffList's own empty state) — a
-          "no search matches" query shows a different empty state.
-        */
-        <StuffSearchResults
-          entries={entries}
-          emptyStateAction={
-            <Link href="/items/new" className={buttonClassName("primary")}>
-              Stash your first item
-            </Link>
-          }
-        />
+        <>
+          <CountLine count={entries.length} max={ITEM_LIMIT} noun={THINGS} />
+          {/*
+            StuffSearchResults ranks `entries` against the header's query,
+            client-side: substring matches while the embedding model loads (or
+            if it never does), a by-meaning ranking once it is ready
+            (src/lib/search/). Entries themselves are resolved server-side
+            here. emptyStateAction only ever shows for the true "this
+            household has zero items" case (StuffList's own empty state) — a
+            "no search matches" query shows a different empty state.
+          */}
+          <StuffSearchResults
+            entries={entries}
+            emptyStateAction={
+              <Link href="/items/new" className={buttonClassName("primary")}>
+                Stash your first item
+              </Link>
+            }
+          />
+        </>
       )}
     </>
   );

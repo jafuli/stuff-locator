@@ -106,3 +106,24 @@ test("other errors are shown verbatim", async () => {
 
   expect(await screen.findByText("create_location: boom")).toBeDefined();
 });
+
+test("at a limit the button is replaced by a note that says so", () => {
+  const { unmount } = render(<AddPlaceHere parentId={null} blocked="placeLimit" />);
+  expect(screen.queryByRole("button", { name: "+ Add a place here" })).toBeNull();
+  expect(screen.getByText(/^Limit reached: this household has 100 places\./)).toBeDefined();
+  unmount();
+
+  render(<AddPlaceHere parentId="deep" blocked="depthLimit" />);
+  expect(screen.getByText(/^Limit reached: this place can't hold more places\./)).toBeDefined();
+});
+
+test("a place-cap refusal from the database (a partner took the last slot) shows the same copy", async () => {
+  const user = userEvent.setup();
+  rpc.mockResolvedValue({ data: null, error: { code: "SL002", message: "place limit reached" } });
+  render(<AddPlaceHere parentId={null} />);
+
+  await user.type(await openField(user), "Shed");
+  await user.click(screen.getByRole("button", { name: "Add" }));
+
+  expect(screen.getByRole("alert").textContent).toMatch(/^Limit reached: this household has 100 places\./);
+});

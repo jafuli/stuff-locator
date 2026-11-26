@@ -12,6 +12,7 @@ import { deletedNotice } from "@/lib/flash-notice";
 import type { LocationBreadcrumbSegment } from "@/lib/fixtures/location-path";
 import type { Item, Location } from "@/lib/fixtures/types";
 import type { Database } from "@/lib/database.types";
+import { addPlaceLimit } from "@/lib/location-path-picker";
 import { createClient } from "@/server/db/server";
 
 // A malformed id (not a valid uuid at all — e.g. an old fixture slug, or a
@@ -271,7 +272,7 @@ export default async function Page(props: PageProps<"/browse/[id]">) {
         </>
       )}
 
-      <AddPlaceHere parentId={currentRow.id} />
+      <AddPlaceHere parentId={currentRow.id} blocked={addPlaceLimit(allLocations.length, segments.length)} />
     </main>
   );
 }

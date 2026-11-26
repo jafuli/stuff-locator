@@ -13,6 +13,8 @@ import { chipsForPlace, resolvePath, type PathChip } from "@/lib/location-path-p
 // aren't Stash-specific despite the module's name.
 import { validateItemName, validateLocationPath } from "@/lib/stash-validation";
 import { createClient } from "@/server/db/client";
+import { friendlyRpcError } from "@/lib/limit-errors";
+import { TEXT_LIMITS } from "@/lib/limits";
 import { useItemFieldErrors } from "@/components/use-item-field-errors";
 import { itemSavedHref } from "@/lib/flash-notice";
 
@@ -88,7 +90,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
 
     if (error) {
       setIsSubmitting(false);
-      setSubmitError(error.message);
+      setSubmitError(friendlyRpcError(error, "editItem"));
       return;
     }
 
@@ -127,6 +129,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
         error={fieldErrors.name}
         // An item's name, not the person's: no browser autofill.
         autoComplete="off"
+        maxLength={TEXT_LIMITS.itemName}
         disabled={isSubmitting}
       />
 
@@ -154,6 +157,7 @@ export function ItemEditForm({ item, locations }: ItemEditFormProps) {
         type="text"
         value={detail}
         onChange={setDetail}
+        maxLength={TEXT_LIMITS.detail}
         disabled={isSubmitting}
       />
 

@@ -12,7 +12,15 @@ import { StuffViewChips } from "@/components/stuff-view-chips";
 import { ItemCardSkeleton } from "@/components/item-card-skeleton";
 import { TabCapsule } from "@/components/tab-capsule";
 import { PathPickerDemo } from "./path-picker-demo";
-import { DialogDemo, FormFieldDemo, HouseholdSheetDemo, StuffSearchDemo } from "./primitive-demos";
+import {
+  CharacterCounterDemo,
+  DialogDemo,
+  FormFieldDemo,
+  HouseholdSheetDemo,
+  StuffSearchDemo,
+} from "./primitive-demos";
+import { AddPlaceHere } from "@/components/add-place-here";
+import { countLine, ITEM_LIMIT, PLACE_LIMIT, PLACES, THINGS } from "@/lib/limits";
 import { LOCATIONS } from "@/lib/fixtures/locations";
 import { ITEMS } from "@/lib/fixtures/items";
 import { getBreadcrumbSegments } from "@/lib/fixtures/location-path";
@@ -313,8 +321,8 @@ export default function ComponentsDemoPage() {
       <Section id="search-heading" title="Search field and view chips">
         <ThemePair>
           <StuffSearchDemo />
-          <StuffViewChips total={5} active="all" />
-          <StuffViewChips total={5} active="place" />
+          <StuffViewChips active="all" />
+          <StuffViewChips active="place" />
         </ThemePair>
       </Section>
 
@@ -353,6 +361,36 @@ export default function ComponentsDemoPage() {
             Pick-only (no &quot;+ New&quot; row; Garage and everything inside it excluded)
           </p>
           <PathPickerDemo label="Move into…" locations={LOCATIONS} pickOnly excludeIds={["garage"]} />
+        </div>
+      </Section>
+
+      <Section id="limits-heading" title="At the household limits (ADR 0015)">
+        <ThemePair>
+          <CharacterCounterDemo />
+          <div className="flex flex-col gap-1">
+            {/* CountLine itself reads the Stuff header's query; these are its three strings. */}
+            <p className="text-meta text-muted">{countLine(37, ITEM_LIMIT, THINGS)}</p>
+            <p className="text-meta text-muted">{countLine(92, PLACE_LIMIT, PLACES)}</p>
+            <p className="text-meta text-muted">{countLine(100, ITEM_LIMIT, THINGS)}</p>
+          </div>
+          <AddPlaceHere parentId={null} blocked="placeLimit" />
+          <AddPlaceHere parentId={null} blocked="depthLimit" />
+          <PathTrail
+            segments={[
+              { id: "garage", name: "Garage" },
+              { id: "garage-closet", name: "Closet" },
+              { id: "garage-closet-toolbox", name: "Toolbox" },
+              { id: "garage-closet-toolbox-red-box", name: "Red box" },
+            ]}
+            collapseFrom={4}
+          />
+        </ThemePair>
+        <div>
+          <p className="mb-1 text-meta text-muted">
+            Move into… with destinations past the depth limit (Office and Garage › Closet greyed, &quot;Limit
+            reached&quot;)
+          </p>
+          <PathPickerDemo label="Move into…" locations={LOCATIONS} pickOnly disabledIds={["office", "garage-closet"]} />
         </div>
       </Section>
     </main>

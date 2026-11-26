@@ -1,10 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { HOUSEHOLD_FULL_MESSAGE } from "@/lib/limit-errors";
 import { LIMIT_ERROR_CODES } from "@/lib/limits";
 
-/** What a joiner sees when the household already has its two people (SL005, ADR 0015). */
-export const HOUSEHOLD_FULL_MESSAGE =
-  "This household already has two people in it, so this invite can't add anyone else.";
+export { HOUSEHOLD_FULL_MESSAGE };
 
 export type RedeemInviteResult = { ok: true; householdName: string | null } | { ok: false; error: string };
 

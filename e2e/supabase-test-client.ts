@@ -280,3 +280,37 @@ export async function addSeededPartnerFor(email: string, password: string): Prom
   const { householdId } = await signInForHouseholdId(email, password);
   await addSeededPartner(householdId);
 }
+
+/**
+ * Seeds `count` top-level places at once (service role: no caps, no events),
+ * for specs that need a household at its place limit. Returns their ids.
+ */
+export async function seedTopLevelPlaces(email: string, password: string, count: number): Promise<string[]> {
+  const { householdId } = await signInForHouseholdId(email, password);
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+  const rows = Array.from({ length: count }, (_, index) => ({
+    household_id: householdId,
+    name: `Place ${String(index + 1)}`,
+  }));
+  const { data, error } = await serviceClient.from("locations").insert(rows).select("id");
+  if (error) {
+    throw new Error(`failed to seed ${String(count)} places: ${error.message}`);
+  }
+  return data.map((row) => row.id);
+}
+
+/** Seeds `count` items into one place at once (service role: no caps, no events). */
+export async function seedItems(email: string, password: string, locationId: string, count: number): Promise<void> {
+  const { userId, householdId } = await signInForHouseholdId(email, password);
+  const serviceClient = createClient<Database>(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"));
+  const rows = Array.from({ length: count }, (_, index) => ({
+    household_id: householdId,
+    location_id: locationId,
+    name: `Thing ${String(index + 1)}`,
+    added_by: userId,
+  }));
+  const { error } = await serviceClient.from("items").insert(rows);
+  if (error) {
+    throw new Error(`failed to seed ${String(count)} items: ${error.message}`);
+  }
+}

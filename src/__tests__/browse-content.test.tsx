@@ -15,7 +15,7 @@ const entries: StuffListEntry[] = [
 const places = <p>The places list</p>;
 
 test("with nothing typed, Browse shows its places", () => {
-  renderUnderStuffHeader(<BrowseContent entries={entries} places={places} />, entries.length);
+  renderUnderStuffHeader(<BrowseContent entries={entries} places={places} />);
 
   expect(screen.getByText("The places list")).toBeDefined();
   expect(screen.queryByText("Passport")).toBeNull();
@@ -23,7 +23,7 @@ test("with nothing typed, Browse shows its places", () => {
 
 test("typing searches right on Browse: the places give way to matching items, and clearing brings them back", async () => {
   const user = userEvent.setup();
-  renderUnderStuffHeader(<BrowseContent entries={entries} places={places} />, entries.length);
+  renderUnderStuffHeader(<BrowseContent entries={entries} places={places} />);
   const field = screen.getByRole("searchbox", { name: "Search your stuff" });
 
   await user.type(field, "tent");

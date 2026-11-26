@@ -22,9 +22,17 @@ export interface PathTrailProps {
    * already there just appears. Off under prefers-reduced-motion.
    */
   printIn?: boolean;
+  /**
+   * Collapse to "first › … › last" from this many segments, at every width.
+   * Activity sets 4 so long from → to paths stay readable (ADR 0015). Left
+   * unset, the trail collapses only under 360px, from 3 segments.
+   */
+  collapseFrom?: number;
 }
 
 const NARROW_QUERY = "(max-width: 359px)";
+/** Under 360px a path collapses from this many segments (one middle segment or more). */
+const NARROW_COLLAPSE_FROM = 3;
 
 function subscribeNarrow(onChange: () => void): () => void {
   if (typeof window.matchMedia !== "function") {
@@ -59,12 +67,13 @@ const TAPE_CLASSES = "h-tape-height rounded-tape bg-tape px-2 text-on-tape shado
  *
  * Under 360px a path with middle segments collapses them to a "…" button
  * that expands them; the button's label names the whole path, so assistive
- * tech still hears every segment. The collapse is decided in JS from a
+ * tech still hears every segment. With `collapseFrom`, a path that long
+ * collapses the same way at any width. The collapse is decided in JS from a
  * media query (not hidden with CSS), so a collapsed trail's DOM — and its
  * text — really is just "first › … › last", and a wide one is never
  * affected.
  */
-export function PathTrail({ segments, linked = false, printIn = false }: PathTrailProps) {
+export function PathTrail({ segments, linked = false, printIn = false, collapseFrom }: PathTrailProps) {
   const [expanded, setExpanded] = useState(false);
   const narrow = useSyncExternalStore(subscribeNarrow, isNarrow, isNarrowOnServer);
 
@@ -73,7 +82,11 @@ export function PathTrail({ segments, linked = false, printIn = false }: PathTra
   }
 
   const lastIndex = segments.length - 1;
-  const collapsed = narrow && !expanded && lastIndex > 1;
+  const longEnough =
+    collapseFrom === undefined
+      ? narrow && segments.length >= NARROW_COLLAPSE_FROM
+      : segments.length >= Math.max(collapseFrom, NARROW_COLLAPSE_FROM);
+  const collapsed = longEnough && !expanded;
   const visible = segments
     .map((segment, index) => ({ segment, index }))
     .filter(({ index }) => !collapsed || index === 0 || index === lastIndex);

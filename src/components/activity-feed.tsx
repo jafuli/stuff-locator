@@ -15,6 +15,9 @@ export interface ActivityFeedProps {
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Activity paths of this many places read "first › … › last" at every width (ADR 0015). */
+const ACTIVITY_COLLAPSE_FROM = 4;
+
 const ITEM_LINK_CLASS = "rounded-tape font-medium underline-offset-2 hover:underline focus-ring";
 
 /** What one event reads as: a sentence after the actor, and an optional second line. */
@@ -49,7 +52,7 @@ function TrailAfter({ word, path }: { word: string; path: string }) {
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-meta text-muted">{word} </span>
-      <PathTrail segments={pathSegmentsFromText(path)} />
+      <PathTrail segments={pathSegmentsFromText(path)} collapseFrom={ACTIVITY_COLLAPSE_FROM} />
     </span>
   );
 }
@@ -75,7 +78,7 @@ function Move({
     text === null ? (
       <span className="text-meta text-muted">{fallback}</span>
     ) : (
-      <PathTrail segments={pathSegmentsFromText(text)} />
+      <PathTrail segments={pathSegmentsFromText(text)} collapseFrom={ACTIVITY_COLLAPSE_FROM} />
     );
 
   if (from === null && !topLevelOnBothSides) {

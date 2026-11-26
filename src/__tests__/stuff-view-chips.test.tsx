@@ -3,39 +3,29 @@ import { render, screen } from "@testing-library/react";
 import { StuffViewChips } from "@/components/stuff-view-chips";
 import { STUFF_PATH } from "@/lib/routes";
 
-test("shows 'All (n)' with the household total and a 'By place' link", () => {
-  render(<StuffViewChips total={18} active="all" />);
+test("plain 'All' and 'By place' links — the count lives in the line above the list now", () => {
+  render(<StuffViewChips active="all" />);
 
-  expect(screen.getByRole("link", { name: "All (18)" }).getAttribute("href")).toBe(STUFF_PATH);
+  expect(screen.getByRole("link", { name: "All" }).getAttribute("href")).toBe(STUFF_PATH);
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("href")).toBe("/browse");
 });
 
 test("All is the current page on Home, and only it", () => {
-  render(<StuffViewChips total={3} active="all" />);
+  render(<StuffViewChips active="all" />);
 
-  expect(screen.getByRole("link", { name: "All (3)" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "All" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "By place" }).hasAttribute("aria-current")).toBe(false);
 });
 
 test("By place is the current page on Browse, and only it", () => {
-  render(<StuffViewChips total={3} active="place" />);
+  render(<StuffViewChips active="place" />);
 
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("aria-current")).toBe("page");
-  expect(screen.getByRole("link", { name: "All (3)" }).hasAttribute("aria-current")).toBe(false);
-});
-
-test("while the count is loading, the chip reads All (…) and still links to the All view", () => {
-  render(<StuffViewChips total={null} active="place" />);
-  expect(screen.getByRole("link", { name: "All (…)" }).getAttribute("href")).toBe(STUFF_PATH);
-});
-
-test("an empty household reads All (0), not a missing count", () => {
-  render(<StuffViewChips total={0} active="all" />);
-  expect(screen.getByRole("link", { name: "All (0)" })).toBeDefined();
+  expect(screen.getByRole("link", { name: "All" }).hasAttribute("aria-current")).toBe(false);
 });
 
 test("the chips are links in a labelled nav with 44px touch targets", () => {
-  render(<StuffViewChips total={1} active="all" />);
+  render(<StuffViewChips active="all" />);
 
   expect(screen.getByRole("navigation", { name: "Stuff view" })).toBeDefined();
   for (const link of screen.getAllByRole("link")) {

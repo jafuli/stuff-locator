@@ -5,10 +5,13 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboard
 import { MoreIcon } from "@/components/icons";
 import { LocationPathPicker } from "@/components/location-path-picker";
 import { Button } from "@/components/ui/button";
+import { CharacterCounter, counterDescribedBy } from "@/components/ui/character-counter";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
 import type { Location } from "@/lib/fixtures/types";
-import { lastExistingId, type PathChip } from "@/lib/location-path-picker";
+import { friendlyRpcError } from "@/lib/limit-errors";
+import { TEXT_LIMITS } from "@/lib/limits";
+import { lastExistingId, moveDestinationsPastDepthLimit, type PathChip } from "@/lib/location-path-picker";
 import { validatePlaceName } from "@/lib/location-validation";
 import { createClient } from "@/server/db/client";
 
@@ -24,8 +27,6 @@ export interface PlaceManagerProps {
   itemCount: number;
   placeCount: number;
 }
-
-const UNIQUE_VIOLATION = "23505";
 
 function plural(count: number, one: string, many: string): string {
   return `${String(count)} ${count === 1 ? one : many}`;
@@ -196,7 +197,7 @@ export function PlaceManager({
     setIsRenaming(false);
 
     if (error) {
-      setRenameError(error.code === UNIQUE_VIOLATION ? `You already have “${trimmed}” here.` : error.message);
+      setRenameError(friendlyRpcError(error, "renamePlace", trimmed));
       return;
     }
     setRenaming(false);
@@ -225,11 +226,18 @@ export function PlaceManager({
                   setDraft(event.target.value);
                 }}
                 disabled={isRenaming}
+                maxLength={TEXT_LIMITS.placeName}
                 aria-invalid={renameError ? true : undefined}
-                aria-describedby="rename-place-hint"
+                aria-describedby={[
+                  "rename-place-hint",
+                  counterDescribedBy("rename-place-counter", draft, TEXT_LIMITS.placeName),
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 className="min-h-control-height w-full rounded-control border border-border-strong bg-surface px-4 text-body text-ink shadow-control focus-ring"
               />
             </h1>
+            <CharacterCounter id="rename-place-counter" value={draft} max={TEXT_LIMITS.placeName} />
             <p id="rename-place-hint" className="text-meta text-muted">
               Enter to save · Esc to cancel
             </p>
@@ -390,13 +398,7 @@ function MoveDialog({
     setIsMoving(false);
 
     if (rpcError) {
-      if (rpcError.code === UNIQUE_VIOLATION) {
-        setError(`There's already a place with this name there. Rename “${place.name}” first, then move it.`);
-      } else if (/own descendant|under itself/i.test(rpcError.message)) {
-        setError(`“${place.name}” can't go inside itself or a place within it.`);
-      } else {
-        setError(rpcError.message);
-      }
+      setError(friendlyRpcError(rpcError, "movePlace", place.name));
       return;
     }
     setChips([]);
@@ -404,6 +406,10 @@ function MoveDialog({
   }
 
   const target = lastExistingId(chips);
+  // Destinations where the place, or anything inside it, would end up past
+  // the depth limit: listed, greyed with "Limit reached", not choosable. The
+  // database (move_container) refuses them too.
+  const pastDepthLimit = moveDestinationsPastDepthLimit(place.id, locations);
   const canMove = chips.length > 0 && pendingText.trim() === "" && !isMoving;
 
   return (
@@ -415,6 +421,7 @@ function MoveDialog({
         onChange={setChips}
         onInputChange={setPendingText}
         excludeIds={[place.id]}
+        disabledIds={pastDepthLimit}
         disabled={isMoving}
         pickOnly
       />

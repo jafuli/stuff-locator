@@ -29,14 +29,14 @@ beforeEach(() => {
 });
 
 /** A stand-in page: registers its data and shows the query it's handed. */
-function Page({ total = 3, onIntent }: { total?: number; onIntent?: () => void }) {
+function Page({ onIntent }: { onIntent?: () => void }) {
   const { query, registerIntent } = useStuffViews();
   useEffect(() => {
     registerIntent(onIntent ?? null);
   }, [registerIntent, onIntent]);
   return (
     <>
-      <RegisterStuffView total={total} mode="list" />
+      <RegisterStuffView mode="list" />
       <p>Page content, query: “{query}”</p>
     </>
   );
@@ -51,7 +51,7 @@ test("one header for both views: heading, search, Stash and the chips, with the 
 
   expect(screen.getByRole("heading", { level: 1, name: STUFF_HEADING })).toBeDefined();
   expect(screen.getByRole("link", { name: "Stash" }).getAttribute("href")).toBe("/items/new");
-  expect(screen.getByRole("link", { name: "All (3)" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "All" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "By place" }).hasAttribute("aria-current")).toBe(false);
 
   nav.pathname = "/browse";
@@ -61,10 +61,10 @@ test("one header for both views: heading, search, Stash and the chips, with the 
     </StuffViewsShell>,
   );
   expect(screen.getByRole("link", { name: "By place" }).getAttribute("aria-current")).toBe("page");
-  expect(screen.getByRole("link", { name: "All (3)" }).hasAttribute("aria-current")).toBe(false);
+  expect(screen.getByRole("link", { name: "All" }).hasAttribute("aria-current")).toBe(false);
 });
 
-test("until the page below has its data, the search field is disabled and the count reads All (…)", () => {
+test("until the page below has its data, the search field is disabled", () => {
   const { rerender } = render(
     <StuffViewsShell>
       <p>Loading skeleton</p>
@@ -72,21 +72,19 @@ test("until the page below has its data, the search field is disabled and the co
   );
 
   expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search your stuff" }).disabled).toBe(true);
-  expect(screen.getByRole("link", { name: "All (…)" })).toBeDefined();
 
   rerender(
     <StuffViewsShell>
-      <Page total={7} />
+      <Page />
     </StuffViewsShell>,
   );
   expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search your stuff" }).disabled).toBe(false);
-  expect(screen.getByRole("link", { name: "All (7)" })).toBeDefined();
 });
 
 test("onboarding asks its own question and drops search, Stash and the chips", () => {
   render(
     <StuffViewsShell>
-      <RegisterStuffView total={0} mode="onboarding" />
+      <RegisterStuffView mode="onboarding" />
     </StuffViewsShell>,
   );
 
@@ -116,9 +114,9 @@ test("a tapped chip waiting on the server selects itself and shows the list skel
   expect(screen.queryByText(/Page content/)).toBeNull();
   expect(screen.getByRole("status").textContent).toBe("Loading…");
   expect(screen.getByRole<HTMLInputElement>("searchbox", { name: "Search your stuff" }).disabled).toBe(true);
-  // The header itself never left: same heading, same count.
+  // The header itself never left: same heading, same chips.
   expect(screen.getByRole("heading", { level: 1, name: STUFF_HEADING })).toBeDefined();
-  expect(screen.getByRole("link", { name: "All (3)" })).toBeDefined();
+  expect(screen.getByRole("link", { name: "All" })).toBeDefined();
 
   // The navigation lands.
   nav.pendingHref = null;

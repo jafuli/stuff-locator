@@ -5,7 +5,9 @@ import { seedItem, seedLocationChain } from "./supabase-test-client";
 import { tabUntilFocused } from "./utils";
 import { STUFF_PATH } from "@/lib/routes";
 
-// The All (n) / By place chips are the way into Browse (wireframes 02 / C1).
+// The All / By place chips are the way into Browse (wireframes 02 / C1). The
+// household count that used to be "All (n)" is a quiet line above the list
+// now (ADR 0015).
 const TEST_PASSWORD = "correct-horse-battery-1";
 
 async function signUpFreshAccount(page: Page): Promise<string> {
@@ -30,27 +32,30 @@ async function seedTwoItems(page: Page): Promise<{ tent: string; passport: strin
   return { tent, passport };
 }
 
-test("the Stuff screen shows All (n) with the household total, current, and By place", async ({ page }) => {
+test("the Stuff screen shows All (current) and By place, with the household count on its own line", async ({
+  page,
+}) => {
   await seedTwoItems(page);
   await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
-  const all = page.getByRole("link", { name: "All (2)" });
+  const all = page.getByRole("link", { name: "All", exact: true });
   await expect(all).toBeVisible();
+  await expect(page.getByText("2 things", { exact: true })).toBeVisible();
   await expect(all).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: "By place" })).not.toHaveAttribute("aria-current", /.*/);
   // The v1 "Recent" chip is deliberately not here.
   await expect(page.getByRole("link", { name: "Recent" })).toHaveCount(0);
 });
 
-test("the count is the household total, not the search results", async ({ page }) => {
+test("the count line steps aside while a search is typed (the list is results then)", async ({ page }) => {
   const { tent } = await seedTwoItems(page);
   await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("searchbox", { name: "Search your stuff" }).fill(tent);
   await expect(page.getByText(tent)).toBeVisible();
-  await expect(page.getByRole("link", { name: "All (2)" })).toBeVisible();
+  await expect(page.getByText("2 things", { exact: true })).toHaveCount(0);
 });
 
 test("Stuff → By place → Browse → All → Stuff, by keyboard", async ({ page }) => {
@@ -65,14 +70,14 @@ test("Stuff → By place → Browse → All → Stuff, by keyboard", async ({ pa
   await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible();
   // Same header as Home, with By place now the current one.
   await expect(page.getByRole("link", { name: "By place" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("link", { name: "All (2)" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "All", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Garage", exact: true })).toBeVisible();
 
-  expect(await tabUntilFocused(page, "All (2)", 15)).toBe(true);
+  expect(await tabUntilFocused(page, "All", 15)).toBe(true);
   await page.keyboard.press("Enter");
 
   await page.waitForURL(STUFF_PATH);
-  await expect(page.getByRole("link", { name: "All (2)" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "All", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
 test("typing in the search box on Browse searches right there, without leaving Browse", async ({ page }) => {
@@ -111,7 +116,7 @@ test("switching All / By place keeps the same header: the search field is never 
   await page.getByRole("link", { name: "By place" }).click();
   await page.waitForURL("/browse");
   await expect(page.getByRole("link", { name: "Garage", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "All (2)" }).click();
+  await page.getByRole("link", { name: "All", exact: true }).click();
   await page.waitForURL(STUFF_PATH);
   await expect(page.getByText(tent)).toBeVisible();
 
@@ -157,7 +162,7 @@ test.describe("slow connection", () => {
     await expect(page.getByRole("status").filter({ hasText: "Loading…" })).toHaveCount(1, quick);
     await expect(search).toBeDisabled(quick);
     await expect(page.getByRole("heading", { level: 1, name: "What are you looking for?" })).toBeVisible(quick);
-    await expect(page.getByRole("link", { name: "All (2)" })).toBeVisible(quick);
+    await expect(page.getByRole("link", { name: "All", exact: true })).toBeVisible(quick);
     // And Browse's own content isn't there yet: this really is the wait.
     await expect(page.getByRole("button", { name: "+ Add a place here" })).toHaveCount(0);
 
@@ -185,8 +190,8 @@ test("chips are comfortable touch targets and the page doesn't scroll sideways a
   await page.goto(STUFF_PATH);
   await page.waitForLoadState("networkidle");
 
-  for (const name of ["All (2)", "By place"]) {
-    const box = await page.getByRole("link", { name }).boundingBox();
+  for (const name of ["All", "By place"]) {
+    const box = await page.getByRole("link", { name, exact: true }).boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
   const overflow = await page.evaluate(

@@ -2,8 +2,11 @@
 
 import { useId, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { useCombobox } from "downshift";
+import { CharacterCounter, counterDescribedBy } from "@/components/ui/character-counter";
 import { cn } from "@/lib/cn";
 import type { Location } from "@/lib/fixtures/types";
+import { DEPTH_LIMIT_PICKER_NOTE, MOVE_DESTINATION_LIMIT, PLACE_LIMIT_PICKER_NOTE } from "@/lib/limit-errors";
+import { TEXT_LIMITS } from "@/lib/limits";
 import {
   addNewLevel,
   buildRows,
@@ -51,6 +54,11 @@ export interface LocationPathPickerProps {
   /** Places (and everything below them) that can't be chosen. */
   excludeIds?: readonly string[];
   /**
+   * Places that are listed but can't be chosen, greyed with "Limit reached"
+   * — "Move into…" destinations that would break the depth limit.
+   */
+  disabledIds?: readonly string[];
+  /**
    * Fires with the raw text on every change, so a form can tell "typed but
    * never turned into a chip" apart from a real selection.
    */
@@ -93,14 +101,23 @@ export function LocationPathPicker({
   describedBy,
   pickOnly = false,
   excludeIds,
+  disabledIds,
   onInputChange,
   inputRef,
 }: LocationPathPickerProps) {
   const [inputValue, setInputValue] = useState("");
   // Explicit so a chip tap can return focus to the field.
   const inputId = useId();
+  const counterId = `${inputId}-counter`;
+  const limitNoteId = `${inputId}-limit`;
   const [announcement, setAnnouncement] = useState("");
-  const rows = buildRows({ locations, chips: value, query: inputValue, pickOnly, excludeIds });
+  const rows = buildRows({ locations, chips: value, query: inputValue, pickOnly, excludeIds, disabledIds });
+  const limitNote =
+    rows.createBlocked === "depthLimit"
+      ? DEPTH_LIMIT_PICKER_NOTE
+      : rows.createBlocked === "placeLimit"
+        ? PLACE_LIMIT_PICKER_NOTE
+        : null;
   const insideItems: ComboItem[] = rows.inside.map((row) => ({ kind: "inside", row }));
   const anywhereItems: ComboItem[] = rows.anywhere.map((row) => ({ kind: "anywhere", row }));
   const createItems: ComboItem[] = rows.createName === null ? [] : [{ kind: "create", name: rows.createName }];
@@ -153,6 +170,9 @@ export function LocationPathPicker({
       // a name and pressing Enter picks it: the existing place when one
       // matches first, otherwise "+ New …". Arrows still move the highlight.
       defaultHighlightedIndex: 0,
+      // A greyed "Move into…" destination is skipped by the arrows and can't
+      // be picked; the create row is never disabled (it is replaced by a note).
+      isItemDisabled: (item) => item.kind !== "create" && item.row.disabled,
       onInputValueChange: ({ inputValue: nextValue }) => {
         setText(nextValue);
       },
@@ -175,7 +195,9 @@ export function LocationPathPicker({
     // submit the form with the chips still unset. React flushes this update at
     // the end of the keydown, before the next key event is dispatched.
     if (event.key === "Enter") {
-      const item = isOpen && highlightedIndex >= 0 ? items.at(highlightedIndex) : undefined;
+      const highlighted = isOpen && highlightedIndex >= 0 ? items.at(highlightedIndex) : undefined;
+      const item =
+        highlighted && (highlighted.kind === "create" || !highlighted.row.disabled) ? highlighted : undefined;
       // Enter in this field only ever picks. With nothing to pick (an empty
       // field, no matches) it does nothing, rather than falling through to
       // submit the surrounding form by accident.
@@ -228,16 +250,34 @@ export function LocationPathPicker({
     // Inside rows show just the place's own name (its parent is the last
     // chip); anywhere rows show the full path.
     const text = item.kind === "inside" ? row.place.name : row.path;
+    const ariaLabel = row.disabled
+      ? `${row.path}, ${MOVE_DESTINATION_LIMIT.toLowerCase()}`
+      : row.isExactSibling
+        ? `${row.path}, already here`
+        : row.path;
     return (
       <li
         key={row.place.id}
         {...getItemProps({ item, index })}
-        aria-label={row.isExactSibling ? `${row.path}, already here` : row.path}
-        className={cn(base, "text-path text-ink", isHighlighted && "bg-divider")}
+        aria-label={ariaLabel}
+        className={cn(
+          base,
+          "text-path",
+          row.disabled ? "cursor-not-allowed text-muted" : "text-ink",
+          isHighlighted && "bg-divider",
+        )}
       >
         <span>
           <MatchedPath path={text} query={inputValue} />
         </span>
+        {/* Visible reason, also inside the accessible name above; the
+            option itself is aria-disabled (downshift's isItemDisabled). */}
+        {row.disabled ? (
+          <>
+            {" "}
+            <span className="shrink-0 text-meta text-muted">{MOVE_DESTINATION_LIMIT}</span>
+          </>
+        ) : null}
         {/* The space keeps "Box" and "already here" apart in the visible
             text, so it stays inside the accessible name (WCAG 2.5.3). */}
         {row.isExactSibling ? (
@@ -307,15 +347,27 @@ export function LocationPathPicker({
         <input
           {...getInputProps({
             ref: inputRef,
-            "aria-describedby": describedBy,
+            "aria-describedby":
+              [
+                describedBy,
+                limitNote === null ? null : limitNoteId,
+                pickOnly ? null : counterDescribedBy(counterId, inputValue, TEXT_LIMITS.placeName),
+              ]
+                .filter(Boolean)
+                .join(" ") || undefined,
             "aria-invalid": describedBy ? true : undefined,
             disabled,
             onKeyDown: handleKeyDown,
+            // A new place's name is held to the place-name limit as it is
+            // typed; a pick-only picker only searches, so it isn't.
+            maxLength: pickOnly ? undefined : TEXT_LIMITS.placeName,
           })}
           placeholder={value.length === 0 ? placeholder : undefined}
           className="min-h-11 min-w-[7ch] flex-1 bg-transparent px-1 text-body text-ink outline-none placeholder:text-muted disabled:opacity-60"
         />
       </div>
+
+      {pickOnly ? null : <CharacterCounter id={counterId} value={inputValue} max={TEXT_LIMITS.placeName} />}
 
       <ul
         {...getMenuProps()}
@@ -367,6 +419,18 @@ export function LocationPathPicker({
       {/* Chip additions and removals are not focus changes, so announce them. */}
       <p aria-live="polite" className="sr-only">
         {announcement}
+      </p>
+
+      {/* Where "+ New …" would be, at a limit: a note, not an option, so it
+          sits outside the listbox, under "Goes in …" (which it refers to:
+          "Put it here"). Existing places above stay pickable. Always mounted
+          and polite, so it is announced once when it fills in. */}
+      <p
+        id={limitNoteId}
+        aria-live="polite"
+        className={cn("text-meta text-muted", limitNote === null ? "sr-only" : "mt-2")}
+      >
+        {limitNote}
       </p>
     </div>
   );
